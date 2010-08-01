@@ -5,5 +5,29 @@ DESIGN DECISIONS
   * No need for 1-1 structure mapping
 - Generally reuse CMS-style mechanisms
 - No attempt to do streaming data. JSON is unordered
-- 
+- Currently no support for our own certificate types:
+  - Support for embedded X.509
+  - Define a Web service for verification
+- Maybe later define our own certs just as a special case of 
+  this format
+- No canonicalization. Anything that needs canon is just a binary
+  literal
+- Standard order of signing and encryption.
+
+FEATURES SUPPORTED
+- Encryption
+  - One to one
+  - One to many
+  - Asymmetric encryption
+  - Symmetric encryption
+  - Mixed (symmetric/asymmetric)
+- Signature
+  - Single signature on a message
+  - Certificates
+    - Embedded
+    - Via reference
+    - CRLs (?)
+
+
+
 
