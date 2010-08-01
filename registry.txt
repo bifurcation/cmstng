@@ -1,0 +1,30 @@
+ALGORITHMS
+Asymmetric Encryption
+- RSA-PKCS1-1.5
+- RSA-PKCS1-2.0
+[TODO: DH/ECDH]
+
+Digital Signature
+- RSA
+- DSA
+- ECDSA
+
+Symmetric Encryption
+- AES-128-CBC
+- AES-256-CBC
+- AES-128-CTR
+- AES-256-CTR
+- AES-128-GCM
+- AES-256-GCM
+
+Integrity Checks
+- HMAC-SHA1
+- HMAC-SHA256
+
+
+
+
+
+
+
+

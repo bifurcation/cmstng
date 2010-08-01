@@ -13,6 +13,7 @@ DESIGN DECISIONS
 - No canonicalization. Anything that needs canon is just a binary
   literal
 - Standard order of signing and encryption.
+- All important metadata goes in the inner JSONo
 
 FEATURES SUPPORTED
 - Encryption
@@ -21,12 +22,19 @@ FEATURES SUPPORTED
   - Asymmetric encryption
   - Symmetric encryption
   - Mixed (symmetric/asymmetric)
+  - All encrypted data comes with an integrity check (MAC/AEAD)
+
 - Signature
   - Single signature on a message
   - Certificates
     - Embedded
     - Via reference
     - CRLs (?)
+
+
+
+- All Dates with cryptographic significance are in RFC 3339 Zulu
+
 
 
 
