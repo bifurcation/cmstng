@@ -14,6 +14,7 @@ DESIGN DECISIONS
   literal
 - Standard order of signing and encryption.
 - All important metadata goes in the inner JSONo
+- All Dates with cryptographic significance are in RFC 3339 Zulu (5.8)
 
 FEATURES SUPPORTED
 - Encryption
@@ -33,9 +34,11 @@ FEATURES SUPPORTED
 
 
 
-- All Dates with cryptographic significance are in RFC 3339 Zulu
 
 
 
 
+OPEN ISSUES:
+- CRLS in message
+- PKIXChain versus CertificateChain { type='pkix'}
 
