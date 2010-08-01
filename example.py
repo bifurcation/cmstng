@@ -38,6 +38,8 @@ def sign_message(msg, signer_cert, signer_priv, digest_algorithm="SHA1"):
             }
         "SignedData":msg_b64
         }
+
+    
     
 
 
