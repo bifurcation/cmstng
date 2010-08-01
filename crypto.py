@@ -60,9 +60,8 @@ class PrivateKey(object):
 
     def getAlgorithm(self):
         return "RSA-PKCS1-1.5"
+
     
-    def __str__(self):
-        return self.encoding_
 
 class KeyPair(object):
     def __init__(self, size=1024):
@@ -75,6 +74,25 @@ class KeyPair(object):
     def getPrivkey(self):
         jpriv = json.dumps(self.priv.key.key.__dict__)
         return PrivateKey(jpriv)
+
+def symmetricEncrypt(key, iv, algorithm, data):
+    return data
+
+    def __str__(self):
+        return self.encoding_
+
+def generateIV(algorithm):
+    return "IV12345"
+
+def hmac(key, algorithm, data):
+    return "MAC12345678"
+
+def generateRandom(bits):
+    return "KEY1234567890123456"
+
+def kdf(k, use):
+    return use + ":" + k
+
 
 if __name__ == '__main__':
     pair = KeyPair(384)

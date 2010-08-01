@@ -57,7 +57,7 @@ def verify_message(msg):
 
         if pkix_chain[0].getUsername() != signature['Signer']:
             raise Exception("Mismatched usernames: %s != %s"%(pkix_chain[0].getUsername(), signature['Signer']))
-
+            
         return pkix_chain[0].getPubkey().verify(signature['Value'],
                                                 signature['SignatureAlgorithm'],
                                                 signature['DigestAlgorithm'],
@@ -67,6 +67,34 @@ def verify_message(msg):
         raise Exception("Malformed message, missing key: %s",str(e))
 
 
+
+def encrypt_message(msg, recipient_cert, encryption_algorithm, integrity_algorithm):
+    sk = crypto.generateRandom(32);
+    key_exchange = recipient_cert.getPubkey().encrypt(sk)    
+    
+    mek = crypto.kdf(sk, encryption_algorithm)
+    mik = crypto.kdf(sk, integrity_algorithm)
+    iv = crypto.generateIV(encryption_algorithm),
+    ciphertext = crypto.symmetricEncrypt(mek, iv, encryption_algorithm, json.dumps(msg)).encode("base64")
+    mac = crypto.hmac(mik, ciphertext)
+
+    emsg = {
+        'Version':version,
+        'Recipients':[
+            {
+                'Name':recipient_cert.getUsername(),
+                'EncryptionAlgorithm':"RSA-PKCS1-1.5",
+                # TODO: hash of cert
+                "EncryptionKey":sk.encode("base64")
+                }
+            ],
+        "Encryption":{"Algorithm":encryption_algorithm, "IV":iv},
+        "Integrity":{"Algorithm":integrity_algorithm, "Value":mac },
+        "EncryptedData":ciphertext
+        }
+
+    return emsg
+    
     
 if __name__ == '__main__':
     ekr_cert_json = {
