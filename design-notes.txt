@@ -1,0 +1,9 @@
+DESIGN DECISIONS
+- Don't pull directly from CMS. This means
+  * No use of OIDs
+  * Different field names
+  * No need for 1-1 structure mapping
+- Generally reuse CMS-style mechanisms
+- No attempt to do streaming data. JSON is unordered
+- 
+
