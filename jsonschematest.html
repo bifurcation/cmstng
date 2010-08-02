@@ -1,0 +1,35 @@
+<html>
+<head><title>Test results</title>
+<script src="jsonschema.js"></script>
+<script src="json2.js"></script>
+<script src="schema.js"></script>
+<script src="correct.js"></script>
+<script>
+
+window.onload = function() {
+	function showResults(testName, instance, schema) {
+//document.body.appendChild(document.createElement('pre')).innerHTML = JSON.stringify(instance, null, 2);
+//document.body.appendChild(document.createElement('pre')).innerHTML = JSON.stringify(schema, null, 2);
+		var results = JSONSchema.validate(instance, schema);
+		if (!results.valid) { 
+			var resultsString = "Errors:";
+			for (var i = 0; i < results.errors.length; i++) {
+				resultsString += "<br/>Validation error for: " +
+					results.errors[i].path + " message: " +
+					results.errors[i].message;
+			}
+		} else {
+			resultsString = "Valid";
+		}
+		document.body.appendChild(document.createElement('div')).innerHTML = 
+			testName + ": " + resultsString;
+	}
+	showResults("signed_msg", signed_msg, signed_schema);
+};
+
+</script>
+<body>
+<h2>Test results</h2>
+
+
+</body></html>
