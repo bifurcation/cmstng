@@ -22,6 +22,7 @@ var signed_msg = {  // MIME-Type: application/signed+json
                      })};
 
 var encrypted_msg = {  // MIME-Type: application/encrypted+json
+	"Type":"encryption",
     "Version":"1.0",
     "Recipients":[
         {
@@ -58,6 +59,7 @@ var encrypted_msg = {  // MIME-Type: application/encrypted+json
 
 
 var signed_encrypted_msg = {  // MIME-Type: application/encrypted+json
+	"Type":"encryption",
     "Version":"1.0",
     "Recipients":[
         {

@@ -4,6 +4,7 @@
 <script src="json2.js"></script>
 <script src="schema.js"></script>
 <script src="correct.js"></script>
+<script src="cert.js"></script>
 <script>
 
 window.onload = function() {
@@ -25,6 +26,8 @@ window.onload = function() {
 			testName + ": " + resultsString;
 	}
 	showResults("signed_msg", signed_msg, signed_schema);
+	showResults("cert", cert, cert_schema);
+	showResults("union", union_inst, union);
 };
 
 </script>
