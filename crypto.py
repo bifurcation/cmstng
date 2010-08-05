@@ -24,20 +24,25 @@ def b64d(s):
     return s.decode('base64')
 
 class Certificate(object):
-    def __init__(self, name=None, encoding=None):
+    def __init__(self, name=None, pubkey=None, encoding=None):
         if encoding:
-            self.encoding_ = b64d(encoding)
-            self.json_ = json.loads(self.encoding_)
-            self.username_ = self.json_['username']
+            if encoding[0] != '{':
+                encoding = b64d(encoding)
+            self.json_ = json.loads(encoding)
+            self.username_ = self.json_['Name']
             self.pubkey_ = self.json_['pubkey']
         else:
             self.json_ = {}
 
         if name:
-            self.json_['username'] = name
+            self.json_['Name'] = name
+        if pubkey:
+            self.json_['pubkey'] = pubkey.getBase64()
+        if not 'NotBefore' in json_:
+            json[
 
     def getUsername(self):
-        return self.json_['username']
+        return self.json_['Name']
     Username = property(getUsername)
 
     def getBase64(self):
@@ -46,8 +51,13 @@ class Certificate(object):
 
     def getPubkey(self):
         return PublicKey(self.json_['pubkey'])
-    PubKey = property(getPubkey)
+    Pubkey = property(getPubkey)
     
+    def Validate(self):
+        return False
+
+    def __str__(self):
+        return json.dumps(self.json_, indent=2)
 
 class PublicKey(object):
     def __init__(self, encoding):
@@ -94,18 +104,23 @@ class PrivateKey(object):
         return "RSA-PKCS1-1.5"
 
 class KeyPair(object):
-    def __init__(self, size=1024):
+    def __init__(self, name, size=1024):
+        self.name = name
         self.priv = RSA.generate(size)
 
     def getPubkey(self):
         jpub = json.dumps(self.priv.publickey().key.__dict__)
         return PublicKey(b64(jpub))
-    PubKey = property(getPubkey)
+    Pubkey = property(getPubkey)
 
     def getPrivkey(self):
         jpriv = json.dumps(self.priv.key.__dict__)
         return PrivateKey(b64(jpriv))
-    PrivKey = property(getPrivkey)
+    Privkey = property(getPrivkey)
+
+    def getCertificate(self):
+        return Certificate(name=self.name, pubkey=self.Pubkey)
+    Certificate = property(getCertificate)
 
 def symmetricEncrypt(key, iv, algorithm, data):
     return data
@@ -139,8 +154,10 @@ def kdf(k, use):
     return use + ":" + k
 
 if __name__ == '__main__':
-    pair = KeyPair(384)
-    priv = pair.getPrivkey()
-    pub = pair.getPubkey()
+    pair = KeyPair("joe", 384)
+    priv = pair.Privkey
+    cert = pair.Certificate
+    pub = cert.Pubkey
+    print cert
     ciphertext = pub.encrypt("foo")
     print priv.decrypt(ciphertext)
