@@ -116,3 +116,7 @@ var signed_encrypted_msg = {  // MIME-Type: application/encrypted+json
                               }))};
 
 
+var keypair = { 
+	"Type":"keypair",
+    "Version":"1.0"
+};
