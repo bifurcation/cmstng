@@ -1,9 +1,7 @@
 import datetime
 import crypto
-from crypto import b64, b64d, get_date, JSONdumps
+from crypto import b64, b64d, get_date, version, JSONdumps
 
-# Version
-version = "1.0"
 
 # The interior message we want to protect
 message_text = "This is a test message"
@@ -13,58 +11,16 @@ inner_message = {
     }
 
 def sign_message(msg, signer_certs, signer_priv, digest_algorithm="SHA1"):
-    msg['date'] = get_date()
-    msg_b64 = b64(JSONdumps(msg))
-
-    username = signer_certs[0].Username
-    signature = signer_priv.sign(digest_algorithm, msg_b64)
-
-    pkix_chain = []
-    for cert in signer_certs:
-        pkix_chain.append(cert)
-            
-    smsg = {
-        "Version":version,
-        "Signature":{
-            "DigestAlgorithm":digest_algorithm,
-            "SignatureAlgorithm":signer_priv.getAlgorithm(),
-            "PkixChain":pkix_chain,
-            "Signer":username,
-            "Value":signature
-            },
-        "SignedData":msg_b64
-        }
-
-    return smsg
+    sig = crypto.Signed(data=message_text)
+    sig.sign(signer_priv, signer_certs, digest_algorithm)
+    return sig
 
 def verify_message(msg):
-    try:
-        signature = msg['Signature']
-        pkix_chain = []
-        
-        # TODO: Check version
-#        for cert in signature['PkixChain']:
-#            pkix_chain.append(crypto.Certificate(encoding=cert))
-        pkix_chain = signature['PkixChain']
-        # TODO: Verify the cert chain
-
-
-        if pkix_chain[0].Username != signature['Signer']:
-            raise Exception("Mismatched usernames: %s != %s"%(pkix_chain[0].Username(), signature['Signer']))
-            
-        return pkix_chain[0].Pubkey.verify(signature['Value'],
-                                           signature['SignatureAlgorithm'],
-                                           signature['DigestAlgorithm'],
-                                           msg['SignedData'])
-
-    except KeyError, e:
-        raise Exception("Malformed message, missing key: %s",str(e))
-
-
+    return msg.verify()
 
 def encrypt_message(msg, recipient_cert, encryption_algorithm, integrity_algorithm):
     sk = crypto.generateSessionKey(encryption_algorithm)
-    key_exchange = recipient_cert.Pubkey.encrypt(sk)    
+    key_exchange = recipient_cert.PublicKey.encrypt(sk)    
     
     mek = crypto.kdf(sk, encryption_algorithm)
     mik = crypto.kdf(sk, integrity_algorithm)
@@ -77,7 +33,7 @@ def encrypt_message(msg, recipient_cert, encryption_algorithm, integrity_algorit
         'Type':'encryption',
         'Recipients':[
             {
-                'Name':recipient_cert.Username,
+                'Name':recipient_cert.Name,
                 'EncryptionAlgorithm':"RSA-PKCS1-1.5",
                 # TODO: hash of cert
                 "EncryptionKey":b64(key_exchange)

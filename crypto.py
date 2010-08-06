@@ -15,17 +15,36 @@ def Hash(alg, data):
     h.update(data)
     return h.digest()
 
+def get_date(offset=0):
+    n = datetime.datetime.utcnow()
+    if offset:
+        n += datetime.timedelta(offset)
+    return n
+    #return n.strftime("%Y-%m-%dT%H:%M:%SZ")
+
 def JSONdefault(o):
+    if isinstance(o, datetime.datetime):
+        return o.strftime("%Y-%m-%dT%H:%M:%SZ")
     return o.JSON()
 
 def JSONdumps(o, indent=None):
     return json.dumps(o, default=JSONdefault, indent=indent)
 
-def get_date(offset=0):
-    n = datetime.datetime.utcnow()
-    if offset:
-        n += datetime.timedelta(offset)
-    return n.strftime("%Y-%m-%dT%H:%M:%SZ")
+def JSONobj(d):
+    t = d.get("Type", None)
+    if t:
+        cons = {
+            "certificate": Certificate,
+            "publickey": PublicKey,
+            "signed": Signed,
+            "signature": Signature
+        }.get(t, None)
+        if cons:
+            return cons(json=d)
+    return d
+
+def JSONloads(s):
+    return json.loads(s, object_hook=JSONobj)
 
 def parse_date(d):
     return dateutil.parser.parse(d, ignoretz=True)
@@ -42,47 +61,58 @@ def b64_to_long(b):
 def long_to_b64(l):    
     return b64(long_to_bytes(l))
 
-class Certificate(object):
-    def __init__(self, name=None, pubkey=None, encoding=None):
-        if encoding:
-            if encoding[0] != '{':
-                encoding = b64d(encoding)
-            self.json_ = json.loads(encoding)
-            self.username_ = self.json_['Name']
-            self.pubkey_ = self.json_['PublicKey']
+class CryptoException(Exception):
+    pass
+
+class CryptBase(object):
+    def __init__(self, objectType, json=None, ver=version):
+        if json:
+            if objectType:
+                # I *think* this is always a programming error
+                assert(json["Type"] == objectType)
+            if ver:
+                if json.get("Version", None) != ver:
+                    raise CryptoException("Invalid version")
+            self.json_ = json
+        elif objectType:
+            self.json_ = {"Type":objectType}
+            if ver:
+                self.json_["Version"] = ver
         else:
             self.json_ = {}
 
-        if name:
-            self.json_['Name'] = name
-        if pubkey:
-            self.json_['PublicKey'] = pubkey
-        if not 'NotBefore' in self.json_:
-            self.json_['NotBefore'] = get_date(-1)
-        if not 'NotAfter' in self.json_:
-            self.json_['NotAfter'] = get_date(1)
-        self.json_['Version'] = version
-        self.json_['Type'] = 'certificate'
+    @classmethod
+    def setProps(cls, *props):
+        for p in props:
+            def g(self, prop=p):
+                return self.json_[prop]
+            def s(self, v, prop=p):
+                self.json_[prop] = v
+            def d(self, prop=p):
+                del self.json_[prop]
+            setattr(cls, p, property(g, s, d))
 
-    @property
-    def Username(self):
-        return self.json_['Name']
+    def JSON(self):
+        return self.json_
 
     @property
     def Base64(self):
-        return b64(json.dumps(self.json_))
+        return b64(JSONdumps(self.json_))
 
-    @property
-    def Pubkey(self):
-        return self.json_['PublicKey']
+    def __str__(self):
+        return JSONdumps(self.json_, indent=2)
 
-    @property
-    def NotBefore(self):
-        return parse_date(self.json_['NotBefore'])
+class Certificate(CryptBase):
+    def __init__(self, name=None, pubkey=None, validityDays=None, json=None):
+        super(Certificate, self).__init__("certificate", json)
 
-    @property
-    def NotAfter(self):
-        return parse_date(self.json_['NotAfter'])
+        if name:
+            self.Name = name
+        if pubkey:
+            self.PublicKey = pubkey
+        if validityDays:
+            self.NotBefore = get_date()
+            self.NotAfter = get_date(validityDays)
 
     def Validate(self):
         n = datetime.datetime.utcnow()
@@ -90,32 +120,27 @@ class Certificate(object):
             return False
         if self.NotAfter < n:
             return False
-        if len(self.Username) == 0:
+        if len(self.Name) == 0:
             return False
-        if not self.Pubkey:
+        if not self.PublicKey:
+            return False
+        if self.json_['Version'] != version:
             return False
         return True
+Certificate.setProps("Name", "PublicKey", "NotBefore", "NotAfter")
 
-    def JSON(self):
-        return self.json_
-
-    def __str__(self):
-        return JSONdumps(self.json_, indent=2)
-
-class PublicKey(object):
-    def __init__(self, encoding=None, key=None):
-        if encoding:
-            if encoding[0] != '{':
-                encoding = b64d(encoding)
-            parsed = json.loads(encoding)
-            n = long(parsed['n'])
-            e = long(parsed['e'])
-            self.key = RSA.construct((n, e))
+class PublicKey(CryptBase):
+    def __init__(self, key=None, json=None):
+        super(PublicKey, self).__init__("publickey", json, ver=None)
         if key:
             self.key = key
-        self.json_ = {"Algorithm": "RSA",
-                      "RsaExponent": long_to_b64(key.e),
-                      "RsaModulus": long_to_b64(key.n)}
+            self.json_["RsaExponent"] = long_to_b64(key.e)
+            self.json_["RsaModulus"] = long_to_b64(key.n)
+            self.json_["Algorithm"] = "RSA"
+        else:
+            n = b64_to_long(self.json_['RsaModulus'])
+            e = b64_to_long(self.json_['RsaExponent'])
+            self.key = RSA.construct((n, e))
 
     def verify(self, signature, signature_algorithm, digest_algorithm, signed_data):
         dig = Hash(digest_algorithm, signed_data)
@@ -123,15 +148,55 @@ class PublicKey(object):
 
     def encrypt(self, plaintext):
         return self.key.encrypt(plaintext, None)[0]
+PublicKey.setProps("RsaExponent", "RsaModulus", "Algorithm")
 
-    def getBase64(self):
-        return b64(self.encoding_)
+class Signature(CryptBase):
+    def __init__(self, certs=None, digest_algorithm=None, sig_algorithm=None, value=None, json=None):
+        super(Signature, self).__init__("signature", json, ver=None)
+        if certs:
+            self.PkixChain = certs
+            self.Signer = certs[0].Name
+        if digest_algorithm:
+            self.DigestAlgorithm = digest_algorithm
+        if sig_algorithm:
+            self.SignatureAlgorithm = sig_algorithm
+        if value:
+            self.Value = value
 
-    def JSON(self):
-        return self.json_
+    def verify(self, data):
+        # TODO: validate certificate chain
+        if len(self.PkixChain) == 0:
+            return False
 
-    def __str__(self):
-        return JSONdumps(self, indent=2)
+        cert = self.PkixChain[0]
+        if cert.Name != self.Signer:
+            return False
+
+        return cert.PublicKey.verify(self.Value, self.SignatureAlgorithm, self.DigestAlgorithm, data)
+
+Signature.setProps("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", "Value")
+
+class Signed(CryptBase):
+    def __init__(self, data=None, contentType="text/plain", json=None):
+        super(Signed, self).__init__("signed", json)
+        if data:
+            if not contentType:
+                raise CryptoException("Must supply content type with data")
+            inner = {
+                'ContentType':"text/plain",
+                'Date': get_date(),
+                'Data': data
+                }
+            self.SignedData = b64(JSONdumps(inner))
+
+    def sign(self, key, certs, digest_algorithm="SHA1"):
+        val = key.sign(digest_algorithm, b64d(self.SignedData))
+        self.Signature = Signature(certs, digest_algorithm, key.Algorithm, val)
+
+    def verify(self):
+        return self.Signature.verify(b64d(self.SignedData))
+
+Signed.setProps("Signature", "SignedData")
 
 class PrivateKey(object):
     def __init__(self, encoding):
@@ -153,7 +218,8 @@ class PrivateKey(object):
     def decrypt(self, ciphertext):
         return self.key.decrypt(ciphertext)
 
-    def getAlgorithm(self):
+    @property
+    def Algorithm(self):
         return "RSA-PKCS1-1.5"
 
 class KeyPair(object):
@@ -171,7 +237,7 @@ class KeyPair(object):
     Privkey = property(getPrivkey)
 
     def getCertificate(self):
-        return Certificate(name=self.name, pubkey=self.Pubkey)
+        return Certificate(name=self.name, pubkey=self.Pubkey, validityDays=7)
     Certificate = property(getCertificate)
 
 def getCipherAlgorithm(algorithm):
@@ -243,6 +309,12 @@ if __name__ == '__main__':
     cert = pair.Certificate
     print cert
     print cert.Validate()
-    pub = cert.Pubkey
+    pub = cert.PublicKey
     ciphertext = pub.encrypt("foo")
     print priv.decrypt(ciphertext)
+
+    s = Signed("Foo")
+    s.sign(priv, [cert,])
+    print s
+
+    print "Verify: " + str(s.verify())

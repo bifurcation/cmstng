@@ -11,7 +11,8 @@ DESIGN DECISIONS
 - Maybe later define our own certs just as a special case of 
   this format
 - No canonicalization. Anything that needs canon is just a binary
-  literal
+  literal.  E.g. don't sign base-64, since it needs to be
+  canonicalized for newlines.
 - Standard order of signing and encryption.
 - All important metadata goes in the inner JSONo
 - All Dates with cryptographic significance are in RFC 3339 Zulu (5.8)

@@ -54,6 +54,7 @@ var encrypted_msg = {  // MIME-Type: application/encrypted+json
                          // TODO: signer name?
                          "ContentType": "text/plain", // MIME type
                          "Date": "2010-08-01T11:42:27Z", // RFC 3339
+						 "Nonce": b64(rand(32)), // is this needed?
                          "Data": "foo"
                      }))};
 
