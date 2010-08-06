@@ -179,13 +179,26 @@ def getCipherAlgorithm(algorithm):
         raise Exception("Unknown algorithm", algorithm)
     __import__("Crypto.Cipher." + algorithm)
     return Crypto.Cipher.__dict__[algorithm]
-    
+
+def pad(data, k):
+    # See RFC 5652 Section 6.3
+    v = k - (len(data) % k)
+    return data + (chr(v) * v)
+
+def unpad(data):
+    # See RFC 5652 Section 6.3
+    s = ord(data[-1])
+    return data[:-s]
+
 def symmetricEncrypt(key, iv, algorithm, data):
-    if not algorithm in Crypto.Cipher.__all__:
-        raise Exception("Unknown algorithm", algorithm)
     alg = getCipherAlgorithm(algorithm)
-    alg.new(key, alg.MODE_CBC, iv)
-    return data
+    cipher = alg.new(key, alg.MODE_CBC, iv)
+    return cipher.encrypt(pad(data, alg.block_size))
+
+def symmetricDecrypt(key, iv, algorithm, data):
+    alg = getCipherAlgorithm(algorithm)
+    cipher = alg.new(key, alg.MODE_CBC, iv)
+    return unpad(cipher.decrypt(data))
 
 def generateIV(algorithm):
     alg = getCipherAlgorithm(algorithm)
