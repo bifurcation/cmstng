@@ -37,7 +37,11 @@ def JSONobj(d):
             "certificate": Certificate,
             "publickey": PublicKey,
             "signed": Signed,
-            "signature": Signature
+            "signature": Signature,
+            "encrypted": Encrypted,
+            "recipient": Recipient,
+            "encryption": Encryption,
+            "integrity": Integrity,
         }.get(t, None)
         if cons:
             return cons(json=d)
@@ -114,7 +118,7 @@ class Certificate(CryptBase):
             self.NotBefore = get_date()
             self.NotAfter = get_date(validityDays)
 
-    def Validate(self):
+    def validate(self):
         n = datetime.datetime.utcnow()
         if self.NotBefore > n:
             return False
@@ -127,6 +131,10 @@ class Certificate(CryptBase):
         if self.json_['Version'] != version:
             return False
         return True
+
+    def hash(self):
+        return "TODO:HASH CERTS"
+
 Certificate.setProps("Name", "PublicKey", "NotBefore", "NotAfter")
 
 class PublicKey(CryptBase):
@@ -183,7 +191,7 @@ class Signed(CryptBase):
             if not contentType:
                 raise CryptoException("Must supply content type with data")
             inner = {
-                'ContentType':"text/plain",
+                'ContentType':contentType,
                 'Date': get_date(),
                 'Data': data
                 }
@@ -197,6 +205,98 @@ class Signed(CryptBase):
         return self.Signature.verify(b64d(self.SignedData))
 
 Signed.setProps("Signature", "SignedData")
+
+class Recipient(CryptBase):
+    def __init__(self, cert=None, key=None, json=None):
+        super(Recipient, self).__init__("recipient", json, ver=None)
+        if cert:
+            self.Name = cert.Name
+            self.EncryptionAlgorithm = cert.PublicKey.Algorithm
+            self.PkixCertificateHash = cert.hash()
+        if key:
+            self.EncryptionKey = b64(key)
+
+Recipient.setProps("Name", "EncryptionAlgorithm", "PkixCertificateHash", "EncryptionKey")
+
+class Encryption(CryptBase):
+    def __init__(self, algorithm=None, iv=None, json=None):
+        super(Encryption, self).__init__("encryption", json, ver=None)
+        if algorithm:
+            self.Algorithm = algorithm
+        if iv:
+            self.IV = b64(iv)
+Encryption.setProps("Algorithm", "IV")
+
+class Integrity(CryptBase):
+    def __init__(self, algorithm=None, value=None, json=None):
+        super(Integrity, self).__init__("integrity", json, ver=None)
+        if algorithm:
+            self.Algorithm = algorithm
+        if value:
+            self.Value = b64(value)
+Integrity.setProps("Algorithm", "Value")
+            
+class Encrypted(CryptBase):
+    def __init__(self, data=None, contentType="text/plain", json=None):
+        super(Encrypted, self).__init__("encrypted", json)
+        if data:
+            if not contentType:
+                raise CryptoException("Must supply content type with data")
+            self.inner = {
+                'ContentType':"text/plain",
+                'Date': get_date(),
+                'Data': data
+                }
+    def encrypt(self, toCerts, encryption_algorithm="AES-256-CBC", integrity_algorithm="HMAC-SHA1"):
+        (alg, size, mode) = getCipherAlgorithm(encryption_algorithm)
+        iv = generateIV(encryption_algorithm)
+        self.Encryption = Encryption(encryption_algorithm, iv)
+
+        sk = generateSessionKey(encryption_algorithm)
+        mek = kdf(sk, encryption_algorithm)
+        ciphertext = symmetricEncrypt(mek, iv, encryption_algorithm, JSONdumps(self.inner))
+        self.EncryptedData = b64(ciphertext)
+
+        rcpts = []
+        for c in toCerts:
+            key_exchange = c.PublicKey.encrypt(sk)
+            r = Recipient(c, key_exchange)
+            rcpts.append(r)
+        self.Recipients = rcpts
+
+        mik = kdf(sk, integrity_algorithm)
+        mac = hmac(mik, integrity_algorithm, ciphertext)
+        self.Integrity = Integrity(integrity_algorithm, mac)
+
+    def decrypt(self, privKey, name):
+        rcpt = None
+        for r in self.Recipients:
+            if r.Name == name:
+                rcpt = r
+                break
+        if not rcpt:
+            raise CryptoException("Name not found")
+        sk = b64d(rcpt.EncryptionKey)
+        sk = privKey.decrypt(sk)
+        ciphertext = b64d(self.EncryptedData)
+        iv = b64d(self.Encryption.IV)
+        encryption_algorithm = self.Encryption.Algorithm
+        mek = kdf(sk, encryption_algorithm)
+        plaintext = symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
+        res = JSONloads(plaintext)
+        dt = res["Date"] = parse_date(res["Date"])
+        if dt > get_date(): # TODO: clock skew
+            raise CryptoException("Message from the future")
+
+        integrity_algorithm = self.Integrity.Algorithm
+        mik = kdf(sk, integrity_algorithm)
+        mac = hmac(mik, integrity_algorithm, ciphertext)
+        if mac != b64d(self.Integrity.Value):
+            raise CryptoException("Invalid HMAC")
+
+        return res
+
+Encrypted.setProps("Recipients", "Encryption", "Integrity", "EncryptedData")
 
 class PrivateKey(object):
     def __init__(self, encoding):
@@ -308,7 +408,7 @@ if __name__ == '__main__':
     priv = pair.Privkey
     cert = pair.Certificate
     print cert
-    print cert.Validate()
+    print cert.validate()
     pub = cert.PublicKey
     ciphertext = pub.encrypt("foo")
     print priv.decrypt(ciphertext)
@@ -318,3 +418,8 @@ if __name__ == '__main__':
     print s
 
     print "Verify: " + str(s.verify())
+
+    e = Encrypted("BAR")
+    e.encrypt([cert,])
+    print e
+    print e.decrypt(priv, "joe")
