@@ -175,10 +175,13 @@ class KeyPair(object):
     Certificate = property(getCertificate)
 
 def getCipherAlgorithm(algorithm):
-    if not algorithm in Crypto.Cipher.__all__:
-        raise Exception("Unknown algorithm", algorithm)
-    __import__("Crypto.Cipher." + algorithm)
-    return Crypto.Cipher.__dict__[algorithm]
+    (name, size, mode) = algorithm.split("-")
+    if not name in Crypto.Cipher.__all__:
+        raise Exception("Unknown algorithm", name)
+    __import__("Crypto.Cipher." + name)
+    alg = Crypto.Cipher.__dict__[name]
+    m = alg.__dict__["MODE_" + mode]
+    return (alg, int(size), m)
 
 def pad(data, k):
     # See RFC 5652 Section 6.3
@@ -191,17 +194,19 @@ def unpad(data):
     return data[:-s]
 
 def symmetricEncrypt(key, iv, algorithm, data):
-    alg = getCipherAlgorithm(algorithm)
-    cipher = alg.new(key, alg.MODE_CBC, iv)
+    (alg, size, mode) = getCipherAlgorithm(algorithm)
+    assert(len(key) * 8 == size)
+    cipher = alg.new(key, mode, iv)
     return cipher.encrypt(pad(data, alg.block_size))
 
 def symmetricDecrypt(key, iv, algorithm, data):
-    alg = getCipherAlgorithm(algorithm)
-    cipher = alg.new(key, alg.MODE_CBC, iv)
+    (alg, size, mode) = getCipherAlgorithm(algorithm)
+    assert(len(key) * 8 == size)
+    cipher = alg.new(key, mode, iv)
     return unpad(cipher.decrypt(data))
 
 def generateIV(algorithm):
-    alg = getCipherAlgorithm(algorithm)
+    (alg, size, mode) = getCipherAlgorithm(algorithm)
     return generateRandom(alg.block_size)
 
 class HashHolder:
@@ -209,7 +214,8 @@ class HashHolder:
         self.name_ = name
 
     def __call__(self):
-        return hashlib.new(self.name_)
+        (hm, name) = self.name_.split("-")
+        return hashlib.new(name)
 
 class HashMeta(type):
     def __new__(cls, name):

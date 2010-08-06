@@ -1,6 +1,6 @@
 import datetime
 import crypto
-from crypto import b64, get_date, JSONdumps
+from crypto import b64, b64d, get_date, JSONdumps
 
 # Version
 version = "1.0"
@@ -63,33 +63,56 @@ def verify_message(msg):
 
 
 def encrypt_message(msg, recipient_cert, encryption_algorithm, integrity_algorithm):
-    sk = crypto.generateRandom(4)
-    key_exchange = recipient_cert.Pubkey().encrypt(sk)    
+    sk = crypto.generateRandom(20)
+    key_exchange = recipient_cert.Pubkey.encrypt(sk)    
     
     mek = crypto.kdf(sk, encryption_algorithm)
     mik = crypto.kdf(sk, integrity_algorithm)
-    iv = crypto.generateIV(encryption_algorithm),
-    ciphertext = b64(crypto.symmetricEncrypt(mek, iv, encryption_algorithm, JSONdumps(msg)))
-    mac = crypto.hmac(mik, integrity_algorithm, ciphertext)
+    iv = crypto.generateIV(encryption_algorithm)
+    msgj = JSONdumps(msg)
+    ciphertext = crypto.symmetricEncrypt(mek, iv, encryption_algorithm, msgj)
+    mac = crypto.hmac(mik, integrity_algorithm, msgj)
 
     emsg = {
         'Version':version,
+        'Type':'encryption',
         'Recipients':[
             {
                 'Name':recipient_cert.Username,
                 'EncryptionAlgorithm':"RSA-PKCS1-1.5",
                 # TODO: hash of cert
-                "EncryptionKey":b64(sk)
+                "EncryptionKey":b64(key_exchange)
                 }
             ],
-        "Encryption":{"Algorithm":encryption_algorithm, "IV":iv},
-        "Integrity":{"Algorithm":integrity_algorithm, "Value":mac },
-        "EncryptedData":ciphertext
+        "Encryption":{"Algorithm":encryption_algorithm, "IV":b64(iv)},
+        "Integrity":{"Algorithm":integrity_algorithm, "Value":b64(mac) },
+        "EncryptedData":b64(ciphertext)
         }
 
     return emsg
     
-    
+def decrypt_message(msg, privKey):
+    rcpt = msg['Recipients'][0]
+    sk = b64d(rcpt['EncryptionKey'])
+    sk = privKey.decrypt(sk)
+
+    ciphertext = b64d(msg['EncryptedData'])
+
+    enc = msg['Encryption']
+    iv = b64d(enc['IV'])
+    encryption_algorithm = enc['Algorithm']
+    mek = crypto.kdf(sk, encryption_algorithm)
+    plaintext = crypto.symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
+
+    integ = msg['Integrity']
+    val = b64d(integ['Value'])
+    integrity_algorithm = integ['Algorithm']
+    mik = crypto.kdf(sk, integrity_algorithm)
+    mac = crypto.hmac(mik, integrity_algorithm, plaintext)
+    if mac != val:
+        raise Exception("Invalid HMAC")
+    return plaintext
+
 if __name__ == '__main__':
     ekr_kp = crypto.KeyPair('ekr@rtfm.com')
     ekr_cert = ekr_kp.Certificate
@@ -110,9 +133,9 @@ if __name__ == '__main__':
     else:
         print "Verification succceeded"
         
+    # Encrypt a message
+    encrypted = encrypt_message(inner_message, ekr_cert, "AES-256-CBC", "HMAC-SHA1")
+    print JSONdumps(encrypted, indent=2)
 
-
-
-    
-
-
+    decrypted = decrypt_message(encrypted, ekr_priv)
+    print decrypted
