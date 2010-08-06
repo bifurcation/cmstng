@@ -63,15 +63,14 @@ def verify_message(msg):
 
 
 def encrypt_message(msg, recipient_cert, encryption_algorithm, integrity_algorithm):
-    sk = crypto.generateRandom(20)
+    sk = crypto.generateSessionKey(encryption_algorithm)
     key_exchange = recipient_cert.Pubkey.encrypt(sk)    
     
     mek = crypto.kdf(sk, encryption_algorithm)
     mik = crypto.kdf(sk, integrity_algorithm)
     iv = crypto.generateIV(encryption_algorithm)
-    msgj = JSONdumps(msg)
-    ciphertext = crypto.symmetricEncrypt(mek, iv, encryption_algorithm, msgj)
-    mac = crypto.hmac(mik, integrity_algorithm, msgj)
+    ciphertext = crypto.symmetricEncrypt(mek, iv, encryption_algorithm, JSONdumps(msg))
+    mac = crypto.hmac(mik, integrity_algorithm, ciphertext)
 
     emsg = {
         'Version':version,
@@ -108,7 +107,7 @@ def decrypt_message(msg, privKey):
     val = b64d(integ['Value'])
     integrity_algorithm = integ['Algorithm']
     mik = crypto.kdf(sk, integrity_algorithm)
-    mac = crypto.hmac(mik, integrity_algorithm, plaintext)
+    mac = crypto.hmac(mik, integrity_algorithm, ciphertext)
     if mac != val:
         raise Exception("Invalid HMAC")
     return plaintext

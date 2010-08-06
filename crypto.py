@@ -209,6 +209,11 @@ def generateIV(algorithm):
     (alg, size, mode) = getCipherAlgorithm(algorithm)
     return generateRandom(alg.block_size)
 
+def generateSessionKey(algorithm):
+    # account for kdf size
+    (alg, size, mode) = getCipherAlgorithm(algorithm)
+    return generateRandom((size/8) - len(algorithm) - 1)
+
 class HashHolder:
     def __init__(self, name):
         self.name_ = name
