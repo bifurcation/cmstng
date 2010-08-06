@@ -1,6 +1,6 @@
-import json
 import datetime
 import crypto
+from crypto import b64, get_date, JSONdumps
 
 # Version
 version = "1.0"
@@ -12,23 +12,16 @@ inner_message = {
     'Data': message_text
     }
 
-def b64(s):
-    return s.encode('base64').replace('\n', '')
-
-def get_date():
-    n = datetime.datetime.utcnow()
-    return n.strftime("%Y-%m-%dT%H:%M:%SZ")
-
 def sign_message(msg, signer_certs, signer_priv, digest_algorithm="SHA1"):
     msg['date'] = get_date()
-    msg_b64 = b64(json.dumps(msg))
+    msg_b64 = b64(JSONdumps(msg))
 
-    username = signer_certs[0].getUsername()
+    username = signer_certs[0].Username
     signature = signer_priv.sign(digest_algorithm, msg_b64)
 
     pkix_chain = []
     for cert in signer_certs:
-        pkix_chain.append(cert.getBase64())
+        pkix_chain.append(cert)
             
     smsg = {
         "Version":version,
@@ -50,19 +43,19 @@ def verify_message(msg):
         pkix_chain = []
         
         # TODO: Check version
-
-        for cert in signature['PkixChain']:
-            pkix_chain.append(crypto.Certificate(encoding=cert))
+#        for cert in signature['PkixChain']:
+#            pkix_chain.append(crypto.Certificate(encoding=cert))
+        pkix_chain = signature['PkixChain']
         # TODO: Verify the cert chain
 
 
-        if pkix_chain[0].getUsername() != signature['Signer']:
-            raise Exception("Mismatched usernames: %s != %s"%(pkix_chain[0].getUsername(), signature['Signer']))
+        if pkix_chain[0].Username != signature['Signer']:
+            raise Exception("Mismatched usernames: %s != %s"%(pkix_chain[0].Username(), signature['Signer']))
             
-        return pkix_chain[0].getPubkey().verify(signature['Value'],
-                                                signature['SignatureAlgorithm'],
-                                                signature['DigestAlgorithm'],
-                                                msg['SignedData'])
+        return pkix_chain[0].Pubkey.verify(signature['Value'],
+                                           signature['SignatureAlgorithm'],
+                                           signature['DigestAlgorithm'],
+                                           msg['SignedData'])
 
     except KeyError, e:
         raise Exception("Malformed message, missing key: %s",str(e))
@@ -70,20 +63,20 @@ def verify_message(msg):
 
 
 def encrypt_message(msg, recipient_cert, encryption_algorithm, integrity_algorithm):
-    sk = crypto.generateRandom(32);
-    key_exchange = recipient_cert.getPubkey().encrypt(sk)    
+    sk = crypto.generateRandom(4)
+    key_exchange = recipient_cert.Pubkey().encrypt(sk)    
     
     mek = crypto.kdf(sk, encryption_algorithm)
     mik = crypto.kdf(sk, integrity_algorithm)
     iv = crypto.generateIV(encryption_algorithm),
-    ciphertext = b64(crypto.symmetricEncrypt(mek, iv, encryption_algorithm, json.dumps(msg)))
-    mac = crypto.hmac(mik, ciphertext)
+    ciphertext = b64(crypto.symmetricEncrypt(mek, iv, encryption_algorithm, JSONdumps(msg)))
+    mac = crypto.hmac(mik, integrity_algorithm, ciphertext)
 
     emsg = {
         'Version':version,
         'Recipients':[
             {
-                'Name':recipient_cert.getUsername(),
+                'Name':recipient_cert.Username,
                 'EncryptionAlgorithm':"RSA-PKCS1-1.5",
                 # TODO: hash of cert
                 "EncryptionKey":b64(sk)
@@ -106,7 +99,7 @@ if __name__ == '__main__':
     # Sign a message
     signed = sign_message(inner_message, ekr_certs, ekr_priv)
     print "***** Signed message ****"
-    print json.dumps(signed, indent=2)
+    print JSONdumps(signed, indent=2)
     print "*****"
 
 
