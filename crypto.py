@@ -11,26 +11,31 @@ import dateutil.parser
 version = "1.0"
 
 def Hash(alg, data):
+    "Hash the data according to the given algorithm.  Example algorithm: 'SHA1'"
     h = hashlib.new(alg)
     h.update(data)
     return h.digest()
 
 def get_date(offset=0):
+    "Get the current date/time, offset by the number of days specified"
     n = datetime.datetime.utcnow()
     if offset:
         n += datetime.timedelta(offset)
     return n
-    #return n.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-def JSONdefault(o):
+def _JSONdefault(o):
+    """Turn an object into JSON.  
+    Dates and instances of classes derived from CryptBase get special handling"""
     if isinstance(o, datetime.datetime):
         return o.strftime("%Y-%m-%dT%H:%M:%SZ")
     return o.JSON()
 
 def JSONdumps(o, indent=None):
-    return json.dumps(o, default=JSONdefault, indent=indent)
+    "Dump crypto objects to string"
+    return json.dumps(o, default=_JSONdefault, indent=indent)
 
-def JSONobj(d):
+def _JSONobj(d):
+    "Turn a JSON dictionary into a crypto object"
     t = d.get("Type", None)
     if t:
         cons = {
@@ -48,27 +53,54 @@ def JSONobj(d):
     return d
 
 def JSONloads(s):
-    return json.loads(s, object_hook=JSONobj)
+    "Load a string as a JSON object, converting to crypto objects as needed"
+    return json.loads(s, object_hook=_JSONobj)
 
 def parse_date(d):
+    "Parse a string containing an ISO8601 date into a datetime"
     return dateutil.parser.parse(d, ignoretz=True)
 
 def b64(s):
+    "Base64 encode, without newlines"
     return s.encode('base64').replace('\n', '')
 
 def b64d(s):
+    "Base64 decode"
     return s.decode('base64')
 
-def b64_to_long(b):    
+def b64_to_long(b):
+    "Turn a base64-encoded byte array into a long"
     return bytes_to_long(b64d(b))
 
 def long_to_b64(l):    
+    "Turn a long into a base64-encoded byte array"
     return b64(long_to_bytes(l))
 
 class CryptoException(Exception):
+    "All exceptions throw intentionally from this module"
     pass
 
+class Props(object):
+    def __init__(self, *args):
+        self.args = args
+
+    def __call__(self, cls):
+        for p in self.args:
+            def g(self, prop=p):
+                return self.json_[prop]
+            def s(self, x, prop=p):
+                self.json_[prop] = x
+            def d(self, prop=p):
+                del self.json_[prop]
+            setattr(cls, p, property(g, s, d))
+
+        return cls
+
 class CryptBase(object):
+    """The base class for all crypto objects.  Crypto objects contain
+    a dictionary that holds their state in a form easy to be
+    translated to JSON.  Getters and setters modify the JSON
+    dictionary."""
     def __init__(self, objectType, json=None, ver=version):
         if json:
             if objectType:
@@ -85,17 +117,6 @@ class CryptBase(object):
         else:
             self.json_ = {}
 
-    @classmethod
-    def setProps(cls, *props):
-        for p in props:
-            def g(self, prop=p):
-                return self.json_[prop]
-            def s(self, v, prop=p):
-                self.json_[prop] = v
-            def d(self, prop=p):
-                del self.json_[prop]
-            setattr(cls, p, property(g, s, d))
-
     def JSON(self):
         return self.json_
 
@@ -106,6 +127,7 @@ class CryptBase(object):
     def __str__(self):
         return JSONdumps(self.json_, indent=2)
 
+@Props("Name", "PublicKey", "NotBefore", "NotAfter")
 class Certificate(CryptBase):
     def __init__(self, name=None, pubkey=None, validityDays=None, json=None):
         super(Certificate, self).__init__("certificate", json)
@@ -135,8 +157,7 @@ class Certificate(CryptBase):
     def hash(self):
         return "TODO:HASH CERTS"
 
-Certificate.setProps("Name", "PublicKey", "NotBefore", "NotAfter")
-
+@Props("RsaExponent", "RsaModulus", "Algorithm")
 class PublicKey(CryptBase):
     def __init__(self, key=None, json=None):
         super(PublicKey, self).__init__("publickey", json, ver=None)
@@ -156,8 +177,8 @@ class PublicKey(CryptBase):
 
     def encrypt(self, plaintext):
         return self.key.encrypt(plaintext, None)[0]
-PublicKey.setProps("RsaExponent", "RsaModulus", "Algorithm")
 
+@Props("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", "Value")
 class Signature(CryptBase):
     def __init__(self, certs=None, digest_algorithm=None, sig_algorithm=None, value=None, json=None):
         super(Signature, self).__init__("signature", json, ver=None)
@@ -182,8 +203,8 @@ class Signature(CryptBase):
 
         return cert.PublicKey.verify(self.Value, self.SignatureAlgorithm, self.DigestAlgorithm, data)
 
-Signature.setProps("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", "Value")
 
+@Props("Signature", "SignedData")
 class Signed(CryptBase):
     def __init__(self, data=None, contentType="text/plain", json=None):
         super(Signed, self).__init__("signed", json)
@@ -204,8 +225,7 @@ class Signed(CryptBase):
     def verify(self):
         return self.Signature.verify(b64d(self.SignedData))
 
-Signed.setProps("Signature", "SignedData")
-
+@Props("Name", "EncryptionAlgorithm", "PkixCertificateHash", "EncryptionKey")
 class Recipient(CryptBase):
     def __init__(self, cert=None, key=None, json=None):
         super(Recipient, self).__init__("recipient", json, ver=None)
@@ -216,8 +236,7 @@ class Recipient(CryptBase):
         if key:
             self.EncryptionKey = b64(key)
 
-Recipient.setProps("Name", "EncryptionAlgorithm", "PkixCertificateHash", "EncryptionKey")
-
+@Props("Algorithm", "IV")
 class Encryption(CryptBase):
     def __init__(self, algorithm=None, iv=None, json=None):
         super(Encryption, self).__init__("encryption", json, ver=None)
@@ -225,8 +244,8 @@ class Encryption(CryptBase):
             self.Algorithm = algorithm
         if iv:
             self.IV = b64(iv)
-Encryption.setProps("Algorithm", "IV")
 
+@Props("Algorithm", "Value")
 class Integrity(CryptBase):
     def __init__(self, algorithm=None, value=None, json=None):
         super(Integrity, self).__init__("integrity", json, ver=None)
@@ -234,8 +253,8 @@ class Integrity(CryptBase):
             self.Algorithm = algorithm
         if value:
             self.Value = b64(value)
-Integrity.setProps("Algorithm", "Value")
-            
+
+@Props("Recipients", "Encryption", "Integrity", "EncryptedData")
 class Encrypted(CryptBase):
     def __init__(self, data=None, contentType="text/plain", json=None):
         super(Encrypted, self).__init__("encrypted", json)
@@ -295,8 +314,6 @@ class Encrypted(CryptBase):
             raise CryptoException("Invalid HMAC")
 
         return res
-
-Encrypted.setProps("Recipients", "Encryption", "Integrity", "EncryptedData")
 
 class PrivateKey(object):
     def __init__(self, encoding):
