@@ -4,7 +4,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto import Random
 import hashlib
-import hmac as hm
+import hmac as HMAC
 import datetime
 import dateutil.parser
 
@@ -398,20 +398,17 @@ def generateSessionKey(algorithm):
     (alg, size, mode) = getCipherAlgorithm(algorithm)
     return generateRandom((size/8) - len(algorithm) - 1)
 
-class HashHolder:
+class HashFactory(object):
+    "Generate a hash instance by name, at the time that HMAC requires it"
     def __init__(self, name):
         self.name_ = name
 
     def __call__(self):
-        (hm, name) = self.name_.split("-")
-        return hashlib.new(name)
-
-class HashMeta(type):
-    def __new__(cls, name):
-        return HashHolder(name)
+        (h, alg) = self.name_.split("-")
+        return hashlib.new(alg)       
 
 def hmac(key, algorithm, data):
-    h = hm.new(key, data, HashMeta(algorithm))
+    h = HMAC.new(key, data, HashFactory(algorithm))
     return h.digest()
 
 rand = Random.new()
