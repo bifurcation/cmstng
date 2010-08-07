@@ -81,6 +81,7 @@ class CryptoException(Exception):
     pass
 
 class Props(object):
+    "A decorator that adds a JSON access property for each of the strings that are passed."
     def __init__(self, *args):
         self.args = args
 
