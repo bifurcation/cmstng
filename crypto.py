@@ -7,6 +7,8 @@ import hashlib
 import hmac as HMAC
 import datetime
 import dateutil.parser
+import math
+import struct
 
 version = "1.0"
 
@@ -411,6 +413,10 @@ def hmac(key, algorithm, data):
     h = HMAC.new(key, data, HashFactory(algorithm))
     return h.digest()
 
+def hmac_sha1(key, data):
+    h = HMAC.new(key, data, hashlib.sha1)
+    return h.digest()
+
 rand = Random.new()
 def generateRandom(octets):
     return rand.read(octets)
@@ -418,9 +424,43 @@ def generateRandom(octets):
 def kdf(k, use):
     return use + ":" + k
 
+def xors(s1, s2):
+    "xor 2 strings"
+    return ''.join([chr(ord(a) ^ ord(b)) for (a,b) in zip(s1, s2)])
+
+def PBKDF2_HMAC_SHA1(pw, salt, iterations, desired):
+#    (alg, size, mode) = getCipherAlgorithm(algorithm)
+#    dkLen = size / 8
+    dkLen = desired
+    hLen = 20 # len(HMAC-SHA1)
+    
+    if dkLen > (2**32 - 1) * hLen:
+        raise CryptoError("derived key too long")
+
+    l = int(math.ceil(float(dkLen) / float(hLen)))
+    r = dkLen - ((l - 1) * hLen)
+
+    def F(P, S, c, i):
+        if c < 1:
+            raise CryptoError("invalid number of iterations")
+        key_one = S + struct.pack("!I", i)
+        prev = hmac_sha1(P, key_one)
+        acc = prev
+        for j in range(1,c):
+            prev = hmac_sha1(P, prev)
+            acc = xors(acc, prev)
+        return acc
+
+    ret = ""
+    for i in range(l):
+        ret += F(pw, salt, iterations, i + 1)
+
+    return ret[:dkLen]
+
 if __name__ == '__main__':
     pair = KeyPair("joe", 384)
     priv = pair.Privkey
+    
     cert = pair.Certificate
     print cert
     print cert.validate()
