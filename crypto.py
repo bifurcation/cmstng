@@ -270,7 +270,7 @@ class Encrypted(CryptBase):
                 'Data': data
                 }
     def encrypt(self, toCerts, encryption_algorithm="AES-256-CBC", integrity_algorithm="HMAC-SHA1"):
-        (alg, size, mode) = getCipherAlgorithm(encryption_algorithm)
+        (alg, size, mode) = getAlgorithm(encryption_algorithm)
         iv = generateIV(encryption_algorithm)
         self.Encryption = Encryption(encryption_algorithm, iv)
 
@@ -360,14 +360,18 @@ class KeyPair(object):
         return Certificate(name=self.name, pubkey=self.Pubkey, validityDays=7)
     Certificate = property(getCertificate)
 
-def getCipherAlgorithm(algorithm):
-    (name, size, mode) = algorithm.split("-")
-    if not name in Crypto.Cipher.__all__:
-        raise Exception("Unknown algorithm", name)
-    __import__("Crypto.Cipher." + name)
-    alg = Crypto.Cipher.__dict__[name]
-    m = alg.__dict__["MODE_" + mode]
-    return (alg, int(size), m)
+__algorithms__ = {
+    "AES-256-CBC": (Crypto.Cipher.AES, 256 / 8, Crypto.Cipher.AES.MODE_CBC),
+    "AES-128-CBC": (Crypto.Cipher.AES, 128 / 8, Crypto.Cipher.AES.MODE_CBC),
+    "HMAC-SHA1":   (hashlib.sha1, 64, None),
+    "HMAC-SHA256": (hashlib.sha256, 64, None),
+}
+
+def getAlgorithm(algorithm):
+    ret = __algorithms__.get(algorithm, None)
+    if not ret:
+        raise CryptoException("Unknown algorithm: " + algorithm)
+    return ret
 
 def pad(data, k):
     # See RFC 5652 Section 6.3
@@ -380,37 +384,29 @@ def unpad(data):
     return data[:-s]
 
 def symmetricEncrypt(key, iv, algorithm, data):
-    (alg, size, mode) = getCipherAlgorithm(algorithm)
-    assert(len(key) * 8 == size)
+    (alg, size, mode) = getAlgorithm(algorithm)
+    assert(len(key) == size)
     cipher = alg.new(key, mode, iv)
     return cipher.encrypt(pad(data, alg.block_size))
 
 def symmetricDecrypt(key, iv, algorithm, data):
-    (alg, size, mode) = getCipherAlgorithm(algorithm)
-    assert(len(key) * 8 == size)
+    (alg, size, mode) = getAlgorithm(algorithm)
+    assert(len(key) == size)
     cipher = alg.new(key, mode, iv)
     return unpad(cipher.decrypt(data))
 
 def generateIV(algorithm):
-    (alg, size, mode) = getCipherAlgorithm(algorithm)
+    (alg, size, mode) = getAlgorithm(algorithm)
     return generateRandom(alg.block_size)
 
 def generateSessionKey(algorithm):
     # account for kdf size
-    (alg, size, mode) = getCipherAlgorithm(algorithm)
-    return generateRandom((size/8) - len(algorithm) - 1)
-
-class HashFactory(object):
-    "Generate a hash instance by name, at the time that HMAC requires it"
-    def __init__(self, name):
-        self.name_ = name
-
-    def __call__(self):
-        (h, alg) = self.name_.split("-")
-        return hashlib.new(alg)       
+    (alg, size, mode) = getAlgorithm(algorithm)
+    return generateRandom(size)
 
 def hmac(key, algorithm, data):
-    h = HMAC.new(key, data, HashFactory(algorithm))
+    (alg, size, mode) = getAlgorithm(algorithm)
+    h = HMAC.new(key, data, alg)
     return h.digest()
 
 def hmac_sha1(key, data):
@@ -422,15 +418,14 @@ def generateRandom(octets):
     return rand.read(octets)
 
 def kdf(k, use):
-    return use + ":" + k
+    (alg, size, mode) = getAlgorithm(use)
+    return PBKDF2_HMAC_SHA1(k, use, 64, size)
 
 def xors(s1, s2):
     "xor 2 strings"
     return ''.join([chr(ord(a) ^ ord(b)) for (a,b) in zip(s1, s2)])
 
 def PBKDF2_HMAC_SHA1(pw, salt, iterations, desired):
-#    (alg, size, mode) = getCipherAlgorithm(algorithm)
-#    dkLen = size / 8
     dkLen = desired
     hLen = 20 # len(HMAC-SHA1)
     

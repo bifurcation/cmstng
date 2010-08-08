@@ -29,9 +29,14 @@ class TestCertificate(unittest.TestCase):
             msg += chr(32 + i)
 
     def test_alg(self):
-        (alg, size, mode) = crypto.getCipherAlgorithm("AES-256-CBC")
+        (alg, size, mode) = crypto.getAlgorithm("AES-256-CBC")
         self.assertEqual(alg.__name__, "Crypto.Cipher.AES")
-        self.assertEqual(size, 256)
+        self.assertEqual(size, 32)
+        self.assertEqual(mode, Crypto.Cipher.AES.MODE_CBC)
+
+        (alg, size, mode) = crypto.getAlgorithm("AES-128-CBC")
+        self.assertEqual(alg.__name__, "Crypto.Cipher.AES")
+        self.assertEqual(size, 16)
         self.assertEqual(mode, Crypto.Cipher.AES.MODE_CBC)        
 
     def test_pub_encrypt(self):
@@ -49,7 +54,7 @@ class TestCertificate(unittest.TestCase):
     def test_key(self):
         alg = "AES-256-CBC"
         key = crypto.generateSessionKey(alg)
-        self.assertEqual(len(key), 32 - len(alg) - 1)
+        self.assertEqual(len(key), 32)
         mek = crypto.kdf(key, alg)
         self.assertEqual(len(mek), 32)
 
