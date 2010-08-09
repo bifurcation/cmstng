@@ -9,7 +9,7 @@ class TestCertificate(unittest.TestCase):
     def setUp(self):
         self.pair = crypto.KeyPair(self.name, self.keysize)
         self.priv = self.pair.Privkey
-        self.cert = self.pair.Certificate
+        self.cert = self.pair.genCertificate()
 
     def test_pair(self):
         self.assertEqual(self.pair.priv.size(), self.keysize-1)
@@ -96,6 +96,33 @@ class TestCertificate(unittest.TestCase):
             self.assertEqual(expected, k)
             i += 1
 
+    def test_PrivKey(self):
+        self.assertTrue(self.priv)
+        privj = crypto.JSONdumps(self.priv)
+        privjl = crypto.JSONloads(privj)
+        self.assertEqual(self.priv.key.d, privjl.key.d)
+        self.assertEqual(self.priv.PublicKey.key.n, privjl.PublicKey.key.n)
+        self.assertEqual(self.priv.PublicKey.key.e, privjl.PublicKey.key.e)
+        
+        sig = self.priv.sign("test")
+        self.assertTrue(self.priv.PublicKey.verify("test", sig))
+
+        ciphertext = self.priv.PublicKey.encrypt("test")
+        plain = self.priv.decrypt(ciphertext)
+        self.assertEqual("test", plain)
+        self.assertNotEqual(ciphertext, plain)
+
+    def test_PubKey(self):
+        pub = self.priv.PublicKey
+        self.assertTrue(pub)
+        self.assertEqual("RSA-PKCS1-1.5", pub.Algorithm)
+        
+        pubj = crypto.JSONdumps(pub)
+        pubjl = crypto.JSONloads(pubj)
+        self.assertEqual(pub.key.n, pubjl.key.n)
+        self.assertEqual(pub.key.e, pubjl.key.e)
+        self.assertEqual(pub.RsaExponent, pubjl.RsaExponent)
+        self.assertEqual(pub.RsaModulus, pubjl.RsaModulus)
 
 if __name__ == '__main__':
     unittest.main()

@@ -44,11 +44,12 @@ def _JSONobj(d):
             "certificate": Certificate,
             "publickey": PublicKey,
             "signed": Signed,
-            "signature": Signature,
-            "encrypted": Encrypted,
-            "recipient": Recipient,
+            "signature":  Signature,
+            "encrypted":  Encrypted,
+            "recipient":  Recipient,
             "encryption": Encryption,
-            "integrity": Integrity,
+            "integrity":  Integrity,
+            "privatekey": PrivateKey,
         }.get(t, None)
         if cons:
             return cons(json=d)
@@ -168,18 +169,45 @@ class PublicKey(CryptBase):
             self.key = key
             self.json_["RsaExponent"] = long_to_b64(key.e)
             self.json_["RsaModulus"] = long_to_b64(key.n)
-            self.json_["Algorithm"] = "RSA"
+            self.json_["Algorithm"] = "RSA-PKCS1-1.5"
         else:
             n = b64_to_long(self.json_['RsaModulus'])
             e = b64_to_long(self.json_['RsaExponent'])
             self.key = RSA.construct((n, e))
 
-    def verify(self, signature, signature_algorithm, digest_algorithm, signed_data):
+    def verify(self, signed_data, signature, signature_algorithm="RSA-PKCS1-1.5", digest_algorithm="SHA1"):
         dig = Hash(digest_algorithm, signed_data)
         return self.key.verify(dig, (b64_to_long(signature), 1))
 
     def encrypt(self, plaintext):
         return self.key.encrypt(plaintext, None)[0]
+
+@Props("PublicKey", "PrivateExponent", "Algorithm")
+class PrivateKey(CryptBase):
+    def __init__(self, key=None, size=1024, json=None):
+        super(PrivateKey, self).__init__("privatekey", json)
+        if not json:
+            if key:
+                self.key = key
+            else:
+                self.key = RSA.generate(size)
+            assert(self.key)
+            self.PublicKey = PublicKey(key=self.key.publickey())
+            self.PrivateExponent = long_to_b64(self.key.d)
+            self.Algorithm = "RSA-PKCS1-1.5"
+        else:
+            self.key = RSA.construct((self.PublicKey.key.n, 
+                                      self.PublicKey.key.e,
+                                      b64_to_long(self.PrivateExponent)))
+
+    def sign(self, signed_data, digest_algorithm="SHA1"):
+        dig = Hash(digest_algorithm, signed_data)
+        sig = self.key.sign(dig, None)[0]
+        sig2 = long_to_bytes(sig)
+        return b64(sig2)
+
+    def decrypt(self, ciphertext):
+        return self.key.decrypt(ciphertext)
 
 @Props("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", "Value")
 class Signature(CryptBase):
@@ -204,8 +232,7 @@ class Signature(CryptBase):
         if cert.Name != self.Signer:
             return False
 
-        return cert.PublicKey.verify(self.Value, self.SignatureAlgorithm, self.DigestAlgorithm, data)
-
+        return cert.PublicKey.verify(data, self.Value, self.SignatureAlgorithm, self.DigestAlgorithm)
 
 @Props("Signature", "SignedData")
 class Signed(CryptBase):
@@ -222,7 +249,7 @@ class Signed(CryptBase):
             self.SignedData = b64(JSONdumps(inner))
 
     def sign(self, key, certs, digest_algorithm="SHA1"):
-        val = key.sign(digest_algorithm, b64d(self.SignedData))
+        val = key.sign(b64d(self.SignedData), digest_algorithm)
         self.Signature = Signature(certs, digest_algorithm, key.Algorithm, val)
 
     def verify(self):
@@ -318,47 +345,21 @@ class Encrypted(CryptBase):
 
         return res
 
-class PrivateKey(object):
-    def __init__(self, encoding):
-        self.encoding_ = b64d(encoding)
-        parsed = json.loads(self.encoding_)
-        n = long(parsed['n'])
-        e = long(parsed['e'])
-        d = long(parsed['d'])
-        p = long(parsed['p'])
-        q = long(parsed['q'])
-        self.key = RSA.construct((n, e, d, p, q))
-
-    def sign(self, digest_algorithm, signed_data):
-        dig = Hash(digest_algorithm, signed_data)
-        sig = self.key.sign(dig, None)[0]
-        sig2 = long_to_bytes(sig)
-        return b64(sig2)
-
-    def decrypt(self, ciphertext):
-        return self.key.decrypt(ciphertext)
-
-    @property
-    def Algorithm(self):
-        return "RSA-PKCS1-1.5"
-
 class KeyPair(object):
     def __init__(self, name, size=1024):
         self.name = name
         self.priv = RSA.generate(size)
 
-    def getPubkey(self):
+    @property
+    def Pubkey(self):
         return PublicKey(key=self.priv.publickey())
-    Pubkey = property(getPubkey)
 
-    def getPrivkey(self):
-        jpriv = json.dumps(self.priv.key.__dict__)
-        return PrivateKey(b64(jpriv))
-    Privkey = property(getPrivkey)
+    @property
+    def Privkey(self):
+        return PrivateKey(key=self.priv)
 
-    def getCertificate(self):
-        return Certificate(name=self.name, pubkey=self.Pubkey, validityDays=7)
-    Certificate = property(getCertificate)
+    def genCertificate(self, validityDays=365):
+        return Certificate(name=self.name, pubkey=self.Pubkey, validityDays=validityDays)
 
 __algorithms__ = {
     "AES-256-CBC": (Crypto.Cipher.AES, 256 / 8, Crypto.Cipher.AES.MODE_CBC),
@@ -455,8 +456,9 @@ def PBKDF2_HMAC_SHA1(pw, salt, iterations, desired):
 if __name__ == '__main__':
     pair = KeyPair("joe", 384)
     priv = pair.Privkey
-    
-    cert = pair.Certificate
+    print priv
+
+    cert = pair.genCertificate(7)
     print cert
     print cert.validate()
     pub = cert.PublicKey
