@@ -19,11 +19,12 @@ def Hash(alg, data):
     return h.digest()
 
 def get_date(offset=0):
-    "Get the current date/time, offset by the number of days specified"
+    "Get the current date/time, offset by the number of days specified, with second precision"
     n = datetime.datetime.utcnow()
     if offset:
         n += datetime.timedelta(offset)
-    return n
+        
+    return n - datetime.timedelta(microseconds=n.microsecond)
 
 def _JSONdefault(o):
     """Turn an object into JSON.  
@@ -85,15 +86,62 @@ class CryptoException(Exception):
 
 class Props(object):
     "A decorator that adds a JSON access property for each of the strings that are passed."
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.args = args
+        self.plain = args
+        self.date = []
+        self.base64 = []
+        plain = kwargs.get("plain", [])
+        date = kwargs.get("date", [])
+        base64 = kwargs.get("base64", [])
+        if plain:
+            if isinstance(plain, (list, tuple)):
+                self.plain += plain
+            else:
+                self.plain += (plain,)
+            self.args += self.plain
+        if date:
+            if isinstance(date, (list, tuple)):
+                self.date = date
+            else:
+                self.date = (date,)
+            self.args += self.date
+        if base64:
+            if isinstance(base64, (list, tuple)):
+                self.base64 = base64
+            else:
+                self.base64 = (base64,)
+            self.args += self.base64
 
     def __call__(self, cls):
-        for p in self.args:
+        cls.Props = self.args
+        for p in self.plain:
             def g(self, prop=p):
                 return self.json_[prop]
             def s(self, x, prop=p):
                 self.json_[prop] = x
+            def d(self, prop=p):
+                del self.json_[prop]
+            setattr(cls, p, property(g, s, d))
+        for p in self.date:
+            def g(self, prop=p):
+                d = self.json_[prop]
+                if isinstance(d, datetime.datetime):
+                    return d
+                return parse_date(d)
+            def s(self, x, prop=p):
+                if isinstance(x, datetime.datetime):
+                    self.json_[prop] = x
+                else:
+                    self.json_[prop] = parse_date(x)
+            def d(self, prop=p):
+                del self.json_[prop]
+            setattr(cls, p, property(g, s, d))
+        for p in self.base64:
+            def g(self, prop=p):
+                return b64d(self.json_[prop])
+            def s(self, x, prop=p):
+                self.json_[prop] = b64(x)
             def d(self, prop=p):
                 del self.json_[prop]
             setattr(cls, p, property(g, s, d))
@@ -128,10 +176,42 @@ class CryptBase(object):
     def Base64(self):
         return b64(JSONdumps(self.json_))
 
+    def __cmp__(self, other):
+        if self.__class__ != other.__class__:
+            return -1
+        r = cmp(self.json_["Type"], other.json_["Type"])
+        if r:
+            return r
+        if hasattr(self, "Version") != hasattr(other, "Version"):
+            return -1
+        if hasattr(self, "Version"):
+            r = cmp(self.json_["Version"], other.json_["Version"])
+            if r:
+                return r
+
+        for p in self.Props:
+            x = getattr(self, p)
+            y = getattr(other, p)
+
+            # arrays should do this by default, if you ask me
+            if isinstance(x, (list, tuple)):
+                r = cmp(len(x), len(y))
+                if r:
+                    return r
+                for (xn, yn) in zip(x, y):
+                    r = cmp(xn, yn)
+                    if r:
+                        return r
+            else:
+                r = cmp(x, y)
+                if r:
+                    return r
+        return 0
+
     def __str__(self):
         return JSONdumps(self.json_, indent=2)
 
-@Props("Name", "PublicKey", "NotBefore", "NotAfter")
+@Props("Name", "PublicKey", date=("NotBefore", "NotAfter"))
 class Certificate(CryptBase):
     def __init__(self, name=None, pubkey=None, validityDays=None, json=None):
         super(Certificate, self).__init__("certificate", json)
@@ -214,6 +294,8 @@ class Signature(CryptBase):
     def __init__(self, certs=None, digest_algorithm=None, sig_algorithm=None, value=None, json=None):
         super(Signature, self).__init__("signature", json, ver=None)
         if certs:
+            if not isinstance(certs, (list, tuple)):
+                certs = (certs,)
             self.PkixChain = certs
             self.Signer = certs[0].Name
         if digest_algorithm:
@@ -253,6 +335,7 @@ class Signed(CryptBase):
         self.Signature = Signature(certs, digest_algorithm, key.Algorithm, val)
 
     def verify(self):
+        # TODO: check dates, nonces, etc?
         return self.Signature.verify(b64d(self.SignedData))
 
 @Props("Name", "EncryptionAlgorithm", "PkixCertificateHash", "EncryptionKey")

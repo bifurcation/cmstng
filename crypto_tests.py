@@ -15,10 +15,6 @@ class TestCertificate(unittest.TestCase):
         self.assertEqual(self.pair.priv.size(), self.keysize-1)
         self.assertEqual(self.pair.name, self.name)
 
-    def test_cert(self):
-        self.assertTrue(self.cert.validate())
-        self.assertEqual(self.cert.Name, self.name)
-
     def test_pad(self):
         msg = ""
         for i in range(65):
@@ -100,6 +96,7 @@ class TestCertificate(unittest.TestCase):
         self.assertTrue(self.priv)
         privj = crypto.JSONdumps(self.priv)
         privjl = crypto.JSONloads(privj)
+        self.assertTrue(self.priv == privjl)
         self.assertEqual(self.priv.key.d, privjl.key.d)
         self.assertEqual(self.priv.PublicKey.key.n, privjl.PublicKey.key.n)
         self.assertEqual(self.priv.PublicKey.key.e, privjl.PublicKey.key.e)
@@ -119,10 +116,30 @@ class TestCertificate(unittest.TestCase):
         
         pubj = crypto.JSONdumps(pub)
         pubjl = crypto.JSONloads(pubj)
+        self.assertTrue(pub == pubjl)
         self.assertEqual(pub.key.n, pubjl.key.n)
         self.assertEqual(pub.key.e, pubjl.key.e)
         self.assertEqual(pub.RsaExponent, pubjl.RsaExponent)
         self.assertEqual(pub.RsaModulus, pubjl.RsaModulus)
+
+    def test_Certificate(self):
+        self.assertTrue(self.cert.validate())
+        self.assertEqual(self.cert.Name, self.name)
+        certj = crypto.JSONdumps(self.cert)
+        certjl = crypto.JSONloads(certj)
+        self.assertTrue(self.cert == certjl)
+        self.assertTrue(certjl.NotBefore == self.cert.NotBefore)
+
+    def test_Signed(self):
+        msg = crypto.b64(crypto.generateRandom(1024))
+        sig = crypto.Signed(msg)
+        sig.sign(self.priv, self.cert)
+        wrapper = crypto.JSONloads(crypto.b64d(sig.SignedData))
+        self.assertEqual(msg, wrapper["Data"])
+        self.assertTrue(sig.verify())
+        sigj = crypto.JSONdumps(sig)
+        sigjl = crypto.JSONloads(sigj)
+        self.assertTrue(sig == sigjl)
 
 if __name__ == '__main__':
     unittest.main()
