@@ -24,13 +24,16 @@ def get_date(offset=0):
     if offset:
         n += datetime.timedelta(offset)
         
-    return n - datetime.timedelta(microseconds=n.microsecond)
+    return n
+
+def fmt_date(d):
+    return d.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def _JSONdefault(o):
     """Turn an object into JSON.  
     Dates and instances of classes derived from CryptBase get special handling"""
     if isinstance(o, datetime.datetime):
-        return o.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return fmt_date(o)
     return o.JSON()
 
 def JSONdumps(o, indent=None):
@@ -51,6 +54,7 @@ def _JSONobj(d):
             "encryption": Encryption,
             "integrity":  Integrity,
             "privatekey": PrivateKey,
+            "inner":      InnerMessage,
         }.get(t, None)
         if cons:
             return cons(json=d)
@@ -87,64 +91,36 @@ class CryptoException(Exception):
 class Props(object):
     "A decorator that adds a JSON access property for each of the strings that are passed."
     def __init__(self, *args, **kwargs):
-        self.args = args
-        self.plain = args
-        self.date = []
-        self.base64 = []
-        plain = kwargs.get("plain", [])
-        date = kwargs.get("date", [])
-        base64 = kwargs.get("base64", [])
-        if plain:
-            if isinstance(plain, (list, tuple)):
-                self.plain += plain
-            else:
-                self.plain += (plain,)
-            self.args += self.plain
-        if date:
-            if isinstance(date, (list, tuple)):
-                self.date = date
-            else:
-                self.date = (date,)
-            self.args += self.date
-        if base64:
-            if isinstance(base64, (list, tuple)):
-                self.base64 = base64
-            else:
-                self.base64 = (base64,)
-            self.args += self.base64
+        self.map = {}
+        for t in args:
+            self.map[t] = "plain"
+        for t in ("plain", "date", "base64", "long"):
+            a = kwargs.get(t, None)
+            if a:
+                if isinstance(a, (list, tuple)):
+                    for b in a:
+                        self.map[b] = t
+                else:
+                    self.map[a] = t
 
     def __call__(self, cls):
-        cls.Props = self.args
-        for p in self.plain:
-            def g(self, prop=p):
-                return self.json_[prop]
-            def s(self, x, prop=p):
-                self.json_[prop] = x
-            def d(self, prop=p):
-                del self.json_[prop]
-            setattr(cls, p, property(g, s, d))
-        for p in self.date:
-            def g(self, prop=p):
-                d = self.json_[prop]
-                if isinstance(d, datetime.datetime):
-                    return d
-                return parse_date(d)
-            def s(self, x, prop=p):
-                if isinstance(x, datetime.datetime):
-                    self.json_[prop] = x
-                else:
-                    self.json_[prop] = parse_date(x)
-            def d(self, prop=p):
-                del self.json_[prop]
-            setattr(cls, p, property(g, s, d))
-        for p in self.base64:
-            def g(self, prop=p):
-                return b64d(self.json_[prop])
-            def s(self, x, prop=p):
-                self.json_[prop] = b64(x)
-            def d(self, prop=p):
-                del self.json_[prop]
-            setattr(cls, p, property(g, s, d))
+        cls.Props = self.map.keys()
+        decode = {"plain": lambda x: x,
+                  "date": parse_date,
+                  "base64": b64d,
+                  "long": b64_to_long}
+        encode = {"plain": lambda x: x,
+                  "date": fmt_date,
+                  "base64": b64,
+                  "long": long_to_b64}
+        for prop,typ in self.map.iteritems():
+            def g(self, p=prop, d=decode[typ]):
+                return d(self.json_[p])
+            def s(self, x, p=prop, e=encode[typ]):
+                self.json_[p] = e(x)
+            def d(self,  p=prop, t=typ):
+                del self.json_[p]
+            setattr(cls, prop, property(g, s, d))
 
         return cls
 
@@ -241,28 +217,28 @@ class Certificate(CryptBase):
     def hash(self):
         return "TODO:HASH CERTS"
 
-@Props("RsaExponent", "RsaModulus", "Algorithm")
+@Props("Algorithm", long=("RsaExponent", "RsaModulus"))
 class PublicKey(CryptBase):
     def __init__(self, key=None, json=None):
         super(PublicKey, self).__init__("publickey", json, ver=None)
         if key:
             self.key = key
-            self.json_["RsaExponent"] = long_to_b64(key.e)
-            self.json_["RsaModulus"] = long_to_b64(key.n)
-            self.json_["Algorithm"] = "RSA-PKCS1-1.5"
+            self.RsaExponent = key.e
+            self.RsaModulus = key.n
+            self.Algorithm = "RSA-PKCS1-1.5"
         else:
-            n = b64_to_long(self.json_['RsaModulus'])
-            e = b64_to_long(self.json_['RsaExponent'])
+            n = self.RsaModulus
+            e = self.RsaExponent
             self.key = RSA.construct((n, e))
 
     def verify(self, signed_data, signature, signature_algorithm="RSA-PKCS1-1.5", digest_algorithm="SHA1"):
         dig = Hash(digest_algorithm, signed_data)
-        return self.key.verify(dig, (b64_to_long(signature), 1))
+        return self.key.verify(dig, (signature, 1))
 
     def encrypt(self, plaintext):
         return self.key.encrypt(plaintext, None)[0]
 
-@Props("PublicKey", "PrivateExponent", "Algorithm")
+@Props("PublicKey", "Algorithm", long="PrivateExponent")
 class PrivateKey(CryptBase):
     def __init__(self, key=None, size=1024, json=None):
         super(PrivateKey, self).__init__("privatekey", json)
@@ -273,23 +249,21 @@ class PrivateKey(CryptBase):
                 self.key = RSA.generate(size)
             assert(self.key)
             self.PublicKey = PublicKey(key=self.key.publickey())
-            self.PrivateExponent = long_to_b64(self.key.d)
+            self.PrivateExponent = self.key.d
             self.Algorithm = "RSA-PKCS1-1.5"
         else:
             self.key = RSA.construct((self.PublicKey.key.n, 
                                       self.PublicKey.key.e,
-                                      b64_to_long(self.PrivateExponent)))
+                                      self.PrivateExponent))
 
     def sign(self, signed_data, digest_algorithm="SHA1"):
         dig = Hash(digest_algorithm, signed_data)
-        sig = self.key.sign(dig, None)[0]
-        sig2 = long_to_bytes(sig)
-        return b64(sig2)
+        return self.key.sign(dig, None)[0]
 
     def decrypt(self, ciphertext):
         return self.key.decrypt(ciphertext)
 
-@Props("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", "Value")
+@Props("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", long="Value")
 class Signature(CryptBase):
     def __init__(self, certs=None, digest_algorithm=None, sig_algorithm=None, value=None, json=None):
         super(Signature, self).__init__("signature", json, ver=None)
@@ -316,29 +290,25 @@ class Signature(CryptBase):
 
         return cert.PublicKey.verify(data, self.Value, self.SignatureAlgorithm, self.DigestAlgorithm)
 
-@Props("Signature", "SignedData")
+@Props("Signature", base64="SignedData")
 class Signed(CryptBase):
     def __init__(self, data=None, contentType="text/plain", json=None):
         super(Signed, self).__init__("signed", json)
         if data:
             if not contentType:
                 raise CryptoException("Must supply content type with data")
-            inner = {
-                'ContentType':contentType,
-                'Date': get_date(),
-                'Data': data
-                }
-            self.SignedData = b64(JSONdumps(inner))
+            inner = InnerMessage(data, contentType)
+            self.SignedData = JSONdumps(inner)
 
     def sign(self, key, certs, digest_algorithm="SHA1"):
-        val = key.sign(b64d(self.SignedData), digest_algorithm)
+        val = key.sign(self.SignedData, digest_algorithm)
         self.Signature = Signature(certs, digest_algorithm, key.Algorithm, val)
 
     def verify(self):
         # TODO: check dates, nonces, etc?
-        return self.Signature.verify(b64d(self.SignedData))
+        return self.Signature.verify(self.SignedData)
 
-@Props("Name", "EncryptionAlgorithm", "PkixCertificateHash", "EncryptionKey")
+@Props("Name", "EncryptionAlgorithm", "PkixCertificateHash", long="EncryptionKey")
 class Recipient(CryptBase):
     def __init__(self, cert=None, key=None, json=None):
         super(Recipient, self).__init__("recipient", json, ver=None)
@@ -347,38 +317,48 @@ class Recipient(CryptBase):
             self.EncryptionAlgorithm = cert.PublicKey.Algorithm
             self.PkixCertificateHash = cert.hash()
         if key:
-            self.EncryptionKey = b64(key)
+            self.EncryptionKey = key
 
-@Props("Algorithm", "IV")
+@Props("Algorithm", long="IV")
 class Encryption(CryptBase):
     def __init__(self, algorithm=None, iv=None, json=None):
         super(Encryption, self).__init__("encryption", json, ver=None)
         if algorithm:
             self.Algorithm = algorithm
         if iv:
-            self.IV = b64(iv)
+            self.IV = iv
 
-@Props("Algorithm", "Value")
+@Props("Algorithm", long="Value")
 class Integrity(CryptBase):
     def __init__(self, algorithm=None, value=None, json=None):
         super(Integrity, self).__init__("integrity", json, ver=None)
         if algorithm:
             self.Algorithm = algorithm
         if value:
-            self.Value = b64(value)
+            self.Value = value
 
-@Props("Recipients", "Encryption", "Integrity", "EncryptedData")
+@Props("ContentType", "Data", date="Date")
+class InnerMessage(CryptBase):
+    def __init__(self, data=None, contentType=None, date=None, json=None):
+        super(InnerMessage, self).__init__("inner", json)
+        if data:
+            self.Data = data
+        if contentType:
+            self.ContentType = contentType
+        if date:
+            self.Date = date
+        elif not json:
+            self.Date = get_date()
+
+@Props("Recipients", "Encryption", "Integrity", base64="EncryptedData")
 class Encrypted(CryptBase):
     def __init__(self, data=None, contentType="text/plain", json=None):
         super(Encrypted, self).__init__("encrypted", json)
         if data:
             if not contentType:
                 raise CryptoException("Must supply content type with data")
-            self.inner = {
-                'ContentType':"text/plain",
-                'Date': get_date(),
-                'Data': data
-                }
+            self.inner = InnerMessage(data, contentType)
+
     def encrypt(self, toCerts, encryption_algorithm="AES-256-CBC", integrity_algorithm="HMAC-SHA1"):
         (alg, size, mode) = getAlgorithm(encryption_algorithm)
         iv = generateIV(encryption_algorithm)
@@ -387,7 +367,7 @@ class Encrypted(CryptBase):
         sk = generateSessionKey(encryption_algorithm)
         mek = kdf(sk, encryption_algorithm)
         ciphertext = symmetricEncrypt(mek, iv, encryption_algorithm, JSONdumps(self.inner))
-        self.EncryptedData = b64(ciphertext)
+        self.EncryptedData = ciphertext
 
         rcpts = []
         for c in toCerts:
@@ -408,10 +388,10 @@ class Encrypted(CryptBase):
                 break
         if not rcpt:
             raise CryptoException("Name not found")
-        sk = b64d(rcpt.EncryptionKey)
+        sk = rcpt.EncryptionKey
         sk = privKey.decrypt(sk)
-        ciphertext = b64d(self.EncryptedData)
-        iv = b64d(self.Encryption.IV)
+        ciphertext = self.EncryptedData
+        iv = self.Encryption.IV
         encryption_algorithm = self.Encryption.Algorithm
         mek = kdf(sk, encryption_algorithm)
         plaintext = symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
@@ -423,7 +403,7 @@ class Encrypted(CryptBase):
         integrity_algorithm = self.Integrity.Algorithm
         mik = kdf(sk, integrity_algorithm)
         mac = hmac(mik, integrity_algorithm, ciphertext)
-        if mac != b64d(self.Integrity.Value):
+        if mac != self.Integrity.Value:
             raise CryptoException("Invalid HMAC")
 
         return res
