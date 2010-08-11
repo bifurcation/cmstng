@@ -23,7 +23,6 @@ def get_date(offset=0):
     n = datetime.datetime.utcnow()
     if offset:
         n += datetime.timedelta(offset)
-        
     return n
 
 def fmt_date(d):
@@ -89,7 +88,10 @@ class CryptoException(Exception):
     pass
 
 class Props(object):
-    "A decorator that adds a JSON access property for each of the strings that are passed."
+    """A decorator that adds a JSON access property for each of the strings that are passed.
+Each property can have a type of plain, date, base64, or long.  Types
+other than plain case encoding to happen on set, and decoding to
+happen on get.  The default type is plain."""
     def __init__(self, *args, **kwargs):
         self.map = {}
         for t in args:
@@ -236,7 +238,13 @@ class PublicKey(CryptBase):
         return self.key.verify(dig, (signature, 1))
 
     def encrypt(self, plaintext):
-        return self.key.encrypt(plaintext, None)[0]
+        # size is keysize_in_bits-1 for some reason.
+        padded = pad_1_5(plaintext, (self.key.size() + 1)/8)
+        ret = self.key.encrypt(padded, None)
+        return ret[0]
+
+    def genCertificate(self, name, validityDays=365):
+        return Certificate(name=name, pubkey=self, validityDays=validityDays)
 
 @Props("PublicKey", "Algorithm", long="PrivateExponent")
 class PrivateKey(CryptBase):
@@ -261,7 +269,8 @@ class PrivateKey(CryptBase):
         return self.key.sign(dig, None)[0]
 
     def decrypt(self, ciphertext):
-        return self.key.decrypt(ciphertext)
+        plain = self.key.decrypt(ciphertext)
+        return unpad_1_5(plain)
 
 @Props("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", long="Value")
 class Signature(CryptBase):
@@ -308,7 +317,7 @@ class Signed(CryptBase):
         # TODO: check dates, nonces, etc?
         return self.Signature.verify(self.SignedData)
 
-@Props("Name", "EncryptionAlgorithm", "PkixCertificateHash", long="EncryptionKey")
+@Props("Name", "EncryptionAlgorithm", "PkixCertificateHash", base64="EncryptionKey")
 class Recipient(CryptBase):
     def __init__(self, cert=None, key=None, json=None):
         super(Recipient, self).__init__("recipient", json, ver=None)
@@ -319,7 +328,7 @@ class Recipient(CryptBase):
         if key:
             self.EncryptionKey = key
 
-@Props("Algorithm", long="IV")
+@Props("Algorithm", base64="IV")
 class Encryption(CryptBase):
     def __init__(self, algorithm=None, iv=None, json=None):
         super(Encryption, self).__init__("encryption", json, ver=None)
@@ -328,7 +337,7 @@ class Encryption(CryptBase):
         if iv:
             self.IV = iv
 
-@Props("Algorithm", long="Value")
+@Props("Algorithm", base64="Value")
 class Integrity(CryptBase):
     def __init__(self, algorithm=None, value=None, json=None):
         super(Integrity, self).__init__("integrity", json, ver=None)
@@ -366,10 +375,14 @@ class Encrypted(CryptBase):
 
         sk = generateSessionKey(encryption_algorithm)
         mek = kdf(sk, encryption_algorithm)
-        ciphertext = symmetricEncrypt(mek, iv, encryption_algorithm, JSONdumps(self.inner))
+        js = JSONdumps(self.inner)
+
+        ciphertext = symmetricEncrypt(mek, iv, encryption_algorithm, js)
         self.EncryptedData = ciphertext
 
         rcpts = []
+        if not isinstance(toCerts, (list, tuple)):
+            toCerts = (toCerts,)
         for c in toCerts:
             key_exchange = c.PublicKey.encrypt(sk)
             r = Recipient(c, key_exchange)
@@ -379,6 +392,7 @@ class Encrypted(CryptBase):
         mik = kdf(sk, integrity_algorithm)
         mac = hmac(mik, integrity_algorithm, ciphertext)
         self.Integrity = Integrity(integrity_algorithm, mac)
+        return (mek, iv)
 
     def decrypt(self, privKey, name):
         rcpt = None
@@ -388,15 +402,19 @@ class Encrypted(CryptBase):
                 break
         if not rcpt:
             raise CryptoException("Name not found")
-        sk = rcpt.EncryptionKey
-        sk = privKey.decrypt(sk)
+
+        ek = rcpt.EncryptionKey
+        sk = privKey.decrypt(ek)
         ciphertext = self.EncryptedData
         iv = self.Encryption.IV
+
         encryption_algorithm = self.Encryption.Algorithm
         mek = kdf(sk, encryption_algorithm)
         plaintext = symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
+        if (not plaintext) or (len(plaintext) < 20) or (plaintext[0] != '{') or (plaintext[-1] != '}'):
+            raise CryptoException("Bad decrypt: " + repr(iv) + ' ' +  repr(plaintext))
         res = JSONloads(plaintext)
-        dt = res["Date"] = parse_date(res["Date"])
+        dt = res.Date
         if dt > get_date(): # TODO: clock skew
             raise CryptoException("Message from the future")
 
@@ -407,22 +425,6 @@ class Encrypted(CryptBase):
             raise CryptoException("Invalid HMAC")
 
         return res
-
-class KeyPair(object):
-    def __init__(self, name, size=1024):
-        self.name = name
-        self.priv = RSA.generate(size)
-
-    @property
-    def Pubkey(self):
-        return PublicKey(key=self.priv.publickey())
-
-    @property
-    def Privkey(self):
-        return PrivateKey(key=self.priv)
-
-    def genCertificate(self, validityDays=365):
-        return Certificate(name=self.name, pubkey=self.Pubkey, validityDays=validityDays)
 
 __algorithms__ = {
     "AES-256-CBC": (Crypto.Cipher.AES, 256 / 8, Crypto.Cipher.AES.MODE_CBC),
@@ -447,9 +449,32 @@ def unpad(data):
     s = ord(data[-1])
     return data[:-s]
 
+def pad_1_5(msg, k):
+    if len(msg) > (k - 11):
+        raise CryptoException("Message too long, max=" + str(k - 11) + " actual: " + str(len(msg)))
+    # rfc3447, section 7.2.1
+    pslen = k - len(msg) - 3
+    ps = generateRandomNonZero(pslen)
+    return "\x00\x02" + ps + "\x00" + msg
+
+def unpad_1_5(msg):
+    if msg[0:2] == '\x00\x02':
+        offset = msg.find("\x00", 2)
+        if offset<2:
+            raise CryptoException("Invalid padding (no zero)")
+        return msg[offset+1:]
+    if msg[0] == "\x02":
+        offset = msg.find("\x00", 1)
+        if offset<2:
+            raise CryptoException("Invalid padding (no zero)")
+        return msg[offset+1:]
+        
+    raise CryptoException("Invalid padding prefix (perhaps invalid decryption?): " + repr(msg))
+
 def symmetricEncrypt(key, iv, algorithm, data):
     (alg, size, mode) = getAlgorithm(algorithm)
     assert(len(key) == size)
+    assert(len(iv) == alg.block_size)
     cipher = alg.new(key, mode, iv)
     return cipher.encrypt(pad(data, alg.block_size))
 
@@ -480,6 +505,13 @@ def hmac_sha1(key, data):
 rand = Random.new()
 def generateRandom(octets):
     return rand.read(octets)
+
+def generateRandomNonZero(octets):
+    r = list(rand.read(octets))
+    for i in range(octets):
+        if r[i] == '\x00':
+            r[i] = '\x01' #ick
+    return "".join(r)
 
 def kdf(k, use):
     (alg, size, mode) = getAlgorithm(use)
@@ -517,24 +549,22 @@ def PBKDF2_HMAC_SHA1(pw, salt, iterations, desired):
     return ret[:dkLen]
 
 if __name__ == '__main__':
-    pair = KeyPair("joe", 384)
-    priv = pair.Privkey
-    print priv
+    priv = PrivateKey(size=512)
+    print "priv=" + str(priv)
 
-    cert = pair.genCertificate(7)
-    print cert
-    print cert.validate()
-    pub = cert.PublicKey
-    ciphertext = pub.encrypt("foo")
-    print priv.decrypt(ciphertext)
+    pub = priv.PublicKey
+    print "pub=" + str(pub)
+    cert = pub.genCertificate("joe@example.com", 7)
+    print "cert=" + str(cert)
+    assert(cert.validate())
 
     s = Signed("Foo")
-    s.sign(priv, [cert,])
-    print s
-
-    print "Verify: " + str(s.verify())
+    s.sign(priv, cert)
+    print "sig=" + str(s)
+    assert(s.verify())
 
     e = Encrypted("BAR")
-    e.encrypt([cert,])
-    print e
-    print e.decrypt(priv, "joe")
+    e.encrypt(cert)
+    print "encrypted=" + str(e)
+    d = e.decrypt(priv, "joe@example.com")
+    assert(d.Data == "BAR")

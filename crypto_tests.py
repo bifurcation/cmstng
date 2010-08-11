@@ -3,17 +3,12 @@ import crypto
 import Crypto
 
 class TestCertificate(unittest.TestCase):
-    keysize = 256
+    keysize = 384
     name = "joe@example.com"
 
     def setUp(self):
-        self.pair = crypto.KeyPair(self.name, self.keysize)
-        self.priv = self.pair.Privkey
-        self.cert = self.pair.genCertificate()
-
-    def test_pair(self):
-        self.assertEqual(self.pair.priv.size(), self.keysize-1)
-        self.assertEqual(self.pair.name, self.name)
+        self.priv = crypto.PrivateKey(size=self.keysize)
+        self.cert = self.priv.PublicKey.genCertificate(name=self.name)
 
     def test_pad(self):
         msg = ""
@@ -23,6 +18,22 @@ class TestCertificate(unittest.TestCase):
             unpad = crypto.unpad(pad)
             self.assertEqual(msg, unpad)
             msg += chr(32 + i)
+
+    def test_pad_1_5(self):
+        msg = "foo"
+        pad = crypto.pad_1_5(msg, 16)
+        self.assertTrue(pad[0:2] == "\x00\x02")
+        unpad = crypto.unpad_1_5(pad)
+        self.assertEquals(msg, unpad)
+        unpad = crypto.unpad_1_5(pad[1:])
+        self.assertEquals(msg, unpad)
+        msg = "\x00\x00\x00\x00"
+        pad = crypto.pad_1_5(msg, 16)
+        self.assertTrue(pad[0:2] == "\x00\x02")
+        unpad = crypto.unpad_1_5(pad)
+        self.assertEquals(msg, unpad)
+        unpad = crypto.unpad_1_5(pad[1:])
+        self.assertEquals(msg, unpad)
 
     def test_alg(self):
         (alg, size, mode) = crypto.getAlgorithm("AES-256-CBC")
@@ -36,12 +47,34 @@ class TestCertificate(unittest.TestCase):
         self.assertEqual(mode, Crypto.Cipher.AES.MODE_CBC)        
 
     def test_pub_encrypt(self):
-        msg = "squeamish"
+        msg = "squeamish_pub"
         pub = self.cert.PublicKey
         ciphertext = pub.encrypt(msg)
         plaintext = self.priv.decrypt(ciphertext)
         self.assertEqual(msg, plaintext)
-    
+
+        msg = "\x00\x00\x00\x00"
+        ciphertext = pub.encrypt(msg)
+        plaintext = self.priv.decrypt(ciphertext)
+        self.assertEqual(msg, plaintext)
+
+        for i in range(128):
+            msg = "message: " + str(i)
+            ciphertext = pub.encrypt(msg)
+            plaintext = self.priv.decrypt(ciphertext)
+            self.assertEqual(msg, plaintext)
+
+    def test_sizes(self):
+        msg = "squea"
+        for i in range(7,10):
+            sz = 2**i
+            priv = crypto.PrivateKey(size=sz)
+            pub = priv.PublicKey
+            ciphertext = pub.encrypt(msg)
+            plaintext = priv.decrypt(ciphertext)
+            self.assertEqual(msg, plaintext)
+
+
     def test_iv(self):
         alg = "AES-256-CBC"
         iv = crypto.generateIV(alg)
@@ -55,7 +88,7 @@ class TestCertificate(unittest.TestCase):
         self.assertEqual(len(mek), 32)
 
     def test_sym_encrypt(self):
-        msg = "squeamish"
+        msg = "squeamish_sym"
         key = "12345678901234561234567890123456"
         iv = "1234567890123456"
         alg = "AES-256-CBC"
@@ -140,6 +173,15 @@ class TestCertificate(unittest.TestCase):
         sigj = crypto.JSONdumps(sig)
         sigjl = crypto.JSONloads(sigj)
         self.assertTrue(sig == sigjl)
+
+    def test_Encrypted(self):
+        msg = "squeamish"
+        e = crypto.Encrypted(msg)
+        (mek, iv1) = e.encrypt(self.cert)
+        self.assertEqual(iv1, e.Encryption.IV)
+        self.assertEqual(self.priv.PublicKey, self.cert.PublicKey)
+        plain = e.decrypt(self.priv, self.name)
+        self.assertEqual(msg, plain.Data)
 
 if __name__ == '__main__':
     unittest.main()
