@@ -35,6 +35,18 @@ class TestCertificate(unittest.TestCase):
         unpad = crypto.unpad_1_5(pad[1:])
         self.assertEquals(msg, unpad)
 
+    def test_pad_oaep(self):
+        msg = "foo"
+        k = 48
+        pad = crypto.pad_oaep_sha1(msg, k)
+        self.assertTrue(pad[0] == "\x00")
+        unpad = crypto.unpad_oaep_sha1(pad, k)
+        self.assertEquals(msg, unpad)
+        msg = "\x00\x00\x00\x00"
+        pad = crypto.pad_oaep_sha1(msg, k)
+        unpad = crypto.unpad_oaep_sha1(pad, k)
+        self.assertEquals(msg, unpad)
+
     def test_alg(self):
         (alg, size, mode) = crypto.getAlgorithm("AES-256-CBC")
         self.assertEqual(alg.__name__, "Crypto.Cipher.AES")
@@ -176,6 +188,14 @@ class TestCertificate(unittest.TestCase):
 
     def test_Encrypted(self):
         msg = "squeamish"
+        e = crypto.Encrypted(msg)
+        (mek, iv1) = e.encrypt(self.cert)
+        self.assertEqual(iv1, e.Encryption.IV)
+        self.assertEqual(self.priv.PublicKey, self.cert.PublicKey)
+        plain = e.decrypt(self.priv, self.name)
+        self.assertEqual(msg, plain.Data)
+
+        msg = u"\u216B"
         e = crypto.Encrypted(msg)
         (mek, iv1) = e.encrypt(self.cert)
         self.assertEqual(iv1, e.Encryption.IV)

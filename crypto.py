@@ -471,6 +471,54 @@ def unpad_1_5(msg):
         
     raise CryptoException("Invalid padding prefix (perhaps invalid decryption?): " + repr(msg))
 
+# rfc3447#appendix-B.2.1
+def MGF1_sha1(mgfSeed, maskLen):
+    hLen = 20
+    # Huh?
+    # If maskLen > 2^32 hLen, output "mask too long" and stop.
+    T = ""
+    for counter in range(0,int(math.ceil(float(maskLen) / float(hLen)))):
+        C = struct.pack("!I", counter)
+        T += hashlib.sha1(mgfSeed + C).digest()
+    return T[:maskLen]
+
+# rfc 3447, section 7.1.1
+def pad_oaep_sha1(msg, k):
+    hLen = 20
+    L = ""
+    mLen = len(msg)
+    if mLen > (k - 2*hLen - 2):
+        raise CryptoException("Message too long, max=" + str(k - 2*hLen - 2) + " actual: " + str(mLen))
+    lHash = hashlib.sha1(L).digest()
+    PS = "\x00" * (k - mLen - 2*hLen - 2)
+    DB = lHash + PS + "\x01" + msg
+    seed = generateRandom(hLen)
+    dbMask = MGF1_sha1(seed, k - hLen - 1)
+    maskedDB = xors(DB, dbMask)
+    seedMask = MGF1_sha1(maskedDB, hLen)
+    maskedSeed = xors(seed, seedMask)
+    return "\x00" + maskedSeed + maskedDB
+
+# rfc 3447, section 7.1.2
+def unpad_oaep_sha1(EM, k):
+    hLen = 20
+    L = ""
+    lHash = hashlib.sha1(L).digest()
+    Y = EM[0]
+    maskedSeed = EM[1:1+hLen]
+    maskedDB = EM[1+hLen:]
+    seedMask = MGF1_sha1(maskedDB, hLen)
+    seed = xors(maskedSeed, seedMask)
+    dbMask = MGF1_sha1(seed, k - hLen - 1)
+    DB = xors(maskedDB, dbMask)
+    lHashP = DB[:hLen]
+    i = hLen
+    while DB[i] == "\x00":
+        i += 1
+    if DB[i] != "\x01":
+        raise CryptoException("Bad OAEP padding")
+    return DB[i+1:]
+    
 def symmetricEncrypt(key, iv, algorithm, data):
     (alg, size, mode) = getAlgorithm(algorithm)
     assert(len(key) == size)

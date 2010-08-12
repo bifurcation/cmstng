@@ -22,7 +22,7 @@ var signed_msg = {  // MIME-Type: application/signed+json
                      })};
 
 var encrypted_msg = {  // MIME-Type: application/encrypted+json
-	"Type":"encryption",
+	"Type":"encrypted",
     "Version":"1.0",
     "Recipients":[
         {
@@ -42,6 +42,7 @@ var encrypted_msg = {  // MIME-Type: application/encrypted+json
         }
     ],
     "Encryption":{
+		"Type":"encryption",
         "Algorithm":"AES-256-CBC",
         "IV":b64(IV)  // May need integrity IV also
 // may need a key expansion transform, may go in alg
