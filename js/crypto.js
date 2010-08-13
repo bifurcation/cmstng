@@ -59,7 +59,7 @@
     }
     
     // load the files
-    var loadit = function(dom, list, path) {
+    var loadit = function(list, path) {
         list = list || [];
         
         for (var idx = 0; idx < list.length; idx++) {
@@ -74,12 +74,10 @@
             if (path === undefined) {
                 continue;
             }
-        
-            var tag = document.createElement("script");
-            tag.type = "text/javascript";
-            tag.src = path + val;
             
-            dom.parentElement.insertBefore(tag);
+            //document.write ensures the scripts completely load in order
+            var tag = "<script type='text/javascript' src='" + path + val + "'></script>";
+            document.write(tag);
         }
     };
     
@@ -87,7 +85,7 @@
     var info = pathit("crypto.js");
     
     // seutp dependencies...
-    loadit(info.dom, deps);
+    loadit(deps);
     // setup files...
-    loadit(info.dom, sources, info.path);
+    loadit(sources, info.path);
 })();

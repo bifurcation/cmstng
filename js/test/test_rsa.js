@@ -27,54 +27,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-(function(){
+$(document).ready(function() {
+    module("cmstng/rsa");
+    
+    test("octet/integer conversion", function() {
+        var osExp, osAct, ip;
+        
+        osExp = "1234";
+        ip = cmstng.RSA.OS2IP(osExp);
+        osAct = cmstng.RSA.I2OSP(ip, osExp.length);
+        equals(osExp, osAct, "basic octet strings equal");
+        
+        osExp = "\x00\x01\x02\x03";
+        ip = cmstng.RSA.OS2IP(osExp);
+        osAct = cmstng.RSA.I2OSP(ip, osExp.length);
+        equals(osExp, osAct, "0-start octet strings equal");
+        
+        osExp = "";
+        for (var idx = 0; idx < 16; idx++) {
+            osExp += String.fromCharCode(Math.random() * 256);
+        }
+        ip = cmstng.RSA.OS2IP(osExp);
+        osAct = cmstng.RSA.I2OSP(ip, osExp.length);
+        equals(osExp, osAct, "random octet strings equal");
 
-var FACTOR_256 = BigInteger(256);
-
-cmstng.RSA = {
-    /**
-     * Converts a octet string into a non-negative integer.
-     *
-     * @param   {String} os The octet string to convert
-     * @return  {BigInteger} The non-negative integer for {os}
-     */
-    OS2IP: function(os) {
-        var ip = BigInteger();
-
-        if (!os) {
-            return ip;
+        var caught;
+        try {
+            caught = false;
+            var ip = cmstng.RSA.I2OSP(Math.pow(256, 16), 4);
+        } catch (ex) {
+            caught = (ex instanceof TypeError) && (ex.message == "integer too large");
         }
-        
-        for (var idx = 0; idx < os.length; idx++) {
-            var b = os.charCodeAt(idx);
-            ip = BigInteger(b).multiply(FACTOR_256.pow(idx)).add(ip);
-        }
-        
-        return ip;
-    },
-    /**
-     * Converts a non-negative integer into an octet string.
-     *
-     * @param   {BigInteger|Integer|String} ip number to convert
-     * @param   {Integer} len The maximum length of the octet string
-     * @return  {String} The octet string for {ip}
-     * @throws  {TypeError} if {ip} is greater than 256^{len}
-     */
-    I2OSP: function(ip, len) {
-        var num = BigInteger(ip);
-        if (num.compare(FACTOR_256.pow(len)) > 0) {
-            throw new TypeError("integer too large");
-        }
-        
-        var os = "";
-        for (var idx = len; idx > 0; idx--) {
-            var parts = num.divRem(FACTOR_256.pow(idx - 1));
-            var b = parts[0].toJSValue();
-            os = String.fromCharCode(b) + os;
-            num = parts[1];
-        }
-        
-        return os;
-    }
-};
-})();
+        ok(caught, "expected TypeError('integer too large') thrown");
+    });
+});
