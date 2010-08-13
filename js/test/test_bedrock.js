@@ -27,22 +27,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-// for minimizing namespace pollution
-(function() {
-
-if ("jsms" in window) {
-    return;
-}
-
-/**
- * @namespace
- *
- * CMSTNG is a library for encrypting and signing objects.
- */
-var cmstng = {
-    version: "$version$"
-};
-
-window.cmstng = cmstng;
-
-})();
+$(document).ready(function() {
+    module("cmstng/bedrock");
+    
+    test("cmstng namespace", function() {
+        ok(typeof(cmstng) == "object", "cmstng namespace exists");
+    });
+});

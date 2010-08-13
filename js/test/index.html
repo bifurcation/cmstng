@@ -30,19 +30,18 @@ POSSIBILITY OF SUCH DAMAGE.
 -->
 <html>
     <head>
-        <title>Crypto Unit Tests</title>
+        <title>CMSTNG Unit Tests</title>
+        <!-- setup core -->
         <script type='text/javascript'
                 src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js'></script>
+        <script type='text/javascript'
+                src='../crypto.js'></script>
+
+        <!-- setup tests -->
         <script type="text/javascript"
                 src="http://github.com/jquery/qunit/raw/master/qunit/qunit.js"></script>
         <script type="text/javascript"
-                src="http://github.com/silentmatt/javascript-biginteger/raw/master/biginteger.js"></script>
-        <script type='text/javascript'
-                src='../crypto.js'></script>
-        <script type='text/javascript'>
-$(document).ready(function() {
-});
-        </script>
+                src="test_bedrock.js"></script>
         
         <link type='text/css'
               rel='stylesheet'
@@ -50,7 +49,7 @@ $(document).ready(function() {
               href='http://github.com/jquery/qunit/raw/master/qunit/qunit.css' />
     </head>
     <body>
-        <h1 id="qunit-header">Crypto Unit Tests</h1>
+        <h1 id="qunit-header">CMSTNG Unit Tests</h1>
         <h2 id="qunit-banner"></h2>
         <h2 id="qunit-userAgent"></h2>
         <ol id="qunit-tests"></ol>
