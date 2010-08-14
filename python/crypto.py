@@ -9,6 +9,7 @@ import datetime
 import dateutil.parser
 import math
 import struct
+import operator
 
 version = "1.0"
 
@@ -45,15 +46,15 @@ def _JSONobj(d):
     if t:
         cons = {
             "certificate": Certificate,
-            "publickey": PublicKey,
-            "signed": Signed,
-            "signature":  Signature,
-            "encrypted":  Encrypted,
-            "recipient":  Recipient,
-            "encryption": Encryption,
-            "integrity":  Integrity,
-            "privatekey": PrivateKey,
-            "inner":      InnerMessage,
+            "encrypted":   Encrypted,
+            "encryption":  Encryption,
+            "inner":       InnerMessage,
+            "integrity":   Integrity,
+            "privatekey":  PrivateKey,
+            "publickey":   PublicKey,
+            "recipient":   Recipient,
+            "signature":   Signature,
+            "signed":      Signed,
         }.get(t, None)
         if cons:
             return cons(json=d)
@@ -518,6 +519,7 @@ def unpad_oaep_sha1(EM, k):
     if DB[i] != "\x01":
         raise CryptoException("Bad OAEP padding")
     return DB[i+1:]
+
     
 def symmetricEncrypt(key, iv, algorithm, data):
     (alg, size, mode) = getAlgorithm(algorithm)
@@ -565,9 +567,10 @@ def kdf(k, use):
     (alg, size, mode) = getAlgorithm(use)
     return PBKDF2_HMAC_SHA1(k, use, 64, size)
 
-def xors(s1, s2):
-    "xor 2 strings"
-    return ''.join([chr(ord(a) ^ ord(b)) for (a,b) in zip(s1, s2)])
+def xors(*args):
+    "xor 2 or more strings"
+    assert(len(args) > 1)
+    return ''.join([chr(reduce(operator.xor, map(ord,vals))) for vals in zip(*args)])
 
 def PBKDF2_HMAC_SHA1(pw, salt, iterations, desired):
     dkLen = desired
@@ -595,6 +598,30 @@ def PBKDF2_HMAC_SHA1(pw, salt, iterations, desired):
         ret += F(pw, salt, iterations, i + 1)
 
     return ret[:dkLen]
+
+def AES_XCBC_MAC(K, M):
+    # rfc3566, section 4
+    a = Crypto.Cipher.AES.new(K)
+    block = 16
+    k1 = a.encrypt("\x01" * block)
+    a1 = Crypto.Cipher.AES.new(K1)
+    k2 = a.encrypt("\x02" * block)
+    k3 = a.encrypt("\x03" * block)
+    E = "\x00" * block
+    numblocks = int(math.ceil(float(len(M)) / float(block)))
+    for i in range(numblocks-1):
+        mi = M[i*block:(i+1)*block]
+        E = a1.encrypt(xors(mi, E))
+    mn = M[(numblocks-1)*block:]
+    if len(mn) == block:
+        E = a1.encrypt(xors(xors(mn, E), k2))
+    else:
+        # Pad M[n] with a single "1" bit, followed by the number of
+        # "0" bits (possibly none) required to increase M[n]'s
+        # blocksize to 128 bits.
+        mn += "\x80" + ("\x00" * (block - len(mn) - 1))
+        assert(len(mn) == block)
+        E = a1.encrypt(xors(xors(mn, E), k2))
 
 if __name__ == '__main__':
     priv = PrivateKey(size=512)
