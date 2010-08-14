@@ -57,6 +57,11 @@ class TestCrypto(unittest.TestCase):
         unpad = crypto.unpad_oaep_sha1(pad, k)
         self.assertEquals(msg, unpad)
 
+    def test_P_SHA256(self):
+        msg = "slithy toves"
+        a = crypto.P_SHA256("secret", "AES-256-CBC", 40)
+        self.assertEquals(40, len(a))
+
     def test_alg(self):
         (alg, size, mode) = crypto.getAlgorithm("AES-256-CBC")
         self.assertEqual(alg.__name__, "Crypto.Cipher.AES")

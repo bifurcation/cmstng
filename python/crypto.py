@@ -552,6 +552,10 @@ def hmac_sha1(key, data):
     h = HMAC.new(key, data, hashlib.sha1)
     return h.digest()
 
+def hmac_sha256(key, data):
+    h = HMAC.new(key, data, hashlib.sha256)
+    return h.digest()
+
 rand = Random.new()
 def generateRandom(octets):
     return rand.read(octets)
@@ -565,7 +569,7 @@ def generateRandomNonZero(octets):
 
 def kdf(k, use):
     (alg, size, mode) = getAlgorithm(use)
-    return PBKDF2_HMAC_SHA1(k, use, 64, size)
+    return P_SHA256(k, use, size)
 
 def xors(*args):
     "xor 2 or more strings, octet by octet"
@@ -622,6 +626,15 @@ def AES_XCBC_MAC(K, M):
         mn += "\x80" + ("\x00" * (block - len(mn) - 1))
         assert(len(mn) == block)
         E = a1.encrypt(xors(xors(mn, E), k2))
+
+
+def P_SHA256(secret, seed, k):
+    A = seed
+    p = hmac_sha256(secret, A + seed)
+    while len(p) < k:
+        A = hmac_sha256(secret, A + seed)
+        p += A
+    return p[:k]
 
 if __name__ == '__main__':
     priv = PrivateKey(size=512)
