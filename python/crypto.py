@@ -86,19 +86,14 @@ class CryptBase(object):
     a dictionary that holds their state in a form easy to be
     translated to JSON.  Getters and setters modify the JSON
     dictionary."""
-    def __init__(self, objectType, json=None, ver=version):
+    def __init__(self, objectType, json=None):
         if json:
             if objectType:
                 # I *think* this is always a programming error
                 assert(json["Type"] == objectType)
-            if ver:
-                if json.get("Version", None) != ver:
-                    raise CryptoException("Invalid version")
             self.json_ = json
         elif objectType:
             self.json_ = {"Type":objectType}
-            if ver:
-                self.json_["Version"] = ver
         else:
             self.json_ = {}
 
@@ -115,12 +110,6 @@ class CryptBase(object):
         r = cmp(self.json_["Type"], other.json_["Type"])
         if r:
             return r
-        if hasattr(self, "Version") != hasattr(other, "Version"):
-            return -1
-        if hasattr(self, "Version"):
-            r = cmp(self.json_["Version"], other.json_["Version"])
-            if r:
-                return r
 
         for p in self.Props:
             x = getattr(self, p)
@@ -144,8 +133,28 @@ class CryptBase(object):
     def __str__(self):
         return JSONdumps(self.json_, indent=2)
 
+@Props("Version")
+class CryptVersion(CryptBase):
+    def __init__(self, objectType, json=None, ver=version):
+        super(CryptVersion, self).__init__(objectType, json)
+        if json:
+            if json.get("Version", None) != ver:
+                raise CryptoException("Invalid version")
+        elif objectType:
+            self.json_["Version"] = ver
+
+    def __cmp__(self, other):
+        r = super(CryptVersion, self).__cmp__(other)
+        if r:
+            return r
+        r = cmp(self.Version, other.Version)
+        if r:
+            return r
+
+        return 0
+
 @Props("Name", "PublicKey", date=("NotBefore", "NotAfter"))
-class Certificate(CryptBase):
+class Certificate(CryptVersion):
     def __init__(self, name=None, pubkey=None, validityDays=None, json=None):
         super(Certificate, self).__init__("certificate", json)
 
@@ -177,7 +186,7 @@ class Certificate(CryptBase):
 @Props("Algorithm", long=("RsaExponent", "RsaModulus"))
 class PublicKey(CryptBase):
     def __init__(self, key=None, json=None):
-        super(PublicKey, self).__init__("publickey", json, ver=None)
+        super(PublicKey, self).__init__("publickey", json)
         if key:
             self.key = key
             self.RsaExponent = key.e
@@ -202,7 +211,7 @@ class PublicKey(CryptBase):
         return Certificate(name=name, pubkey=self, validityDays=validityDays)
 
 @Props("PublicKey", "Algorithm", long="PrivateExponent")
-class PrivateKey(CryptBase):
+class PrivateKey(CryptVersion):
     def __init__(self, key=None, size=1024, json=None):
         super(PrivateKey, self).__init__("privatekey", json)
         if not json:
@@ -230,7 +239,7 @@ class PrivateKey(CryptBase):
 @Props("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", long="Value")
 class Signature(CryptBase):
     def __init__(self, certs=None, digest_algorithm=None, sig_algorithm=None, value=None, json=None):
-        super(Signature, self).__init__("signature", json, ver=None)
+        super(Signature, self).__init__("signature", json)
         if certs:
             if not isinstance(certs, (list, tuple)):
                 certs = (certs,)
@@ -255,7 +264,7 @@ class Signature(CryptBase):
         return cert.PublicKey.verify(data, self.Value, self.SignatureAlgorithm, self.DigestAlgorithm)
 
 @Props("Signature", base64="SignedData")
-class Signed(CryptBase):
+class Signed(CryptVersion):
     def __init__(self, data=None, contentType="text/plain", json=None):
         super(Signed, self).__init__("signed", json)
         if data:
@@ -275,7 +284,7 @@ class Signed(CryptBase):
 @Props("Name", "EncryptionAlgorithm", "PkixCertificateHash", base64="EncryptionKey")
 class Recipient(CryptBase):
     def __init__(self, cert=None, key=None, json=None):
-        super(Recipient, self).__init__("recipient", json, ver=None)
+        super(Recipient, self).__init__("recipient", json)
         if cert:
             self.Name = cert.Name
             self.EncryptionAlgorithm = cert.PublicKey.Algorithm
@@ -286,7 +295,7 @@ class Recipient(CryptBase):
 @Props("Algorithm", base64="IV")
 class Encryption(CryptBase):
     def __init__(self, algorithm=None, iv=None, json=None):
-        super(Encryption, self).__init__("encryption", json, ver=None)
+        super(Encryption, self).__init__("encryption", json)
         if algorithm:
             self.Algorithm = algorithm
         if iv:
@@ -295,14 +304,14 @@ class Encryption(CryptBase):
 @Props("Algorithm", base64="Value")
 class Integrity(CryptBase):
     def __init__(self, algorithm=None, value=None, json=None):
-        super(Integrity, self).__init__("integrity", json, ver=None)
+        super(Integrity, self).__init__("integrity", json)
         if algorithm:
             self.Algorithm = algorithm
         if value:
             self.Value = value
 
 @Props("ContentType", "Data", date="Date")
-class InnerMessage(CryptBase):
+class InnerMessage(CryptVersion):
     def __init__(self, data=None, contentType=None, date=None, json=None):
         super(InnerMessage, self).__init__("inner", json)
         if data:
@@ -315,7 +324,7 @@ class InnerMessage(CryptBase):
             self.Date = get_date()
 
 @Props("Recipients", "Encryption", "Integrity", base64="EncryptedData")
-class Encrypted(CryptBase):
+class Encrypted(CryptVersion):
     def __init__(self, data=None, contentType="text/plain", json=None):
         super(Encrypted, self).__init__("encrypted", json)
         if data:
