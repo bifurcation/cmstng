@@ -2,7 +2,7 @@ import unittest
 import crypto
 import Crypto
 
-class TestCertificate(unittest.TestCase):
+class TestCrypto(unittest.TestCase):
     keysize = 384
     name = "joe@example.com"
 
@@ -10,6 +10,16 @@ class TestCertificate(unittest.TestCase):
         self.priv = crypto.PrivateKey(size=self.keysize)
         self.cert = self.priv.PublicKey.genCertificate(name=self.name)
 
+    def test_xors(self):
+        self.assertRaises(AssertionError, crypto.xors)
+        self.assertRaises(AssertionError, crypto.xors, "")
+        self.assertEqual("", crypto.xors("", ""))
+        self.assertEqual("", crypto.xors("", "", ""))
+        self.assertEqual("", crypto.xors("", "", ""))
+        self.assertEqual("\x01", crypto.xors("\x00", "\x01"))
+        self.assertEqual("\x00", crypto.xors("\x00", "\x01", "\x01"))
+        self.assertEqual("\x00\x01\x00", crypto.xors("\x00\x00\x00", "\x01\x00\x01", "\x01\x01\x01"))
+        
     def test_pad(self):
         msg = ""
         for i in range(65):
@@ -204,4 +214,5 @@ class TestCertificate(unittest.TestCase):
         self.assertEqual(msg, plain.Data)
 
 if __name__ == '__main__':
-    unittest.main()
+    import sys
+    unittest.main(argv=sys.argv)

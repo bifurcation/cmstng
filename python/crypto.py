@@ -568,7 +568,7 @@ def kdf(k, use):
     return PBKDF2_HMAC_SHA1(k, use, 64, size)
 
 def xors(*args):
-    "xor 2 or more strings"
+    "xor 2 or more strings, octet by octet"
     assert(len(args) > 1)
     return ''.join([chr(reduce(operator.xor, map(ord,vals))) for vals in zip(*args)])
 
