@@ -87,6 +87,7 @@ class CryptBase(object):
     translated to JSON.  Getters and setters modify the JSON
     dictionary."""
     def __init__(self, objectType, json=None):
+        super(CryptBase,self).__init__()
         if json:
             if objectType:
                 # I *think* this is always a programming error
@@ -99,6 +100,10 @@ class CryptBase(object):
 
     def JSON(self):
         return self.json_
+
+    @property
+    def JSONstr(self):
+        return JSONdumps(self.json_)
 
     @property
     def Base64(self):
@@ -152,6 +157,31 @@ class CryptVersion(CryptBase):
             return r
 
         return 0
+
+    def write(self, fp, indent=None):
+        def wj(p):
+            return json.dump(self, p, default=_JSONdefault, indent=indent)
+
+        if isinstance(fp, basestring):
+            f = open(fp, "w")
+            r = wj(f)
+            f.close()
+            return r
+        else:
+            return wj(fp)
+
+    @classmethod
+    def read(cls, fp):
+        def rj(p):
+            return json.load(p, object_hook=_JSONobj)
+
+        if isinstance(fp, basestring):
+            f = open(fp, "r")
+            r = rj(f)
+            f.close()
+            return r
+        else:
+            return rj(fp)
 
 @Props("Name", "PublicKey", date=("NotBefore", "NotAfter"))
 class Certificate(CryptVersion):
@@ -236,6 +266,11 @@ class PrivateKey(CryptVersion):
         plain = self.key.decrypt(ciphertext)
         return unpad_1_5(plain)
 
+    def encryptPair(self, key):
+        e = Encrypted(self.JSONstr, "text/json")
+        e.encrypt(key=key)
+        return e
+        
 @Props("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", long="Value")
 class Signature(CryptBase):
     def __init__(self, certs=None, digest_algorithm=None, sig_algorithm=None, value=None, json=None):
@@ -332,31 +367,55 @@ class Encrypted(CryptVersion):
                 raise CryptoException("Must supply content type with data")
             self.inner = InnerMessage(data, contentType)
 
-    def encrypt(self, toCerts, encryption_algorithm="AES-256-CBC", integrity_algorithm="HMAC-SHA1"):
+    def encrypt(self, toCerts=None, encryption_algorithm="AES-256-CBC", integrity_algorithm="HMAC-SHA1", key=None):
         (alg, size, mode) = getAlgorithm(encryption_algorithm)
         iv = generateIV(encryption_algorithm)
         self.Encryption = Encryption(encryption_algorithm, iv)
 
-        sk = generateSessionKey(encryption_algorithm)
+        if key:
+            sk = key
+        else:
+            sk = generateSessionKey(encryption_algorithm)
         mek = kdf(sk, encryption_algorithm)
         js = JSONdumps(self.inner)
 
         ciphertext = symmetricEncrypt(mek, iv, encryption_algorithm, js)
         self.EncryptedData = ciphertext
 
-        rcpts = []
-        if not isinstance(toCerts, (list, tuple)):
-            toCerts = (toCerts,)
-        for c in toCerts:
-            key_exchange = c.PublicKey.encrypt(sk)
-            r = Recipient(c, key_exchange)
-            rcpts.append(r)
-        self.Recipients = rcpts
+        if toCerts:
+            rcpts = []
+            if not isinstance(toCerts, (list, tuple)):
+                toCerts = (toCerts,)
+            for c in toCerts:
+                key_exchange = c.PublicKey.encrypt(sk)
+                r = Recipient(c, key_exchange)
+                rcpts.append(r)
+            self.Recipients = rcpts
 
         mik = kdf(sk, integrity_algorithm)
         mac = hmac(mik, integrity_algorithm, ciphertext)
         self.Integrity = Integrity(integrity_algorithm, mac)
-        return (mek, iv)
+
+    def symmetricDecrypt(self, key):
+        ciphertext = self.EncryptedData
+        iv = self.Encryption.IV
+
+        encryption_algorithm = self.Encryption.Algorithm
+        mek = kdf(key, encryption_algorithm)
+        plaintext = symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
+        if (not plaintext) or (len(plaintext) < 20) or (plaintext[0] != '{') or (plaintext[-1] != '}'):
+            raise CryptoException("Bad decrypt: " + repr(iv) + ' ' +  repr(plaintext))
+        res = JSONloads(plaintext)
+        dt = res.Date
+        if dt > get_date(): # TODO: clock skew
+            raise CryptoException("Message from the future")
+
+        integrity_algorithm = self.Integrity.Algorithm
+        mik = kdf(key, integrity_algorithm)
+        mac = hmac(mik, integrity_algorithm, ciphertext)
+        if mac != self.Integrity.Value:
+            raise CryptoException("Invalid HMAC")
+        return res
 
     def decrypt(self, privKey, name):
         rcpt = None
@@ -369,44 +428,39 @@ class Encrypted(CryptVersion):
 
         ek = rcpt.EncryptionKey
         sk = privKey.decrypt(ek)
-        ciphertext = self.EncryptedData
-        iv = self.Encryption.IV
-
-        encryption_algorithm = self.Encryption.Algorithm
-        mek = kdf(sk, encryption_algorithm)
-        plaintext = symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
-        if (not plaintext) or (len(plaintext) < 20) or (plaintext[0] != '{') or (plaintext[-1] != '}'):
-            raise CryptoException("Bad decrypt: " + repr(iv) + ' ' +  repr(plaintext))
-        res = JSONloads(plaintext)
-        dt = res.Date
-        if dt > get_date(): # TODO: clock skew
-            raise CryptoException("Message from the future")
-
-        integrity_algorithm = self.Integrity.Algorithm
-        mik = kdf(sk, integrity_algorithm)
-        mac = hmac(mik, integrity_algorithm, ciphertext)
-        if mac != self.Integrity.Value:
-            raise CryptoException("Invalid HMAC")
+        res = self.symmetricDecrypt(sk)
 
         return res
 
+    def decryptJSON(self, key):
+        res = self.symmetricDecrypt(key)
+        if res.ContentType != "text/json":
+            raise CryptoException("Invalid data type, not 'text/json'")
+        js = JSONloads(res.Data)
+        return js
+
 if __name__ == '__main__':
     priv = PrivateKey(size=512)
-    print "priv=" + str(priv)
+    print "var priv=" + str(priv) + ";"
 
     pub = priv.PublicKey
-    print "pub=" + str(pub)
+    print "var pub=" + str(pub) + ";"
     cert = pub.genCertificate("joe@example.com", 7)
     print "cert=" + str(cert)
     assert(cert.validate())
 
     s = Signed("Foo")
     s.sign(priv, cert)
-    print "sig=" + str(s)
+    print "var sig=" + str(s) + ";"
     assert(s.verify())
 
     e = Encrypted("BAR")
     e.encrypt(cert)
-    print "encrypted=" + str(e)
+    print "var encrypted=" + str(e) + ";"
     d = e.decrypt(priv, "joe@example.com")
     assert(d.Data == "BAR")
+
+    pr = priv.encryptPair("test")
+    print "var encrypted_pair=" + str(pr) + ";"
+    pj = pr.decryptJSON("test")
+    assert(pj == priv)

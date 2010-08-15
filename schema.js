@@ -1,46 +1,64 @@
-var union = {
-	"additionalProperties":"false",
-	"type":
-	[
-		{
-			"type":"object",
-			"properties":{
-				"foo":{"type":"string"}
-			}
-		},
-		{
-			"type":"object",
-			"properties":{
-				"bar":{"type":"string"}
-			}
-		}
-]
-};
+var typed_schema={
+	"description":"Typed json schema",
+	"type":"object",
+	"properties":{
+		"Type":{
+			"description":"How the instance is intended to be used",
+			"type":"string",
+			"enum":["certificate", "encrypted", "encryption", "inner", "integrity", "privatekey", "publickey", "recipient", "signature", "signed"]
+		}}};
 
-var union_inst = {
-	"foo":"boo",
-	"bat":"boo"
-};
-
-var base_schema = {
+var versioned_schema={
 	"description":"A base class for crypto schemas",
 	"type":"object",
+	"extends":typed_schema,
 	"properties":{
 		"Version":{
 			"description":"The version of the schema this instance conforms to",
 			"type":"string",
-			"enum":["1.0"]},
-		"Intent":{
-			"description":"How the instance is intended to be used",
+			"enum":["1.0"]
+		}}};
+
+var publickey_schema = {
+	"description":"An RSA public key",
+	"type":"object",
+	"extends":typed_schema,
+	"properties":{
+		"Algorithm":{
 			"type":"string",
-			"enum":["signed", "cert", "encrypted"]
-		}
-	}};
+			"enum":["RSA-PKCS1-1.5", "RSA-PKCS1-OAEP"]
+		},
+		"RsaExponent":{
+			"description":"",
+			"type":"string"},
+		"RsaModulus":{
+			"description":"",
+			"type":"string"
+		}}};
+
+var privatekey_schema = {
+	"description":"An RSA private key",
+	"type":"object",
+	"extends":versioned_schema,
+	"properties":{
+		"PublicKey":{
+			"type":"object",
+			"extends":PublicKey
+		},
+		"Algorithm":{
+			"description":"",
+			"type":"string",
+			"enum":["RSA-PKCS1-1.5", "RSA-PKCS1-OAEP"]
+		},
+		"PrivateExponent":{
+			"description":"",
+			"type":"string"
+		}}};
 
 var signed_schema = {
 	"description":"A signed message",
 	"type":"object",
-	"extends":base_schema,
+	"extends":versioned_schema,
 	"properties":{
 		"Signature":{
 			"description":"The signature over the SignedData",
@@ -68,6 +86,10 @@ var signed_schema = {
 					"items":{
 						"type":"string" } }
 			}}}};
+
+var union_schema = {
+	"type":[publickey_schema, privatekey_schema, signed_schema]
+};
 
 var cert_schema = {
 	"description":"A certificate",

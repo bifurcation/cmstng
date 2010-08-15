@@ -24,9 +24,11 @@ window.onload = function() {
 		document.body.appendChild(document.createElement('div')).innerHTML = 
 			testName + ": " + resultsString;
 	}
-	showResults("signed_msg", signed_msg, signed_schema);
-	showResults("cert", cert, cert_schema);
-	showResults("union", union_inst, union);
+	showResults("Private", priv, union_schema);
+	showResults("Public", pub, union_schema);
+	showResults("Cert", cert, union_schema);
+	showResults("Sig", sig, union_schema);
+	showResults("Encrypted", encrypted, union_schema);
 };
 
 </script>

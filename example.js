@@ -117,8 +117,18 @@ var signed_encrypted_msg = {  // MIME-Type: application/encrypted+json
                                                        })}
                               }))};
 
-
-var keypair = { 
-	"Type":"keypair",
-    "Version":"1.0"
+var encrypted_key = {
+  "Type": "encrypted", 
+  "Version": "1.0", 
+  "Encryption": {
+    "Type": "encryption", 
+    "Algorithm": "AES-256-CBC", 
+    "IV": "u1tHg7WLbrbt7IovbymZ1g=="
+  }, 
+  "EncryptedData": "", 
+  "Integrity": {
+    "Type": "integrity", 
+    "Value": "GIcy/LOJmJqow8TaWLr6Z1aMY7k=", 
+    "Algorithm": "HMAC-SHA1"
+  }
 };
