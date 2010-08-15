@@ -220,11 +220,6 @@ class Certificate(CryptVersion):
         pk = self.PublicKey
         source = self.Name + self.json_["NotAfter"] + self.json_["NotBefore"] + pk.Algorithm
         source = source.encode('utf8') + long_to_bytes(pk.RsaExponent) + long_to_bytes(pk.RsaModulus)
-        # dig = hashlib.sha1(source).digest().encode('hex')
-        # f = []
-        # for i in range(len(dig) / 2):
-        #     f.append(dig[i*2:(i+1)*2])
-        # return ":".join(f)
         return b64(hashlib.sha1(source).digest())
 
 @Props("Algorithm", long=("RsaExponent", "RsaModulus"))
