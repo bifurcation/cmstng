@@ -403,7 +403,7 @@ class Encrypted(CryptVersion):
         encryption_algorithm = self.Encryption.Algorithm
         mek = kdf(key, encryption_algorithm)
         plaintext = symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
-        if (not plaintext) or (len(plaintext) < 20) or (plaintext[0] != '{') or (plaintext[-1] != '}'):
+        if (not plaintext) or (len(plaintext) < 67) or (plaintext[0] != '{') or (plaintext[-1] != '}'):
             raise CryptoException("Bad decrypt: " + repr(iv) + ' ' +  repr(plaintext))
         res = JSONloads(plaintext)
         dt = res.Date

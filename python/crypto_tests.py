@@ -89,16 +89,14 @@ class TestCrypto(unittest.TestCase):
     def test_Encrypted(self):
         msg = "squeamish"
         e = crypto.Encrypted(msg)
-        (mek, iv1) = e.encrypt(self.cert)
-        self.assertEqual(iv1, e.Encryption.IV)
+        e.encrypt(self.cert)
         self.assertEqual(self.priv.PublicKey, self.cert.PublicKey)
         plain = e.decrypt(self.priv, self.name)
         self.assertEqual(msg, plain.Data)
 
         msg = u"\u216B"
         e = crypto.Encrypted(msg)
-        (mek, iv1) = e.encrypt(self.cert)
-        self.assertEqual(iv1, e.Encryption.IV)
+        e.encrypt(self.cert)
         self.assertEqual(self.priv.PublicKey, self.cert.PublicKey)
         plain = e.decrypt(self.priv, self.name)
         self.assertEqual(msg, plain.Data)
