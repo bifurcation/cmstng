@@ -222,6 +222,13 @@ class Certificate(CryptVersion):
         source = source.encode('utf8') + long_to_bytes(pk.RsaExponent) + long_to_bytes(pk.RsaModulus)
         return b64(hashlib.sha1(source).digest())
 
+    def readable_hash(self):
+        dig = b64d(self.Hash).encode('hex')
+        f = []
+        for i in range(len(dig) / 2):
+            f.append(dig[i*2:(i+1)*2])
+        return ":".join(f)
+        
 @Props("Algorithm", long=("RsaExponent", "RsaModulus"))
 class PublicKey(CryptBase):
     def __init__(self, key=None, json=None):
