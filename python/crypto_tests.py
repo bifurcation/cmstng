@@ -91,14 +91,14 @@ class TestCrypto(unittest.TestCase):
         e = crypto.Encrypted(msg)
         e.encrypt(self.cert)
         self.assertEqual(self.priv.PublicKey, self.cert.PublicKey)
-        plain = e.decrypt(self.priv, self.name)
+        plain = e.decrypt(self.priv, name=self.name)
         self.assertEqual(msg, plain.Data)
 
         msg = u"\u216B"
         e = crypto.Encrypted(msg)
         e.encrypt(self.cert)
         self.assertEqual(self.priv.PublicKey, self.cert.PublicKey)
-        plain = e.decrypt(self.priv, self.name)
+        plain = e.decrypt(self.priv, cert=self.cert)
         self.assertEqual(msg, plain.Data)
 
 if __name__ == '__main__':

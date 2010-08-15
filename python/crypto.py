@@ -1,5 +1,6 @@
 from crypto_utils import *
 import json
+import hashlib
 
 version = "1.0"
 
@@ -183,7 +184,7 @@ class CryptVersion(CryptBase):
         else:
             return rj(fp)
 
-@Props("Name", "PublicKey", date=("NotBefore", "NotAfter"))
+@Props("Name", "PublicKey", "Hash", date=("NotBefore", "NotAfter"))
 class Certificate(CryptVersion):
     def __init__(self, name=None, pubkey=None, validityDays=None, json=None):
         super(Certificate, self).__init__("certificate", json)
@@ -195,6 +196,11 @@ class Certificate(CryptVersion):
         if validityDays:
             self.NotBefore = get_date()
             self.NotAfter = get_date(validityDays)
+        if "Hash" not in self.json_:
+            self.Hash = self.hash()
+        else:
+            if self.Hash != self.hash():
+                raise CryptoException("Invalid certificate hash")
 
     def validate(self):
         n = datetime.datetime.utcnow()
@@ -211,7 +217,15 @@ class Certificate(CryptVersion):
         return True
 
     def hash(self):
-        return "TODO:HASH CERTS"
+        pk = self.PublicKey
+        source = self.Name + self.json_["NotAfter"] + self.json_["NotBefore"] + pk.Algorithm
+        source = source.encode('utf8') + long_to_bytes(pk.RsaExponent) + long_to_bytes(pk.RsaModulus)
+        # dig = hashlib.sha1(source).digest().encode('hex')
+        # f = []
+        # for i in range(len(dig) / 2):
+        #     f.append(dig[i*2:(i+1)*2])
+        # return ":".join(f)
+        return b64(hashlib.sha1(source).digest())
 
 @Props("Algorithm", long=("RsaExponent", "RsaModulus"))
 class PublicKey(CryptBase):
@@ -271,14 +285,14 @@ class PrivateKey(CryptVersion):
         e.encrypt(key=key)
         return e
         
-@Props("PkixChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", long="Value")
+@Props("CertificateChain", "Signer", "DigestAlgorithm", "SignatureAlgorithm", long="Value")
 class Signature(CryptBase):
     def __init__(self, certs=None, digest_algorithm=None, sig_algorithm=None, value=None, json=None):
         super(Signature, self).__init__("signature", json)
         if certs:
             if not isinstance(certs, (list, tuple)):
                 certs = (certs,)
-            self.PkixChain = certs
+            self.CertificateChain = certs
             self.Signer = certs[0].Name
         if digest_algorithm:
             self.DigestAlgorithm = digest_algorithm
@@ -289,10 +303,10 @@ class Signature(CryptBase):
 
     def verify(self, data):
         # TODO: validate certificate chain
-        if len(self.PkixChain) == 0:
+        if len(self.CertificateChain) == 0:
             return False
 
-        cert = self.PkixChain[0]
+        cert = self.CertificateChain[0]
         if cert.Name != self.Signer:
             return False
 
@@ -316,14 +330,14 @@ class Signed(CryptVersion):
         # TODO: check dates, nonces, etc?
         return self.Signature.verify(self.SignedData)
 
-@Props("Name", "EncryptionAlgorithm", "PkixCertificateHash", base64="EncryptionKey")
+@Props("Name", "EncryptionAlgorithm", "CertificateHash", base64="EncryptionKey")
 class Recipient(CryptBase):
     def __init__(self, cert=None, key=None, json=None):
         super(Recipient, self).__init__("recipient", json)
         if cert:
             self.Name = cert.Name
             self.EncryptionAlgorithm = cert.PublicKey.Algorithm
-            self.PkixCertificateHash = cert.hash()
+            self.CertificateHash = cert.Hash
         if key:
             self.EncryptionKey = key
 
@@ -417,14 +431,19 @@ class Encrypted(CryptVersion):
             raise CryptoException("Invalid HMAC")
         return res
 
-    def decrypt(self, privKey, name):
-        rcpt = None
-        for r in self.Recipients:
-            if r.Name == name:
-                rcpt = r
-                break
+    def decrypt(self, privKey, cert=None, name=None):
+        rcpt = []
+        if cert:
+            h = cert.Hash
+            rcpt += [r for r in self.Recipients if r.CertificateHash == h]
+        if name:
+            rcpt += [r for r in self.Recipients if r.Name == name]
+
         if not rcpt:
-            raise CryptoException("Name not found")
+            raise CryptoException("Name/certificate not found in recipients")
+        if len(rcpt) > 1:
+            raise CryptoException("Too many matches found in recipients")
+        rcpt = rcpt[0]
 
         ek = rcpt.EncryptionKey
         sk = privKey.decrypt(ek)
@@ -446,7 +465,7 @@ if __name__ == '__main__':
     pub = priv.PublicKey
     print "var pub=" + str(pub) + ";"
     cert = pub.genCertificate("joe@example.com", 7)
-    print "cert=" + str(cert)
+    print "var cert=" + str(cert) + ";"
     assert(cert.validate())
 
     s = Signed("Foo")
@@ -457,7 +476,7 @@ if __name__ == '__main__':
     e = Encrypted("BAR")
     e.encrypt(cert)
     print "var encrypted=" + str(e) + ";"
-    d = e.decrypt(priv, "joe@example.com")
+    d = e.decrypt(priv, cert=cert)
     assert(d.Data == "BAR")
 
     pr = priv.encryptPair("test")
