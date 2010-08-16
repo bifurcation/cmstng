@@ -53,13 +53,13 @@
 
     <abstract>
       <t>
-	Many applications require the ability to send cryptographically
-	secured messages. While the IETF has defined a number of formats
-	for such messages [TODO: REF CMS, PEM, OpenPGP], those formats 
-	use encodings which are not congenial for Web applications. 
-	This document describes a new cryptographic message format
-	which is based on JavaScript Object Notation (JSON) and thus
-	is easy for Web applications to generate and parse.
+         Many applications require the ability to send cryptographically
+         secured messages. While the IETF has defined a number of formats
+         for such messages [TODO: REF CMS, PEM, OpenPGP], those formats 
+         use encodings which are not congenial for Web applications. 
+         This document describes a new cryptographic message format
+         which is based on JavaScript Object Notation (JSON) and thus
+         is easy for Web applications to generate and parse.
       </t>
     </abstract>
   </front>
@@ -67,26 +67,26 @@
   <middle>
     <section title="Introduction">
       <t>
-	Many applications require the ability to send cryptographically
-	secured (encrypted, digitally signed, etc.) messages. 
-	While the IETF has defined a number of formats for such messages
-	[TODO: REF CMS, PEM, OpenPGP], those formats are widely
-	viewed as being excessively complicated for the demands of
-	Web applications, which typically only need the ability
-	to secure simple messages. In addition, existing formats
-	use encoding mechanisms (e.g., ASN.1) which are not congenial
-	for Web applications. This presents an obstacle to the deployment
-	of strong security by such applications.
+         Many applications require the ability to send cryptographically
+         secured (encrypted, digitally signed, etc.) messages. 
+         While the IETF has defined a number of formats for such messages
+         [TODO: REF CMS, PEM, OpenPGP], those formats are widely
+         viewed as being excessively complicated for the demands of
+         Web applications, which typically only need the ability
+         to secure simple messages. In addition, existing formats
+         use encoding mechanisms (e.g., ASN.1) which are not congenial
+         for Web applications. This presents an obstacle to the deployment
+         of strong security by such applications.
       </t>
       <t>
-	This document describes a new cryptographic message format,
-	JavaScript Message Security (JSMS) intended to meet the need of the
-	Web environment. While JSMS is modelled on existing
-	formats--principally CMS [TODO: REF]--it uses JavaScript Object
-	Notation (JSON) rather than ASN.1/BER/DER, making it far easier for
-	Web applications to handle. In the interest of simplicity, JSMS also
-	omits a number of lesser-used CMS modes (multiple signatures,
-	password-based encryption).
+         This document describes a new cryptographic message format,
+         JavaScript Message Security (JSMS) intended to meet the need of the
+         Web environment. While JSMS is modelled on existing
+         formats--principally CMS [TODO: REF]--it uses JavaScript Object
+         Notation (JSON) rather than ASN.1/BER/DER, making it far easier for
+         Web applications to handle. In the interest of simplicity, JSMS also
+         omits a number of lesser-used CMS modes (multiple signatures,
+         password-based encryption).
       </t>
     </section>
     <section title="Conventions Used In This Document">
@@ -97,167 +97,425 @@
     </section>
     <section title="Overview">
       <t>
-	The JSMS message format is simply a JSON dictionary with an appropriate
-	collection of fields. For instance, 
-	[TODO: Need something here.]
+         The JSMS message format is simply a JSON dictionary with an appropriate
+         collection of fields. For instance, 
+         [TODO: Need something here.]
       </t>
       <section title="Operational Modes">
-	<t>
-	  JSMS supports two operational modes:
-	</t><t>
-	  <list style="hanging">
-	    <t hangText="Encrypted Data"></t><t>
-	    A block of data encrypted under a random message encryption
-	    key (MEK). The MEK is then separately encrypted for each
-	    recipient, either via symmetric or asymmetric encryption.
-	    The data is always integrity protected, either via a
-	    separate MAC or an AEAD algorithm such as AES-GCM.</t>
-	    
-	    <t></t>
+         <t>
+           JSMS supports two operational modes:
+         </t><t>
+           <list style="hanging">
+             <t hangText="Encrypted Data"></t><t>
+             A block of data encrypted under a random message encryption
+             key (MEK). The MEK is then separately encrypted for each
+             recipient, either via symmetric or asymmetric encryption.
+             The data is always integrity protected, either via a
+             separate MAC or an AEAD algorithm such as AES-GCM.</t>
+             
+             <t></t>
 
-	    <t hangText="Signed Data"></t><t>
-	    A block of data signed by a single signer using his
-	    asymmetric key and optionally carrying his certificate.
-	    Multiple signatures are not permitted (in our view,
-	    this feature has proved to be more trouble than it is
-	    generally worth.)
-	  </t>
-	  </list>
-	</t>
-	<t>
-	  Any other desired security functions are provided by composition
-	  of these modes. For instance, a signed and encrypted
-	  message is produced by first creating a Signed message and
-	  then encrypting that data. (See <xref target="sec.msg-composition"/> for more on composition.
-	</t>
+             <t hangText="Signed Data"></t><t>
+             A block of data signed by a single signer using his
+             asymmetric key and optionally carrying his certificate.
+             Multiple signatures are not permitted (in our view,
+             this feature has proved to be more trouble than it is
+             generally worth.)
+           </t>
+           </list>
+         </t>
+         <t>
+           Any other desired security functions are provided by composition
+           of these modes. For instance, a signed and encrypted
+           message is produced by first creating a Signed message and
+           then encrypting that data. (See <xref target="sec.msg-composition"/> for more on composition.
+         </t>
       </section>
       <section title="Conventions">
-	<t>
-	  In general, JSMS follows the following structural conventions:
-	</t>
-	<t>
-	  <list style="hanging">
-	    <t hangText="Base64 as the only encoding"> </t>
-	    <t>
-	    Any data that does not have a straightforward string
-	    representation (binary values, large integers, etc.)
-	    is base64-encoded. In some cases, hexadecimal encodings
-	    might be more convenient, but consistency seems even
-	    more important.
-	    </t>
+         <t>
+           In general, JSMS follows the following structural conventions:
+         </t>
+         <t>
+           <list style="hanging">
+             <t hangText="Base64 as the only encoding"> </t>
+             <t>
+             Any data that does not have a straightforward string
+             representation (binary values, large integers, etc.)
+             is base64-encoded. In some cases, hexadecimal encodings
+             might be more convenient, but consistency seems even
+             more important.
+             </t>
 
-	    <t></t>
+             <t></t>
 
-	    <t hangText="No canonicalization"></t>
-	    <t>
-	      In most cryptographic message formats (CMS, PKIX, 
-	      XML-DSIG [TODO: REF]), canonical encodings are 
-	      used to allow the same value to be computed at both
-	      sender and recipient (e.g., for digital signatures).
-	      This is inconvenient in
-	      JSON, which just views messages as a bundle of
-	      key/value pairs. Instead, whenever canonicalization
-	      would be required, the relevant data is serialized
-	      and base64 encoded, with whatever computation is necessary
-	      being performed on the base64-encoded version.
-	    </t>
-	    
-	    <t></t>
+             <t hangText="No canonicalization"></t>
+             <t>
+               In most cryptographic message formats (CMS, PKIX, 
+               XML-DSIG [TODO: REF]), canonical encodings are 
+               used to allow the same value to be computed at both
+               sender and recipient (e.g., for digital signatures).
+               This is inconvenient in
+               JSON, which just views messages as a bundle of
+               key/value pairs. Instead, whenever canonicalization
+               would be required, the relevant data is serialized
+               and base64 encoded for transport.
+             </t>
+             
+             <t></t>
 
-	    <t hangText="In-memory processing"></t>
-	    <t>
-	      We assume that the entire message can fit in main
-	      memory and make no effort to design a wire representation
-	      which can be handled in small chunks in a single pass.
-	      This means, for instance, that there is no need to 
-	      have a message digest indicator at the beginning of
-	      the message and then the signature at the end, as
-	      is done in CMS. Fields are simply serialized in
-	      whatever order is most convenient for the JSON
-	      implementation. The examples in this document are
-	      generally shown in whatever order seems most readable and
-	      are not normative.
-	    </t>
-	  </list>
-	</t>
-	</section>
+             <t hangText="In-memory processing"></t>
+             <t>
+               We assume that the entire message can fit in main
+               memory and make no effort to design a wire representation
+               which can be handled in small chunks in a single pass.
+               This means, for instance, that there is no need to 
+               have a message digest indicator at the beginning of
+               the message and then the signature at the end, as
+               is done in CMS. Fields are simply serialized in
+               whatever order is most convenient for the JSON
+               implementation. The examples in this document are
+               generally shown in whatever order seems most readable and
+               are not normative.
+             </t>
+           </list>
+         </t>
+         </section>
 
-	<section title="Certificate Processing">
-	  <t>
-	    Experience has shown that certificate handling 
-	    path construction) is one of the trickier parts of
-	    building a cryptographic system. While JSMS supports
-	    PKIX certificates, it's certificate processing
-	    is far simpler than that of CMS. 
-	    When a JSMS agent provides its certificate, it must
-	    provide an ordered chain (as in TLS [REF]) terminating
-	    in its own certificate, thus removing the need to construct
-	    certificate paths. In addition, because many implementations
-	    will not want to do any ASN.1/BER processing at all, 
-	    we define a Web service which applications can use for
-	    chain valiation. (See [TODO]).
-	  </t>
-	</section>
+         <section title="Certificate Processing">
+           <t>
+             Experience has shown that certificate handling 
+             path construction) is one of the trickier parts of
+             building a cryptographic system. While JSMS supports
+             PKIX certificates, it's certificate processing
+             is far simpler than that of CMS. 
+             When a JSMS agent provides its certificate, it must
+             provide an ordered chain (as in TLS [REF]) terminating
+             in its own certificate, thus removing the need to construct
+             certificate paths. In addition, because many implementations
+             will not want to do any ASN.1/BER processing at all, 
+             we define a Web service which applications can use for
+             chain valiation. (See [TODO]).
+           </t>
+         </section>
       </section>
 
       
       <section title="Message Format">
-	<section title="Common Elements" anchor="sec.message-common">
-	  <t>
-	    A JSMS message is simple a JSON dictionary object
-	    containing a set of specific values. The following fields
-	    MUST be present in all messages:
-	  </t>
+         <section title="Content Object" anchor="sec.content">
+	   <t>
+	     JSMS operates by providing transformations on "Content" objects,
+	     which are just mime-typed JSON objects. These objects are then
+	     wrapped in a signed/encrypted wrapper:
+	   </t>
+	   <figure>
+             <!--begin-pdu-->
+	     <artwork><![CDATA[
+var content_schema={
+          "description":"Message contents",
+          "type":"object":
+	  "properties":{
+	             "ContentType":{
+		                  "description":"A MIME content type",
+				  "type":"string",
+                     },
+                     "Data":{
+                                  "description":"The underlying data",
+				  "type":"string",
+		            }
+}};
+               ]]></artwork>
+           </figure>
+	   <t>
+             The meaning of the fields is as follows:
+	   </t>
           <t><list style="hanging">
               <t/>
-	      
-	      <t hangText="Version:">The version number. For this specification
-	      this value MUST be set to the string "1.0"</t>
-	      
-	      <t/>
+      
+               <t hangText="ContentType:">A MIME [REF] content type indicating the 
+	       type of the "Data" field.</t>
+	       
+	       <t hangText="Data:">The data value. [OPEN ISSUE: Do we need an encoding here?]</t>
+	     </list>
+	 </t>
+	 <t>
+	   Signing and encryption transform a "Content" object into 
+	   "Signed" and "Encrypted" objects respectively. Verification and decryption
+	   transform "Signed" and "Encrypted" objects back into "Content" objects.
+	 </t>
+         </section>
+	 
 
-	      <t hangText="MessageType:">The type of the message. MUST be either
-	      "Signed" or "Encrypted", to indicate a signed message or an
-	      encrypted message respectively.</t>
-	    </list>
-	  </t>
-	  <t>
-	    
-	    
-	</section>
+         <section title="Common Elements" anchor="sec.message-common">
+           <t>
+             A JSMS message is simple a JSON dictionary object
+             containing a set of specific values. 
+           </t>
+
+           <figure>
+             <!--begin-pdu-->
+	     <artwork><![CDATA[
+var message_schema={
+         "description":"The basic schema for a JSMS message",
+         "type":"object",
+         "properties":{
+                  "Type":{
+                           "description":"Message type",
+                           "type":"string",
+                           "enum":["signed", "encrypted"]
+                  },
+                  "Version":{
+                           "description":"Version number for the message",
+                           "type":"string",
+                           "enum":["1.0"]
+                  }
+         }};
+               ]]></artwork>
+           </figure>
+           
+           <t>
+             The following fields
+             MUST be present in all messages:
+           </t>
+          <t><list style="hanging">
+              <t/>
+      
+               <t hangText="Version:">The version number. For this specification
+               this value MUST be set to the string "1.0"</t>
+               
+               <t/>
+
+               <t hangText="Type:">The type of the message. MUST be either
+               "signed" or "encrypted", to indicate a signed message (<xref target="sec.signed"/>)
+               or an encrypted message (<xref target="sec.encrypted"/>) respectively.</t>
+             </list>
+           </t>
+           <t>
+           </t>
+         </section>
+
+         <section title="Signed Data" anchor="sec.signed">
+           <t>
+             A "signed" message contains a signed data block plus a digital signature over
+             that data. Only one signer is allowed.
+           </t>
+
+           <figure>
+             <!--begin-pdu-->
+              <artwork><![CDATA[
+var signed_schema = {
+         "description":"A signed message",
+         "type":"object",
+         "extends":message_schema,
+         "properties":{
+                  "Signature":{
+                           "description":"The signature over the SignedData",
+                           "type":"object",
+                           "properties":{
+                                    "Value":{
+                                             "description":"the content to be signed",
+                                             "type":"string"},
+                                    "DigestAlgorithm":{
+                                             "description":"",
+                                             "type":"string",
+                                             "enum":["SHA1", "SHA256"] },
+                                    "SignatureAlgorithm":{
+                                             "description":"",
+                                             "type":"string",
+                                             "enum":["RSA-PKCS1-1.5"] },
+                                    "Signer":{
+                                             "description":"",
+                                             "type":"string",
+                                             "format":"email" },
+                                    "CertChain": {
+                                        "description":"The signer's cert chain",
+                                            "type":certchain_schema
+                                             }
+                           }}}};
+               ]]></artwork>
+           </figure>
+           <t>
+             The meaning of the fields is described below:
+           </t>
+           <t>
+             <list style="hanging">
+               <t/><t hangText="Value:">The data over which the signature
+               is computed. This value MUST be a base64-encoded version of
+               a "Content" structure (see <xref target="sec.content"/>).
+               [OPEN ISSUE: is this exactly what we want?]</t>
+               
+               <t/><t hangText="DigestAlgorithm:">The message digest used to
+               compute the signature. This field MUST be present 
+               for RSA-based signatures but MAY be omitted for future
+               signatures which do not allow flexible digests.  </t>
+               
+               <t/><t hangText="SignatureAlgorithm:">The signature algorithm
+               used to compute the signature. This field MUST be present.</t>
+
+               <t/><t hangText="Signer:">The signer's identity, expressed
+               as an email address [OPEN ISSUE: This seems like it should be a URI.].
+               This field MUST be present.
+             </t>
+             <t/><t hangText="CertChain:">The signer's certificate chain,
+               if any (see <xref target="sec.certificates"/>).</t>
+           </list>
+           </t>
+	   
+	   <section title="Signature Computation" anchor="sec.signature_computation">
+	     <t>
+	       The signature is computed over the string prior to base64 encoding.
+	       I.e., the processing order for encoding is:
+	     </t>
+	     <t><list style="numbers">
+	       <t>Serialize the inner "Content" value into a string X.</t>
+	       <t>Compute the signature value over X. (In the case of signatures
+	       which use digests, this means feed the literal bytes of the
+	       signature into the digest function.). Insert the result into
+	       the "Signature" field.</t>
+	       <t>Compute the base64 representation of X and insert it into
+	       the "Value" field of the message.</t>
+	     </list>
+	     </t>
+	     <t>
+	       This procedure removes dependencies on the exact serialization
+	       algorithm: variation in spacing, field order, etc. do not affect
+	       signature validity since the base64 representation preserves them
+	       on the wire and protects them from modification by intermediaries.
+	     </t>
+	     <t>
+	       <list style="hanging">
+		 <t hangText="Note:">
+		   An alternative algorithm would be to compute the signature on the
+		   base64 representation itself, but this has two disadvantages:
+		   (1) any intermediaries which change spacing/line breaks would
+		   break the signature. (2) it is inconsistent with the algorithm
+		   for encryption (<xref target="sec.encrypted"/>), which is designed
+		   to avoid multiple base64 encoding.
+		 </t>
+	       </list>
+	     </t>
+	     <t>
+	       This procedure only specifies the input to the signature computation.
+	       The details of the computation depend on the signature algorithm
+	       itself. The mapping from code points to algorithms is found in
+	       <xref target="sec.iana-cons"/>.
+	     </t>
+	   </section>
+	   <section title="Signature Verification" anchor="sec.signature_verification">
+	     <t>
+	       In order to verify the signature, the steps of the previous section are
+	       reversed. 
+	     </t>
+	     <t><list style="numbers">
+	       <t>Process the provided "Signer" and "CertChain" fields
+	       as described in <xref target="sec.certificates"/> in order to determine
+	       the sender's public key.</t>
+	       <t>Base64 decode the "Value" field in order to recover a string X.</t>
+	       <t>Verify the "Signature" field against X using the sender's
+	       public key and the "SignatureAlgorithm" and "DigestAlgorithm" fields.
+	       If the signature fails, return an error.</t>
+	       <t>Deserialize X to recover the inner "Content" value.</t>
+	     </list>
+	     </t>
+	     <t>
+	       
+	     </t>
+	     <section title="Certificate Processing" anchor="sec.certificates">
+	       <t>
+		 JSMS uses the "CertChain" element to carry certificate chains.
+	       </t>
+           <figure>
+             <!--begin-pdu-->
+	     <artwork><![CDATA[
+var certchain_schema = {
+         "description":"A certificate chain",
+         "type":"object",
+};
+
+var certchain_pkix_schema = {
+        "description":"A chain of PKIX certificates",
+         "extends":certchain_schema,
+         "properties":{
+                 "Type:{
+                       "description":"The type of certificate chain",
+                       "type":"string",
+                       "enum":["PKIX"] },
+                  "Chain":{
+                       "description":"PKIX certificates in order from root to end-entity",
+                       "type":"array",
+                       "items":{
+                              "description":"A base64-encoded BER certificate",
+                              "type":"string",
+                               }
+                               
+}}};
+               ]]></artwork>
+           </figure>
+           <t>
+             The meaning of the fields is described below:
+           </t>
+           <t>
+             <list style="hanging">
+	       <t/><t hangText="Type:">The type of the certificate chain. The 
+	       only defined value is "PKIX", referring to PKIX [REF] 
+	       certificates.</t>
+	       
+	       <t/><t hangText="Chain:">An array of certificate values.
+	       In the case of "PKIX" certificates this is a list of base64-encoded
+	       DER/BER PKIX certificate values. PKIX certificates MUST be
+	       represented in order with each certificate certifying the
+	       next and the final certificate representing the end-entity.
+	       </t>
+	     </list>
+	   </t>
+	   <t>
+	     The recipient MUST verify the certificate chain (in the case of
+	     PKIX certificates according to RFC 5280). If any validation
+	     failure occurs, the implementation MUST abort processing and
+	     return an error.
+	   </t>
+	   <t>
+	     Once the certificate chain is validated, the end-entity certificate must
+	     contain an identity which matches the "Signer" field. In the case of
+	     PKIX certificates, the certificate MUST contain a subjectAltName
+	     field of type "uniformResourceIdentifier". This field MUST
+	     match [TODO: define match] the URI in the "Signer" field. If not,
+	     an error MUST be returned.
+	     [OPEN ISSUE: See URI note above.]
+	   </t>
+	     </section>
+	   </section>
+	   <section title="Example" anchor="sec.signed-example">
+	     <t>TODO</t>
+	   </section>
+	 </section>
+	 <section title="Encrypted Data" anchor="sec.encrypted">
+	   <t>
+	     An "encrypted" message contains a "Content" element
+	     encrypted under a single Content Encryption Key (CEK)
+	     plus an arbitrary number of "Recipient" blocks each
+	     of which contains a copy of the CEK encrypted for
+	     a given recipient. Both symmetric and asymmetric
+	     encryption is supported. All "encrypted" messages
+	     contain a symmetric integrity check, either via a 
+	     MAC or via an AEAD [REF] algorithm such as GCM [REF].
+	   </t>
+         </section>
+
+         <section title="Composition" anchor="sec.msg-composition">
 
 
-
-	    
-
-
-	<section title="Signed Data">
-	  <t>
-
-
-
-	  </t>
-	</section>
-	<section title="Encrypted Data">
-	
-
-	</section>
-
-	<section title="Composition" anchor="sec.msg-composition">
-
-
-	</section>
+         </section>
       </section>
       
       <section title="IANA Considerations" anchor="sec.iana-cons">
-	<t>
-	  [TODO]
-	  <list style="symbols">
-	    <t>Register MIME types</t>
-	    <t>Registries for signature, encryption, MAC</t>
-	  </list>
-	</t>
-	  
+         <t>
+           [TODO]
+           <list style="symbols">
+             <t>Register MIME types</t>
+             <t>Registries for signature, encryption, MAC</t>
+           </list>
+         </t>
+           
       </section>
 
       <section title="Security Considerations" anchor="sec.sec-cons">
