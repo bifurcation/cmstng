@@ -60,4 +60,47 @@ $(document).ready(function() {
         }
         ok(caught, "expected TypeError('integer too large') thrown");
     });
+    
+    test("encrypt/decrypt primitives", function() {
+        var key = {
+            e: BigInteger("65537"),
+            n: BigInteger("8381861285539999928425167369322043075218228948622323927388630897914182086483456452515184445294706580481598631072117626969832084869558491027189130453353503"),
+            d: BigInteger("5241524956364890322514741814500591900020884034993800471736091979938308504361566130855757453150201003675599948456830377244914135374650350914274340264013473")
+        };
+        
+        // yes, it's a combined key...just testing the primitives
+        var msgExp, msgAct, ctext;
+        
+        msgExp = cmstng.RSA.OS2IP("1234567");
+        ctext = cmstng.RSA.RSAEP(key, msgExp);
+        window.console.log("ctext is " + ctext.toString());
+        msgAct = cmstng.RSA.RSADP(key, ctext);
+        equals(msgExp.toString(), msgAct.toString(), "messages equal");
+        
+        var badKey, caught;
+        badKey = $.extend({}, key);
+        delete badKey.e;
+        try {
+            cmstng.RSA.RSAEP(badKey, msgExp);
+        } catch (ex) {
+            caught = (ex instanceof TypeError);
+        }
+        ok(caught, "expected TypeError thrown (missing e)");
+        
+        badKey = $.extend({}, key);
+        delete badKey.n;
+        try {
+        } catch (ex) {
+            caught = (ex instanceof TypeError);
+        }
+        ok(caught, "expected TypeError thrown (missing n)");
+        
+        badKey = $.extend({}, key);
+        delete badKey.d;
+        try {
+        } catch (ex) {
+            caught = (ex instanceof TypeError);
+        }
+        ok(caught, "expected TypeError thrown (missing d)");
+    });
 });

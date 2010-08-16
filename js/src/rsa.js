@@ -75,6 +75,49 @@ cmstng.RSA = {
         }
         
         return os;
+    },
+
+    /**
+     * Encrypts the given message via the RSAEP method.
+     *
+     * @param   {Object} key The key to encrypt with
+     * @param   {BigInteger} msg The message to encrypt
+     * @returns {BigInteger} The ciphertext for {msg} from {key}
+     * @throws  {TypeError} If {key} is invalid
+     */
+    RSAEP: function(key, msg) {
+        // TODO: make this broken out into chunks...
+        var ctext;
+        
+        if (!key || !key.e || !key.n) {
+            throw new TypeError("invalid key");
+        }
+        msg = BigInteger(msg);
+        ctext = msg.modPow(key.e, key.n);
+        
+        return ctext;
+    },
+    /**
+     * Decrypts the given ciphertext via the RSADP method.
+     *
+     * @param   {Object} key The key to decrypt with
+     * @param   {BigInteger} ctext The ciphertext to decrypt
+     * @returns {BigInteger} The message for {ctext} from {key}
+     * @throws  {TypeError} If {key} is invalid
+     */
+    RSADP: function(key, ctext) {
+        // TODO: make this broken out into chunks...
+        var msg;
+        
+        if (!key || !key.d || !key.n) {
+            throw new TypeError("invalid key");
+        }
+        ctext = BigInteger(ctext);
+        msg = ctext.modPow(key.d, key.n);
+        
+        // TODO: try to use more expressive form if possible
+        
+        return msg;
     }
 };
 })();
