@@ -459,16 +459,22 @@ class Encrypted(CryptoBase):
                 raise CryptoException("Must supply content type with data")
             self.inner = InnerMessage(data, contentType, name=name)
 
-    def encrypt(self, toCerts=None, encryption_algorithm="AES-256-CBC", integrity_algorithm="HMAC-SHA1", key=None):
+    def encrypt(self, toCerts=None, 
+                encryption_algorithm="AES-256-CBC", 
+                integrity_algorithm="HMAC-SHA1", 
+                key=None):
         (alg, size, mode) = getAlgorithm(encryption_algorithm)
         iv = generateIV(encryption_algorithm)
         self.Encryption = Encryption(encryption_algorithm, iv)
 
         if key:
             sk = key
+            mek = kdf(sk, encryption_algorithm, PBKDF2_HMAC_SHA1_1024)
+            mik = kdf(sk, integrity_algorithm, PBKDF2_HMAC_SHA1_1024)
         else:
             sk = generateSessionKey(encryption_algorithm)
-        mek = kdf(sk, encryption_algorithm)
+            mek = kdf(sk, encryption_algorithm, P_SHA256)
+            mik = kdf(sk, integrity_algorithm, P_SHA256)
         js = JSONdumps(self.inner)
 
         ciphertext = symmetricEncrypt(mek, iv, encryption_algorithm, js)
@@ -485,16 +491,15 @@ class Encrypted(CryptoBase):
                 rcpts.append(r)
             self.Recipients = rcpts
 
-        mik = kdf(sk, integrity_algorithm)
         mac = hmac(mik, integrity_algorithm, ciphertext)
         self.Integrity = Integrity(integrity_algorithm, mac)
 
-    def symmetricDecrypt(self, key):
+    def _symmetricDecrypt(self, key, kd_function):
         ciphertext = self.EncryptedData
         iv = self.Encryption.IV
 
         encryption_algorithm = self.Encryption.Algorithm
-        mek = kdf(key, encryption_algorithm)
+        mek = kdf(key, encryption_algorithm, kd_function)
         plaintext = symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
         if (not plaintext) or (len(plaintext) < 67) or (plaintext[0] != '{') or (plaintext[-1] != '}'):
             raise CryptoException("Bad decrypt: " + repr(iv) + ' ' +  repr(plaintext))
@@ -504,7 +509,7 @@ class Encrypted(CryptoBase):
             raise CryptoException("Message from the future")
 
         integrity_algorithm = self.Integrity.Algorithm
-        mik = kdf(key, integrity_algorithm)
+        mik = kdf(key, integrity_algorithm, kd_function)
         mac = hmac(mik, integrity_algorithm, ciphertext)
         if mac != self.Integrity.Value:
             raise CryptoException("Invalid HMAC")
@@ -527,12 +532,12 @@ class Encrypted(CryptoBase):
 
         ek = rcpt.EncryptionKey
         sk = privKey.decrypt(ek)
-        res = self.symmetricDecrypt(sk)
+        res = self._symmetricDecrypt(sk, P_SHA256)
 
         return res
 
     def decryptJSON(self, key):
-        res = self.symmetricDecrypt(key)
+        res = self._symmetricDecrypt(key, PBKDF2_HMAC_SHA1_1024)
         if res.ContentType != JSON_MIME:
             raise CryptoException("Invalid data type, not '%s'" % JSON_MIME)
         js = JSONloads(res.Data)

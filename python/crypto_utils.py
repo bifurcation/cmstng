@@ -185,14 +185,17 @@ def generateRandomNonZero(octets):
             r[i] = '\x01' #ick
     return "".join(r)
 
-def kdf(k, use):
+def kdf(k, use, f):
     (alg, size, mode) = getAlgorithm(use)
-    return P_SHA256(k, use, size)
+    return f(k, use, size)
 
 def xors(*args):
     "xor 2 or more strings, octet by octet"
     assert(len(args) > 1)
     return ''.join([chr(reduce(operator.xor, map(ord,vals))) for vals in zip(*args)])
+
+def PBKDF2_HMAC_SHA1_1024(pw, salt, desired):
+    return PBKDF2_HMAC_SHA1(pw, salt, 1024, desired)
 
 def PBKDF2_HMAC_SHA1(pw, salt, iterations, desired):
     dkLen = desired
