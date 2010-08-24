@@ -81,10 +81,20 @@ class TestCrypto(unittest.TestCase):
         sig.sign(self.priv, self.cert)
         inner = crypto.JSONloads(sig.SignedData)
         self.assertEqual(msg, inner.Data)
-        self.assertTrue(sig.verify())
+        self.assertTrue(sig.verify(True))
+        # TODO: unit tests for CAs
         sigj = crypto.JSONdumps(sig)
         sigjl = crypto.JSONloads(sigj)
         self.assertTrue(sig == sigjl)
+
+    def test_CA(self):
+        c = self.cert
+        for i in range(10):
+            priv = crypto.PrivateKey(size=self.keysize)
+            cert = priv.PublicKey.genCertificate("ca " + str(i))
+            c = c.wrapSign(priv, cert)
+        d = crypto.check_cert(c, True)
+        self.assertEqual(self.cert, d)
 
     def test_Encrypted(self):
         msg = "squeamish"
@@ -98,7 +108,7 @@ class TestCrypto(unittest.TestCase):
         e = crypto.Encrypted(msg)
         e.encrypt(self.cert)
         self.assertEqual(self.priv.PublicKey, self.cert.PublicKey)
-        plain = e.decrypt(self.priv, cert=self.cert)
+        plain = e.decrypt(self.priv, cert=self.cert, trusted=True)
         self.assertEqual(msg, plain.Data)
 
 if __name__ == '__main__':

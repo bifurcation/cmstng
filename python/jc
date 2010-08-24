@@ -1,0 +1,282 @@
+#!/usr/bin/env python
+
+from crypto import *
+from getpass import getpass
+from optparse import OptionParser, OptionValueError
+from mimetypes import guess_type
+import sys
+
+DEFAULT_MIME = "application/octet-stream"
+
+def sample(opts, args):
+    ca_priv = PrivateKey(size=opts.size)
+    print "var ca_priv=%s;" % ca_priv
+    
+    ca_cert = ca_priv.PublicKey.genCertificate("My CA", opts.validity)
+    print "var ca_cert=%s;" % ca_cert
+    set_bundle([ca_cert])
+
+    priv = PrivateKey(size=opts.size)
+    print "var priv=%s;" % priv
+
+    pub = priv.PublicKey
+    print "var pub=%s;" % pub
+    cert = pub.genCertificate("joe@example.com", opts.validity)
+    print "var cert=%s;" % cert 
+    assert(cert.validate())
+    signed_cert = cert.wrapSign(ca_priv, ca_cert)
+    print "var signed_cert=%s;" % signed_cert
+
+    s = Signed("Foo")
+    s.sign(priv, signed_cert)
+    print "var sig=%s;" % s
+    assert(s.verify())
+
+    e = Encrypted("BAR")
+    e.encrypt(signed_cert)
+    print "var encrypted=%s;" % e
+    d = e.decrypt(priv, cert=signed_cert)
+    assert(d.Data == "BAR")
+
+    pr = priv.wrapEncrypt("test")
+    print "var encrypted_pair=%s;" % pr
+    pj = pr.decryptJSON("test")
+    assert(pj == priv)
+
+def private(opts, args):
+    pk = PrivateKey(size=opts.size)
+    if opts.phrase:
+        pr = pk.wrapEncrypt(opts.phrase)
+        pr.write(opts.outfile, opts.indent)
+    else:
+        pk.write(opts.outfile, opts.indent)
+
+def read_key(opts):
+    if not opts.keyfile:
+        raise OptionValueError("No key file specified")
+    k = CryptoBase.read(opts.keyfile)
+    if k.Type == "encrypted":
+        if not opts.phrase:
+            raise OptionValueError("Passphrase required for encrypted private key")
+        k = k.decryptJSON(opts.phrase)
+    if k.Type != "privatekey":
+        raise OptionValueError("Specified file is not a private key")
+    return k
+
+def read_cert(opts):
+    if not opts.cert:
+        raise OptionValueError("No certificate file specified")
+    c = CryptoBase.read(opts.cert)
+    return c
+
+def open_in(opts):
+    if not opts.infile or (opts.infile == "-"):
+        return sys.stdin
+    return open(opts.infile, "r")
+
+def cert(opts, args):
+    k = read_key(opts)
+    if not opts.name:
+        raise OptionValueError("Name is required for generating a cert")
+    cert = k.PublicKey.genCertificate(opts.name, opts.validity)
+    cert.write(opts.outfile, opts.indent)
+
+def validate(opts, args):
+    f = CryptoBase.read(open_in(opts))
+    if f.Type == "certificate":
+        res = f.validate()
+        print res
+        sys.exit(res)
+    elif f.Type == "signed":
+        res = f.verify()
+        print res
+        sys.exit(res)
+    else:
+        raise OptionValueError("Unknown file type")
+
+def guess_mime(opts):
+    if opts.mime:
+        return opts.mime
+
+    if opts.infile and (opts.infile != "-"):
+        m = guess_type(opts.infile)
+        if m:
+            return m[0]
+    return DEFAULT_MIME
+
+def sign(opts, args):
+    k = read_key(opts)
+    f = open_in(opts)
+    data = f.read()
+    f.close()
+    mime = guess_mime(opts)
+    s = Signed(data=data, contentType=mime, name=opts.infile)
+
+    cert = read_cert(opts)
+    s.sign(k, cert)
+    s.write(opts.outfile, opts.indent)
+
+def bundle(opts, args):
+    certs = []
+    for a in args:
+        f = CryptoBase.read(a)
+        if f.Type != "certificate":
+            raise OptionValueError("Expected certificate as infile")
+        if not f.validate():
+            raise OptionValueError("Invalid certificate")
+        certs.append(f)
+    JSONwrite(certs, opts.outfile, opts.indent)
+
+def pretty_print(opts, args):
+    f = CryptoBase.read(open_in(opts))
+    if not opts.indent:
+        opts.indent = 2
+    f.write(opts.outfile, opts.indent)
+
+def encrypt(opts, args):
+    f = open_in(opts)
+    data = f.read()
+    f.close()
+    mime = guess_mime(opts)
+    e = Encrypted(data=data, contentType=mime, name=opts.infile)
+    
+    cert = read_cert(opts)
+    e.encrypt(cert)
+    e.write(opts.outfile, opts.indent)
+    
+def decrypt(opts, args):
+    k = read_key(opts)
+    cert = read_cert(opts)
+    cert = check_cert(cert, True)
+    f = CryptoBase.read(open_in(opts))
+    if f.Type != "encrypted":
+        raise OptionValueError("Not an encrypted file")
+    plain = f.decrypt(k, cert)
+
+    if opts.outfile:
+        fp = open(opts.outfile, "w")
+        fp.write(plain.Data)
+        fp.close()
+    else:
+        sys.stdout.write(plain.Data)
+
+def get_pass(option, opt, value, parser):
+     pp = getpass("Pass phrase: ")
+     if not pp:
+         raise OptionValueError("No pass phrase specified")
+     parser.values.phrase = pp
+
+def get_bundle(option, opt, value, parser):
+    if not value:
+        raise OptionValueError("No bundle file specified")
+    f = CryptoBase.read(value)
+    if isinstance(f, (list, tuple)):
+        set_bundle(f)
+    elif f.Type == 'certificate':
+        set_bundle([f])
+    else:
+        raise OptionValueError("Invalid bundle file.  MUST be certificate, or certificate list.")
+
+if __name__ == '__main__':
+    ACTIONS = {"sample": sample,
+               "private": private,
+               "cert": cert,
+               "validate": validate,
+               "sign": sign,
+               "bundle": bundle,
+               "print": pretty_print,
+               "encrypt": encrypt,
+               "decrypt": decrypt,
+               }
+    action_names = ACTIONS.keys()
+    action_names.sort()
+    optp = OptionParser(usage="usage: %prog action [options]", 
+                        description="""Perform JSON encryption. The action is required,
+and must be drawn from the following list: """ + repr(action_names))
+    optp.add_option('-s','--size', 
+                    help='Size of the private key to generate, in bits [default: %default]', 
+                    dest='size',
+                    type=int,
+                    default=512)
+    optp.add_option('-o','--outfile', 
+                    help='File to output [default: stdout]', 
+                    dest='outfile',
+                    default=None)
+    optp.add_option('-d','--indent', 
+                    help='Number of spaces to indent [default: none]', 
+                    dest='indent',
+                    type=int,
+                    default=None)
+    optp.add_option('-p','--prompt', 
+                    help='Prompt for a passphrase',
+                    action='callback',
+                    callback=get_pass)
+    optp.add_option('-P','--passphrase', 
+                    help='Use the given passphrase',
+                    dest='phrase',
+                    default=None)
+    optp.add_option('-k', '--keyfile',
+                    help='''Use the given private key file. 
+ If the file is encrypted, a passphrase is required with -p or -P''',
+                    dest='keyfile',
+                    default=None)
+    optp.add_option('-n', '--name',
+                    help='Name for the certificate to generate',
+                    dest='name',
+                    default=None)
+    optp.add_option('-l', '--validity',
+                    help='Validity period for the certificate, in days, starting now [default: %default]',
+                    dest='validity',
+                    type=int,
+                    default=365)
+    optp.add_option('-i', '--infile',
+                    help='Input file',
+                    dest='infile',
+                    default=None)
+    optp.add_option('-m', '--mimetype',
+                    help='ContentType of the file [default: computed from file name]',
+                    dest='mime',
+                    default=None)
+    optp.add_option('-c', '--cert',
+                    help='Certificate to process with.  Required for sign, encrypt.',
+                    dest='cert',
+                    default=None)
+    optp.add_option('-v', '--verbose',
+                    help='Print stack traces on error',
+                    dest='verbose',
+                    action='store_true',
+                    default=False)
+    optp.add_option('-b', '--bundle',
+                    help='File containing bundle of certificates to treat as trusted CAs.  Can be a single certificate file, or a list generated with "jc bundle".  If none is specified, no CA checking is performed.  [default: None]',
+                    action='callback',
+                    callback=get_bundle,
+                    type='string')
+
+    def usage(msg=None):
+        if msg:
+            sys.stderr.write("%s\n" % msg)
+        optp.print_help(file=sys.stderr)
+        sys.exit(1)
+        
+    opts,args = optp.parse_args()
+    if len(args) < 1:
+        print repr(args)
+        usage("No action")
+
+    if not opts.outfile and not opts.indent:
+        opts.indent = 2
+        
+    cmd = args[0]
+    cf = ACTIONS.get(cmd, None)
+    if not cf:
+        usage("Unknown action")
+
+    if opts.verbose:
+        cf(opts, args[1:])
+    else:
+        try:
+            cf(opts, args[1:])
+        except OptionValueError as e:
+            sys.stderr.write("ERROR: %s\n" % e)
+        except CryptoException as e:
+            sys.stderr.write("CRYPTO ERROR: %s\n" % e)
