@@ -238,8 +238,9 @@ class CertificateExtension(CryptoTyped):
             self.Name = name
         if value:
             self.Value = value
+            
     def cannon(self):
-        return self.Name + "\x00" + self.Value
+        return self.Name.encode('utf8') + "\x00" + self.Value.encode('utf8')
 
     def check(self, cert):
         n = self.known_extensions.get(self.Name)
@@ -300,14 +301,17 @@ class Certificate(CryptoBase):
 
     def hash(self):
         pk = self.PublicKey        
-        source = [self.Name, self.json_["NotAfter"], self.json_["NotBefore"], pk.Algorithm]
+        source = [pk.Algorithm, self.Name,
+                  self.json_["NotAfter"], self.json_["NotBefore"],
+                  unicode(self.Serial)]
+        source = [s.encode('utf8') for s in source]
+        source += [long_to_bytes(pk.RsaExponent), long_to_bytes(pk.RsaModulus)]
         if "CriticalExtensions" in self.json_:
             source += [e.cannon() for e in self.CriticalExtensions]
         if "Extensions" in self.json_:
             source += [e.cannon() for e in self.Extensions]
 
         source = "\x00".join(source)
-        source = source.encode('utf8') + long_to_bytes(pk.RsaExponent) + long_to_bytes(pk.RsaModulus)
         return b64(hashlib.sha1(source).digest())
 
     def readable_hash(self):
