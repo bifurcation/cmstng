@@ -50,6 +50,7 @@ def _JSONobj(d):
             "certificate": Certificate,
             "encrypted":   Encrypted,
             "encryption":  Encryption,
+            "extension":   CertificateExtension,
             "inner":       InnerMessage,
             "integrity":   Integrity,
             "privatekey":  PrivateKey,
@@ -99,13 +100,13 @@ happen on get.  The default type is plain."""
                   "base64": b64,
                   "long": long_to_b64}
         for prop,typ in self.map.iteritems():
-            def g(self, p=prop, d=decode[typ]):
-                return d(self.json_[p])
-            def s(self, x, p=prop, e=encode[typ]):
-                self.json_[p] = e(x)
-            def d(self,  p=prop, t=typ):
+            def prop_getter(self, p=prop, decoder=decode[typ]):
+                return decoder(self.json_.get(p))
+            def prop_setter(self, x, p=prop, encoder=encode[typ]):
+                self.json_[p] = encoder(x)
+            def prop_deleter(self, p=prop, t=typ):
                 del self.json_[p]
-            setattr(cls, prop, property(g, s, d))
+            setattr(cls, prop, property(prop_getter, prop_setter, prop_deleter))
 
         return cls
 
@@ -146,9 +147,9 @@ class CryptoTyped(object):
             return r
 
         for p in self.Props:
-            x = getattr(self, p)
-            y = getattr(other, p)
-
+            x = getattr(self, p, None)
+            y = getattr(other, p, None)
+                
             # arrays should do this by default, if you ask me
             if isinstance(x, (list, tuple)):
                 r = cmp(len(x), len(y))
@@ -220,7 +221,18 @@ Closes the file handle when complete."""
         e.encrypt(key=key)
         return e
 
-@Props("Name", "PublicKey", "Hash", "Serial", date=("NotBefore", "NotAfter"))
+@Props("Name", "Value")
+class CertificateExtension(CryptoTyped):
+    def __init__(self, name=None, value=None, json=None):
+        super(CertificateExtension, self).__init__("extension", json)
+        if name:
+            self.Name = name
+        if value:
+            self.Value = value
+    def cannon(self):
+        return self.Name + "\x00" + self.Value
+    
+@Props("Name", "PublicKey", "Hash", "Serial", "Extensions", "CriticalExtensions", date=("NotBefore", "NotAfter"))
 class Certificate(CryptoBase):
     def __init__(self, name=None, pubkey=None, serial=None, validityDays=None, json=None):
         super(Certificate, self).__init__("certificate", json)
@@ -242,6 +254,16 @@ class Certificate(CryptoBase):
             if self.Hash != self.hash():
                 raise CryptoException("Invalid certificate hash")
 
+    def addExtension(self, name, value):
+        if "Extensions" not in self.json_:
+            self.Extensions = []
+        self.Extensions.append(CertificateExtension(name, value))
+
+    def addCriticalExtension(self, name, value):
+        if "CriticalExtensions" not in self.json_:
+            self.CriticalExtensions = []
+        self.CriticalExtensions.append(CertificateExtension(name, value))
+        
     def validate(self):
         n = datetime.datetime.utcnow()
         if self.NotBefore > n:
@@ -258,7 +280,13 @@ class Certificate(CryptoBase):
 
     def hash(self):
         pk = self.PublicKey
-        source = self.Name + self.json_["NotAfter"] + self.json_["NotBefore"] + pk.Algorithm
+        source = [self.Name, self.json_["NotAfter"], self.json_["NotBefore"], pk.Algorithm]
+        if "CriticalExtensions" in self.json_:
+            source += [e.cannon() for e in self.CriticalExtensions]
+        if "Extensions" in self.json_:
+            source += [e.cannon() for e in self.Extensions]
+
+        source = "\x00".join(source)
         source = source.encode('utf8') + long_to_bytes(pk.RsaExponent) + long_to_bytes(pk.RsaModulus)
         return b64(hashlib.sha1(source).digest())
 
@@ -417,23 +445,27 @@ class Recipient(CryptoTyped):
         if key:
             self.EncryptionKey = key
 
-@Props("Algorithm", base64="IV")
+@Props("Algorithm", "KDF", base64="IV")
 class Encryption(CryptoTyped):
-    def __init__(self, algorithm=None, iv=None, json=None):
+    def __init__(self, algorithm=None, iv=None, kdf=None, json=None):
         super(Encryption, self).__init__("encryption", json)
         if algorithm:
             self.Algorithm = algorithm
         if iv:
             self.IV = iv
+        if kdf:
+            self.KDF = kdf
 
-@Props("Algorithm", base64="Value")
+@Props("Algorithm", "KDF", base64="Value")
 class Integrity(CryptoTyped):
-    def __init__(self, algorithm=None, value=None, json=None):
+    def __init__(self, algorithm=None, value=None, kdf=None, json=None):
         super(Integrity, self).__init__("integrity", json)
         if algorithm:
             self.Algorithm = algorithm
         if value:
             self.Value = value
+        if kdf:
+            self.KDF = kdf
 
 @Props("ContentType", "Data", "Name", date="Date")
 class InnerMessage(CryptoBase):
@@ -465,16 +497,16 @@ class Encrypted(CryptoBase):
                 key=None):
         (alg, size, mode) = getAlgorithm(encryption_algorithm)
         iv = generateIV(encryption_algorithm)
-        self.Encryption = Encryption(encryption_algorithm, iv)
+        self.Encryption = Encryption(encryption_algorithm, iv=iv)
 
         if key:
             sk = key
             mek = kdf(sk, encryption_algorithm, PBKDF2_HMAC_SHA1_1024)
-            mik = kdf(sk, integrity_algorithm, PBKDF2_HMAC_SHA1_1024)
+            self.Encryption.KDF = "PBKDF2_HMAC_SHA1"
         else:
             sk = generateSessionKey(encryption_algorithm)
             mek = kdf(sk, encryption_algorithm, P_SHA256)
-            mik = kdf(sk, integrity_algorithm, P_SHA256)
+            self.Encryption.KDF = "P_SHA256"
         js = JSONdumps(self.inner)
 
         ciphertext = symmetricEncrypt(mek, iv, encryption_algorithm, js)
@@ -491,8 +523,9 @@ class Encrypted(CryptoBase):
                 rcpts.append(r)
             self.Recipients = rcpts
 
+        mik = kdf(sk, integrity_algorithm, P_SHA256)
         mac = hmac(mik, integrity_algorithm, ciphertext)
-        self.Integrity = Integrity(integrity_algorithm, mac)
+        self.Integrity = Integrity(integrity_algorithm, mac, "P_SHA256")
 
     def _symmetricDecrypt(self, key, kd_function):
         ciphertext = self.EncryptedData

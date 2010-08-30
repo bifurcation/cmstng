@@ -74,6 +74,12 @@ class TestCrypto(unittest.TestCase):
         certjl = crypto.JSONloads(certj)
         self.assertTrue(self.cert == certjl)
         self.assertTrue(certjl.NotBefore == self.cert.NotBefore)
+        h = self.cert.hash()
+        self.assertTrue(h)
+        self.assertEqual(h, certjl.hash())
+        certjl.addExtension("foo", "bar")
+        certjl.addCriticalExtension("fooCritical", "barCrit")
+        self.assertNotEqual(h, certjl.hash())
 
     def test_Signed(self):
         msg = crypto.b64(crypto.generateRandom(1024))
