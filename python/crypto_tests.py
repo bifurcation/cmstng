@@ -80,6 +80,7 @@ class TestCrypto(unittest.TestCase):
         certjl.addExtension("foo", "bar")
         certjl.addCriticalExtension("fooCritical", "barCrit")
         self.assertNotEqual(h, certjl.hash())
+        self.assertFalse(certjl.validate())
 
     def test_Signed(self):
         msg = crypto.b64(crypto.generateRandom(1024))

@@ -67,6 +67,13 @@ def JSONloads(s):
     "Load a string as a JSON object, converting to crypto objects as needed"
     return json.loads(s, object_hook=_JSONobj)
 
+def get_kdf(name):
+    kdf_f = {"P_SHA256": P_SHA256,
+             "PBKDF2_HMAC_SHA1": PBKDF2_HMAC_SHA1_1024}.get(name)
+    if not kdf_f:
+        raise CryptoException("Unknown KDF: %s" % f)
+    return kdf_f
+
 class CryptoException(Exception):
     "All exceptions throw intentionally from this module"
     pass
@@ -223,6 +230,8 @@ Closes the file handle when complete."""
 
 @Props("Name", "Value")
 class CertificateExtension(CryptoTyped):
+    known_extensions = {}
+    
     def __init__(self, name=None, value=None, json=None):
         super(CertificateExtension, self).__init__("extension", json)
         if name:
@@ -231,7 +240,13 @@ class CertificateExtension(CryptoTyped):
             self.Value = value
     def cannon(self):
         return self.Name + "\x00" + self.Value
-    
+
+    def check(self, cert):
+        n = self.known_extensions.get(self.Name)
+        if not n:
+            return False
+        return n(self, cert)
+        
 @Props("Name", "PublicKey", "Hash", "Serial", "Extensions", "CriticalExtensions", date=("NotBefore", "NotAfter"))
 class Certificate(CryptoBase):
     def __init__(self, name=None, pubkey=None, serial=None, validityDays=None, json=None):
@@ -276,10 +291,15 @@ class Certificate(CryptoBase):
             return False
         if self.json_['Version'] != version:
             return False
+        ce = self.CriticalExtensions
+        if ce:
+            for e in ce:
+                if not e.check(self):
+                    return False
         return True
 
     def hash(self):
-        pk = self.PublicKey
+        pk = self.PublicKey        
         source = [self.Name, self.json_["NotAfter"], self.json_["NotBefore"], pk.Algorithm]
         if "CriticalExtensions" in self.json_:
             source += [e.cannon() for e in self.CriticalExtensions]
@@ -527,12 +547,12 @@ class Encrypted(CryptoBase):
         mac = hmac(mik, integrity_algorithm, ciphertext)
         self.Integrity = Integrity(integrity_algorithm, mac, "P_SHA256")
 
-    def _symmetricDecrypt(self, key, kd_function):
+    def _symmetricDecrypt(self, key):
         ciphertext = self.EncryptedData
         iv = self.Encryption.IV
 
         encryption_algorithm = self.Encryption.Algorithm
-        mek = kdf(key, encryption_algorithm, kd_function)
+        mek = kdf(key, encryption_algorithm, get_kdf(self.Encryption.KDF))
         plaintext = symmetricDecrypt(mek, iv, encryption_algorithm, ciphertext)
         if (not plaintext) or (len(plaintext) < 67) or (plaintext[0] != '{') or (plaintext[-1] != '}'):
             raise CryptoException("Bad decrypt: " + repr(iv) + ' ' +  repr(plaintext))
@@ -542,10 +562,10 @@ class Encrypted(CryptoBase):
             raise CryptoException("Message from the future")
 
         integrity_algorithm = self.Integrity.Algorithm
-        mik = kdf(key, integrity_algorithm, kd_function)
+        mik = kdf(key, integrity_algorithm, get_kdf(self.Integrity.KDF))
         mac = hmac(mik, integrity_algorithm, ciphertext)
         if mac != self.Integrity.Value:
-            raise CryptoException("Invalid HMAC")
+            raise CryptoException("Invalid HMAC: '%s' != '%s'" % (b64(mac), b64(self.Integrity.Value)))
         return res
 
     def decrypt(self, privKey, cert=None, name=None, trusted=False):
@@ -565,12 +585,12 @@ class Encrypted(CryptoBase):
 
         ek = rcpt.EncryptionKey
         sk = privKey.decrypt(ek)
-        res = self._symmetricDecrypt(sk, P_SHA256)
+        res = self._symmetricDecrypt(sk)
 
         return res
 
     def decryptJSON(self, key):
-        res = self._symmetricDecrypt(key, PBKDF2_HMAC_SHA1_1024)
+        res = self._symmetricDecrypt(key)
         if res.ContentType != JSON_MIME:
             raise CryptoException("Invalid data type, not '%s'" % JSON_MIME)
         js = JSONloads(res.Data)

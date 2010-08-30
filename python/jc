@@ -13,6 +13,9 @@ def sample(opts, args):
     print "var ca_priv=%s;" % ca_priv
     
     ca_cert = ca_priv.PublicKey.genCertificate("My CA", opts.validity)
+    ca_cert.addExtension("urn:oid:2.5.29.15", 0)
+    ca_cert.addExtension("urn:oid:2.5.29.15", 5)
+    ca_cert.addExtension("urn:oid:2.5.29.15", 6)
     print "var ca_cert=%s;" % ca_cert
     set_bundle([ca_cert])
 
