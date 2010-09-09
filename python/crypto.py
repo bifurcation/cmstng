@@ -250,16 +250,24 @@ class CertificateExtension(CryptoTyped):
         
 @Props("Name", "PublicKey", "Hash", "Serial", "Extensions", "CriticalExtensions", date=("NotBefore", "NotAfter"))
 class Certificate(CryptoBase):
-    def __init__(self, name=None, pubkey=None, serial=None, validityDays=None, json=None):
+    def __init__(self, name=None, pubkey=None, serial=None, 
+                 validityDays=None, notBefore=None, notAfter=None,
+                 json=None):
         super(Certificate, self).__init__("certificate", json)
 
         if name:
             self.Name = name
         if pubkey:
             self.PublicKey = pubkey
+
         if validityDays:
             self.NotBefore = get_date()
             self.NotAfter = get_date(validityDays)
+        if notBefore:
+            self.NotBefore = notBefore
+        if notAfter:
+            self.NotAfter = notAfter
+
         if serial is not None:
             self.Serial = serial
         if "Serial" not in self.json_:
