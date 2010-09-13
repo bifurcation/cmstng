@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
+<!ENTITY rfc2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
+<!ENTITY rfc5280 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5280.xml">
+<!ENTITY rfc5116 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5116.xml">
+<!ENTITY rfc2045 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2045.xml">
+<!ENTITY rfc3986 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3986.xml">
+<!ENTITY rfc4086 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.4086.xml">
+<!ENTITY rfc5246 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5246.xml">
+<!ENTITY rfc3447 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3447.xml">
+<!ENTITY rfc5649 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5649.xml">
+]>
 <!-- $Id -->
 <?rfc inline="yes"?>
 <?rfc toc="yes" ?>
@@ -49,7 +60,7 @@
 
 
 
-    <date day="02" month="August" year="2010" />
+    <date day="12" month="September" year="2010" />
 
     <abstract>
       <t>
@@ -92,8 +103,8 @@
     <section title="Conventions Used In This Document">
       <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
       "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
-      document are to be interpreted as described in <!--<xref
-      target="RFC2119"> </xref> TODO -->.</t>
+      document are to be interpreted as described in <xref
+      target="RFC2119"> </xref>.</t>
     </section>
     <section title="Overview">
       <t>
@@ -186,7 +197,7 @@
              Experience has shown that certificate handling 
              path construction) is one of the trickier parts of
              building a cryptographic system. While JSMS supports
-             PKIX certificates, it's certificate processing
+             PKIX certificates, its certificate processing
              is far simpler than that of CMS. 
              When a JSMS agent provides its certificate, it must
              provide an ordered chain (as in TLS [REF]) terminating
@@ -207,8 +218,13 @@
 	     which are just mime-typed JSON objects. These objects are then
 	     wrapped in a signed/encrypted wrapper:
 	   </t>
+	   <t>
+	     [[OPEN ISSUE: Do we want to have both the schema description
+	     and the bullet point description...]
+	   </t>
 	   <figure>
              <!--begin-pdu-->
+	     
 	     <artwork><![CDATA[
 var content_schema={
           "description":"Message contents",
@@ -231,7 +247,7 @@ var content_schema={
           <t><list style="hanging">
               <t/>
       
-               <t hangText="ContentType:">A MIME [REF] content type indicating the 
+               <t hangText="ContentType:">A MIME <xref target="RFC2045"/> media type indicating the 
 	       type of the "Data" field.</t>
 	       
 	       <t hangText="Data:">The data value. [OPEN ISSUE: Do we need an encoding here?]</t>
@@ -280,7 +296,7 @@ var message_schema={
               <t/>
       
                <t hangText="Version:">The version number. For this specification
-               this value MUST be set to the string "1.0"</t>
+               this value MUST be set to the string "1.0". [TODO: VErsion processing.]</t>
                
                <t/>
 
@@ -333,6 +349,9 @@ var signed_schema = {
                            }}}};
                ]]></artwork>
            </figure>
+	   <t>[[OPEN ISSUE: How do we represent enums that correspond to algorithm identifiers
+	   and hence registries.]]</t>
+	     
            <t>
              The meaning of the fields is described below:
            </t>
@@ -352,7 +371,7 @@ var signed_schema = {
                used to compute the signature. This field MUST be present.</t>
 
                <t/><t hangText="Signer:">The signer's identity, expressed
-               as an email address [OPEN ISSUE: This seems like it should be a URI.].
+	       as a URI <xref target="RFC3986"/>
                This field MUST be present.
              </t>
              <t/><t hangText="CertChain:">The signer's certificate chain,
@@ -469,7 +488,7 @@ var certchain_pkix_schema = {
 	   </t>
 	   <t>
 	     The recipient MUST verify the certificate chain (in the case of
-	     PKIX certificates according to RFC 5280). If any validation
+	     PKIX certificates according to RFC 5280 <xref target="RFC5280"/>). If any validation
 	     failure occurs, the implementation MUST abort processing and
 	     return an error.
 	   </t>
@@ -478,10 +497,9 @@ var certchain_pkix_schema = {
 	     contain an identity which matches the "Signer" field. In the case of
 	     PKIX certificates, the certificate MUST contain a subjectAltName
 	     field of type "uniformResourceIdentifier". This field MUST
-	     match [TODO: define match] the URI in the "Signer" field. If not,
+	     be equivalent to the URI in the "Signer" field. If not,
 	     an error MUST be returned.
-	     [OPEN ISSUE: See URI note above.]
-	   </t>
+	   </t>	   
 	     </section>
 	   </section>
 	   <section title="Example" anchor="sec.signed-example">
@@ -490,20 +508,325 @@ var certchain_pkix_schema = {
 	 </section>
 	 <section title="Encrypted Data" anchor="sec.encrypted">
 	   <t>
-	     An "encrypted" message contains a "Content" element
-	     encrypted under a single Content Encryption Key (CEK)
-	     plus an arbitrary number of "Recipient" blocks each
-	     of which contains a copy of the CEK encrypted for
-	     a given recipient. Both symmetric and asymmetric
-	     encryption is supported. All "encrypted" messages
-	     contain a symmetric integrity check, either via a 
-	     MAC or via an AEAD [REF] algorithm such as GCM [REF].
+	     An "encrypted" message contains an encrypted "Content"
+	     block. All "encrypted" messages contain a symmetric integrity check, either via a
+	     MAC or via an AEAD <xref target="RFC5116"/> algorithm such as GCM
+	     [REF].
+	     A message may be encrypted to an arbitrary number of 
+	     recipients. Each recipient is represented by a 
+	     "Recipient" block, which contains a copy of the
+	     keying material encrypted for that recipient.
+	     Both symmetric and asymmetric key establishment 
+	     is supported. In order to support both integrity and 
+	     encryption, what is carried in the Recipient block 
+	     is a Content Master Key (CMK) which is then used with
+	      a KDF to generate the Content Encryption Key (CEK)
+	      used to encrypt the message and the Content Integrity Key (CIK) used with the MAC.
 	   </t>
+           <figure>
+             <!--begin-pdu-->
+              <artwork><![CDATA[
+var encrypted_schema = {
+  "description":"An encrypted object",
+  "type":"object",
+  "extends":message_schema,
+  "properties":{
+    "Recipients":{
+      "description":"The list of recipient blocks",
+      "type":"array",
+      "items":{
+         "description":"A single recipient block"
+         "type":"recipient_schema",
+       }
+    },
+
+    "KDF":{
+      "description":"The KDF used to derive the MAC and encryption keys",
+      "type":"string",
+      "enum":["P_SHA256"]
+    },
+  
+    "Encryption":{
+      "description":"The encryption control information for the entire message",
+      "type":"object",
+      "properties":{
+        "Algorithm":{
+          "description":"The algorithm used to encrypt the message",
+          "type":"string",
+          "enum":["AES-128-CBC", "AES-256-CBC", "AES-128-GCM", "AES-256-GCM"]
+        }
+        "IV":{
+          "description":"The initialization vector for the message (base64-encoded)",
+	  "type":"string"
+        } 
+     }
+    },
+  
+     "Integrity":{
+      "description":"The integrity control information for the entire message",
+      "type":"object",
+      "properties":{
+        "Algorithm":{
+          "description":"The algorithm used to compute the MAC",
+          "type":"string",
+          "enum":["HMAC-SHA-256"],
+        },
+        "Value":{
+          "description":"The MAC value (base64-encoded)",
+          "type":"string",
+        }
+      }
+    },
+
+    "Data":{
+      "description":"The ciphertext (base64-encoded)",
+      "type":"string",
+    }
+  }
+}
+]]></artwork>
+	   </figure>
+
+	   <t>
+             The meaning of the fields is as follows:
+	   </t>
+          <t><list style="hanging">
+	      
+	    <t></t><t hangText="Recipients:">
+	    The list of recipients. This
+	    is an array of recipient_schema structures, each of 
+	    which establishes the CMK for that recipient.</t>
+	    
+	    <t></t><t hangText="KDF:">
+	    Specifies the key derivation function used to generate
+	    the CEK and the CIK from the CMK. This field MAY
+	    be absent if an AEAD algorithm is used, in which 
+	    case the CEK is derived by copying the CMK.</t>
+	    
+	    <t></t>><t hangText="Encryption:">
+	    Specifies the properties of the encryption. The Algorithm
+	    field specifies the encryption algorithm and the IV field
+	    specifies the initialization vector (if required for the
+	    algorithm.</t>
+	    
+	    <t></t>><t hangText="Integrity:">
+	    Specifies the properties of the integrity check. The
+	    Algorithm field specifies the MAC algorithm and the
+	    Value field contains the MAC. This field MAY be absent
+	    if no integrity check is used.</t>
+
+	    <t></t><t hangText="Data:">
+	    Contains the ciphertext.</t>
+	  </list>
+	  </t>
+	  
+	  <t>
+	    Each Recipient element provides an encrypted copy of the CMK 
+	    for a single recipient.
+	  </t>
+           <figure>
+             <!--begin-pdu-->
+              <artwork><![CDATA[
+var encrypted_schema = {
+  "description":"An encrypted object",
+  "type":"object",
+  "extends":message_schema,
+  "properties":{
+    "KEK":{
+      "type":"object",
+      "description:"Identifies the key used to encrypt the CMK",
+      "properties":{
+        "RecipientName":{
+         "type":"string",
+	 "description":"The recipients name represented as a URI",
+        },
+        "CertificateDigest":{
+         "type":"string",
+	 "description":"A digest of the recipient's certificate",
+	},
+        "KeyIdentifier",
+         "type":"string",
+	 "description":"An opaque string representing a shared symmetric key"
+        }
+      }
+    },
+    "Algorithm":{
+      "description":"The algorithm used to protect the CMK",
+      "type":"string",
+      "enum":["RSA-PKCS1-1.5", "AES-128-CBC", "AES-256-CBC", "AES-128-GCM", "AES-256-GCM"]
+    },
+    "Value":{
+      "description":"The binary representation of the encrypted CMK (base64-encoded)",
+      "type":string"
+    }
+  }
+}
+]]></artwork>
+</figure>
+           <t>
+             The meaning of the fields is described below:
+           </t>
+           <t>
+             <list style="hanging">
+	       <t/><t hangText="KEK">Indicates the key used to encrypt
+	       the CMK. Either a "RecipientName" or a "KeyIdentifier" 
+	       MUST be provided. If the "RecipientName" is provided, then
+	       a "CertificateDigest" SHOULD be provided.</t>
+	       <t></t>
+	       
+	       <list style="hanging">
+		 <t hangText="RecipientName:">Provides the recipient's name in URI
+		 form.</t>
+		 
+		 <t hangText="CertificateDigest:">[TODO: Canonicalization? TODO]</t>
+		 
+		 <t hangText="KeyIdentifier">The name of a shared symmetric key 
+		 known to both sender and recipient. This need not be globally
+		 unique as long as it is unique within the recipient's context.</t>
+	       </list>
+	       
+	       <t hangText="Algorithm:">The algorithm used to encrypt the CMK. Note
+	       the JSMS only supports key transport and not key agreement
+	       (since key agreement can always be turned into key transport).
+	       </t>
+	       
+	       <t hangText="Value:">The CMK encrypted under the specified algorithm
+	       and key.</t>
+	     </list>
+	   </t>
+	   
+	   <section title="Message Encryption" anchor="sec.encryption">
+	     <t>
+	       The message encryption process is as follows.
+	     </t>
+	     <t><list style="numbers">
+	       <t>Generate a random CMK. The CMK MUST have a length at least
+	       equal to that of the larger of the required integrity or
+	       encryption keys and MUST be generated randomly. See <xref target="RFC4086"/>
+	       for considerations on generating random values.</t>
+
+	       <t>Encrypt the CMK for each recipient (see <xref target="sec.encrypt_cmk"/>)</t>
+
+	       <t>Generate a random IV (if required for the algorithm).</t>
+	       
+	       <t>Run the key derivation algorithm (see <xref target="sec.key_derivation"/>)
+	       to generate the CEK and CIK (if not using an AEAD algorithm).</t>
+
+	       <t>Serialize the content into a bitstring M.</t>
+	       
+	       <t>Encrypt M using the CEK and IV to form the bitstring C.</t>
+
+	       <t>Set the Value element equal to the base64-encoded representation of C.</t>
+	       
+	       <t>If not using an AEAD algorithm, compute the function I = MAC(CIK, C)
+	       using the chosen integrity algorithm. Note that this is EtA encryption
+	       which is considered the best cryptographic choice ([TODO: REF Canetti]).
+	       Set the Integrity.Value element equal to the base64-encoded representation of I.</t>
+	       
+	       </list>
+	     </t>
+	   </section>
+	   <section title="Message Decryption" anchor="sec.decryption">
+	     <t>
+	       The message decryption process is the reverse of the encryption process.
+	     </t>
+	     <t><list style="numbers">
+	       <t>Identify a Recipient block which appears to reference a key known to the recipient.</t>
+	       
+	       <t>Decrypt the CMK. If this fails and another Recipient block appears plausible,
+	       that MAY be tried.</t>
+
+	       <t>Run the key derivation algorithm (see <xref target="sec.key_derivation"/>)
+	       to generate the CEK and CIK (if not using an AEAD algorithm).</t>
+	       
+	       <t>If not using an AEAD algorithm, compute the integrity check value I' on the
+	       binary representation of the Value element using the indicated integrity
+	       check. If the Integrity.Value does not match I', then an error MUST be reported
+	       and processing MUST be aborted.</t>
+
+	       <t>Decrypt the binary representation of the Value element and output the result</t>
+	     </list>
+	     </t>
+	   </section>
+	   
+
+	   <section title="Key Derivation" anchor="sec.key_derivation">
+	     <t>
+	       The key derivation process converts the CMK into a CEK. It assumes as
+	       a primitive a Key Derivation Function (KDF) which notionally
+	       takes three arguments:
+
+	       <list style="hanging">
+		 <t hangText="MasterKey:">The master key used to compute the individual use keys</t>
+		 <t hangText="Label:">The use key label, used to differentiate individual use keys</t>
+		 <t hangText="Length:">The length of the desired use key</t>
+	       </list>
+	       
+	       <t>
+		 The only real KDF specified in this document is the TLS PRF, which is invoked
+		 as PRF(MasterKey, Label) with an empty seed and produces an arbitrary length
+		 output. The appropriate number of bits (Length) is simply extracted from the beginning
+		 of the output. The KDF name "P_XXX" in this document refers the the 
+		 TLS <xref target="RFC5246"/> PRF using P_XXX as the underlying P_hash function.
+	       </t>
+	       
+	       <t>
+		 To compute the CEK from the CMK, the label "Encryption" is used.
+	       </t>
+	       
+	       <t>
+		 To compute the CIK from the CMK, the label "Integrity" is used.
+	       </t>
+
+	       <t>
+		 When AEAD algorithms are used the KDF element MUST not be present.
+		 When they are not used, it MUST be present.
+	       </t>
+	     </t>
+	   </section>
+	   <section title="CMK Encryption" anchor="sec.encrypt_cmk">
+	     <t>
+	       JSMS supports two forms of CMK encryption:
+	     </t>
+	     <t>
+	       <list style="symbols">
+		 <t>Asymmetric encryption under the recipient's public key.</t>
+		 <t>Symmetric encryption under a shared key.</t>
+	       </list>
+	     </t>
+	     <section title="Asymmetric Encryption" anchor="sec.asymmetric_encryption">
+	       <t>
+		 In the asymmetric encryption mode, the CMK is encrypted under the 
+		 recipient's public key. The only currently defined asymmetric encryption
+		 mode is RSA-PKCS1-1.5, which refers to <xref target="RFC3447"/> 
+		 RSAES-PKCS1-v1_5.
+	       </t>
+	     </section>
+	     <section title="Symmetric Encryption" anchor="sec.symmetric_encryption">
+	       <t>
+		 In the symmetric encryption mode, the CMK is encrypted under a
+		 symmetric key shared between the sender and receiver. All such
+		 modes MUST provide integrity for the CMK. This document defines
+		 four such modes: AES-128-CBC, AES-256-CBC
+		 referring to the <xref target="RFC5649"/> AES key wrapping
+		 modes and AES-128-GCM, AES-256-GCM, referring to AES encryption
+		 with GCM. For GCM the random 64-bit IV is prepended to the ciphertext.
+	       </t>
+	     </section>
+	   </section>
          </section>
 
          <section title="Composition" anchor="sec.msg-composition">
-
-
+	   <t>
+	     This document does not specify a combination signed and encrypted
+	     mode. However, because the contents of a message can be arbitrary,
+	     and encryption and data origin authentication can be provided by
+	     recursively encapsulating multiple JSMS messages. In general,
+	     senders SHOULD sign the message and then encrypt the result
+	     (thus encrypting the signature). This prevents attacks in which the
+	     signature is stripped, leaving just an encrypted message, as
+	     well as providing privacy for the signer.
+	   </t>
          </section>
       </section>
       
@@ -531,6 +854,15 @@ var certchain_pkix_schema = {
   
   <back>
     <references title="Normative References">
+      &rfc2119;
+      &rfc5280;
+      &rfc5116;
+      &rfc2045;
+      &rfc3986;
+      &rfc4086;
+      &rfc5246;
+      &rfc3447;
+      &rfc5649;
     </references>
     <references title="Informative References">
     </references> 
