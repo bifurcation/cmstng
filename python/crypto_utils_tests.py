@@ -77,7 +77,7 @@ class TestCryptoUtils(unittest.TestCase):
         alg = "AES-256-CBC"
         key = generateSessionKey(alg)
         self.assertEqual(len(key), 32)
-        mek = kdf(key, alg)
+        mek = kdf(key, alg,PBKDF2_HMAC_SHA1_1024)
         self.assertEqual(len(mek), 32)
 
     def test_sym_encrypt(self):
