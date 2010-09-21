@@ -30,15 +30,16 @@ def decrypt_message(msg, privKey, name):
 if __name__ == '__main__':
     ekr_kp = crypto.KeyPair('ekr@rtfm.com')
     ekr_cert = ekr_kp.Certificate
-    ekr_certs = [ ekr_cert, ]
     ekr_priv = ekr_kp.Privkey
+    #ekr_priv = crypto.PrivateKey(size=1024)
+    #ekr_cert =  ekr_priv.PublicKey.genCertificate('ekr@rtfm.com')
+    ekr_certs = [ ekr_cert, ]
 
     # Sign a message
     signed = sign_message(inner_message, ekr_certs, ekr_priv)
     print "***** Signed message ****"
     print JSONdumps(signed, indent=2)
     print "*****"
-
 
     # Verify a message
     result = verify_message(signed)
