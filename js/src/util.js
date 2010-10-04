@@ -29,48 +29,52 @@
 
 (function(){
 
-cmstng.RSA = {
-     /**
-     * Encrypts the given message via the RSAEP method.
+var FACTOR_256 = BigInteger(256);
+
+cmstng.UTIL = {
+    /**
+     * Converts a octet string into a non-negative integer.
      *
-     * @param   {Object} key The key to encrypt with
-     * @param   {BigInteger} msg The message to encrypt
-     * @returns {BigInteger} The ciphertext for {msg} from {key}
-     * @throws  {TypeError} If {key} is invalid
+     * @param   {String} os The octet string to convert
+     * @return  {BigInteger} The non-negative integer for {os}
      */
-    RSAEP: function(key, msg) {
-        // TODO: make this broken out into chunks...
-        var ctext;
-        
-        if (!key || !key.e || !key.n) {
-            throw new TypeError("invalid key");
+    OS2IP: function(os) {
+        var ip = BigInteger();
+
+        if (!os) {
+            return ip;
         }
-        msg = BigInteger(msg);
-        ctext = msg.modPow(key.e, key.n);
         
-        return ctext;
+        for (var idx = 0; idx < os.length; idx++) {
+            var b = os.charCodeAt(idx);
+            ip = BigInteger(b).multiply(FACTOR_256.pow(idx)).add(ip);
+        }
+        
+        return ip;
     },
     /**
-     * Decrypts the given ciphertext via the RSADP method.
+     * Converts a non-negative integer into an octet string.
      *
-     * @param   {Object} key The key to decrypt with
-     * @param   {BigInteger} ctext The ciphertext to decrypt
-     * @returns {BigInteger} The message for {ctext} from {key}
-     * @throws  {TypeError} If {key} is invalid
+     * @param   {BigInteger|Integer|String} ip number to convert
+     * @param   {Integer} len The maximum length of the octet string
+     * @return  {String} The octet string for {ip}
+     * @throws  {TypeError} if {ip} is greater than 256^{len}
      */
-    RSADP: function(key, ctext) {
-        // TODO: make this broken out into chunks...
-        var msg;
-        
-        if (!key || !key.d || !key.n) {
-            throw new TypeError("invalid key");
+    I2OSP: function(ip, len) {
+        var num = BigInteger(ip);
+        if (num.compare(FACTOR_256.pow(len)) > 0) {
+            throw new TypeError("integer too large");
         }
-        ctext = BigInteger(ctext);
-        msg = ctext.modPow(key.d, key.n);
         
-        // TODO: try to use more expressive form if possible
+        var os = "";
+        for (var idx = len; idx > 0; idx--) {
+            var parts = num.divRem(FACTOR_256.pow(idx - 1));
+            var b = parts[0].toJSValue();
+            os = String.fromCharCode(b) + os;
+            num = parts[1];
+        }
         
-        return msg;
+        return os;
     }
 };
 })();

@@ -31,12 +31,19 @@
     // 3rd party dependencies
     var deps = [
         //'http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js',
-        'http://github.com/silentmatt/javascript-biginteger/raw/master/biginteger.js',
+       'http://github.com/silentmatt/javascript-biginteger/raw/master/biginteger.js',
+        'http://bitwiseshiftleft.github.com/sjcl/sjcl.js',
+      //  'http://www-cs-students.stanford.edu/~tjw/jsbn/jsbn.js',
+      //  'http://www-cs-students.stanford.edu/~tjw/jsbn/jsbn2.js',
+      //  'http://www-cs-students.stanford.edu/~tjw/jsbn/rsa.js',
+     //   'http://www-cs-students.stanford.edu/~tjw/jsbn/rsa2.js',
+     //   'http://www-cs-students.stanford.edu/~tjw/jsbn/base64.js',
         ''
     ];
     // our sources
     var sources = [
         'src/bedrock.js',
+        'src/util.js',
         'src/rsa.js',
         ''
     ];

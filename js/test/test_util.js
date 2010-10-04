@@ -27,50 +27,38 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-(function(){
+$(document).ready(function() {
+    module("cmstng/util");
+    
+    test("octet/integer conversion", function() {
+        var osExp, osAct, ip;
+        
+        osExp = "1234";
+        ip = cmstng.UTIL.OS2IP(osExp);
+        osAct = cmstng.UTIL.I2OSP(ip, osExp.length);
+        equals(osExp, osAct, "basic octet strings equal");
+        
+        osExp = "\x00\x01\x02\x03";
+        ip = cmstng.UTIL.OS2IP(osExp);
+        osAct = cmstng.UTIL.I2OSP(ip, osExp.length);
+        equals(osExp, osAct, "0-start octet strings equal");
+        
+        osExp = "";
+        for (var idx = 0; idx < 16; idx++) {
+            osExp += String.fromCharCode(Math.random() * 256);
+        }
+        ip = cmstng.UTIL.OS2IP(osExp);
+        osAct = cmstng.UTIL.I2OSP(ip, osExp.length);
+        equals(osExp, osAct, "random octet strings equal");
 
-cmstng.RSA = {
-     /**
-     * Encrypts the given message via the RSAEP method.
-     *
-     * @param   {Object} key The key to encrypt with
-     * @param   {BigInteger} msg The message to encrypt
-     * @returns {BigInteger} The ciphertext for {msg} from {key}
-     * @throws  {TypeError} If {key} is invalid
-     */
-    RSAEP: function(key, msg) {
-        // TODO: make this broken out into chunks...
-        var ctext;
-        
-        if (!key || !key.e || !key.n) {
-            throw new TypeError("invalid key");
+        var caught;
+        try {
+            caught = false;
+            var ip = cmstng.UTIL.I2OSP(Math.pow(256, 16), 4);
+        } catch (ex) {
+            caught = (ex instanceof TypeError) && (ex.message == "integer too large");
         }
-        msg = BigInteger(msg);
-        ctext = msg.modPow(key.e, key.n);
-        
-        return ctext;
-    },
-    /**
-     * Decrypts the given ciphertext via the RSADP method.
-     *
-     * @param   {Object} key The key to decrypt with
-     * @param   {BigInteger} ctext The ciphertext to decrypt
-     * @returns {BigInteger} The message for {ctext} from {key}
-     * @throws  {TypeError} If {key} is invalid
-     */
-    RSADP: function(key, ctext) {
-        // TODO: make this broken out into chunks...
-        var msg;
-        
-        if (!key || !key.d || !key.n) {
-            throw new TypeError("invalid key");
-        }
-        ctext = BigInteger(ctext);
-        msg = ctext.modPow(key.d, key.n);
-        
-        // TODO: try to use more expressive form if possible
-        
-        return msg;
-    }
-};
-})();
+        ok(caught, "expected TypeError('integer too large') thrown");
+    });
+
+});
