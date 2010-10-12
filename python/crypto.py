@@ -46,21 +46,7 @@ def _JSONobj(d):
     "Turn a JSON dictionary into a crypto object"
     t = d.get("Type", None)
     if t:
-        cons = {
-            "certificate": Certificate,
-            "encrypted":   Encrypted,
-            "encryption":  Encryption,
-            "extension":   CertificateExtension,
-            "inner":       InnerMessage,
-            "integrity":   Integrity,
-            "privatekey":  PrivateKey,
-            "publickey":   PublicKey,
-            "recipient":   Recipient,
-            "signature":   Signature,
-            "signed":      Signed,
-        }.get(t, None)
-        if cons:
-            return cons(json=d)
+        return TypeName.create(t, d)
     return d
 
 def JSONloads(s):
@@ -78,62 +64,125 @@ class CryptoException(Exception):
     "All exceptions throw intentionally from this module"
     pass
 
+class CoDec(object):
+    @classmethod
+    def schema(cls):
+        return {"type": "string"}
+
+    @classmethod
+    def encode(cls, x):
+        return x
+
+    @classmethod
+    def decode(cls, x):
+        return x
+
+class Identity(CoDec):
+    pass
+    
+class Base64codec(CoDec):
+    @classmethod
+    def schema(cls):
+        return {"type": "string",
+                "format": "base64"}
+
+    @classmethod
+    def encode(cls, x):
+        return b64(x)
+
+    @classmethod
+    def decode(cls, x):
+        return b64d(x)
+
+class DateCodec(CoDec):
+    @classmethod
+    def schema(cls):
+        return {"type": "string",
+                "format": "date-time"}
+
+    @classmethod
+    def encode(cls, x):
+        return fmt_date(x)
+
+    @classmethod
+    def decode(cls, x):
+        return parse_date(x)
+
+class LongCodec(CoDec):
+    @classmethod
+    def encode(self, x):
+        return long_to_b64(x)
+
+    @classmethod
+    def decode(self, x):
+        return b64_to_long(x)
+
+class ListCodec(CoDec):
+    lst = []
+    @classmethod
+    def schema(cls):
+        return {"type": "string",
+                "enum": cls.lst}
+
+class TypeName(object):
+    """A decorator that tells the framework what the Type of the class
+is.  This information is used both for selecting the right class at
+de-serialization time as well as writing out the Type at serialization time."""
+    typeMap = {}
+    
+    def __init__(self, Type):
+        self.typ = Type
+
+    def __call__(self, cls):
+        TypeName.typeMap[self.typ] = cls
+        cls.Type = self.typ
+        return cls
+
+    @classmethod
+    def create(cls, name, json):
+        cons = TypeName.typeMap.get(name, None)
+        if not cons:
+            return name
+        return cons(json=json)
+
 class Props(object):
     """A decorator that adds a JSON access property for each of the strings that are passed.
 Each property can have a type of plain, date, base64, or long.  Types
 other than plain cause encoding to happen on set, and decoding to
 happen on get.  The default type is plain."""
     def __init__(self, *args, **kwargs):
-        self.map = {}
-        for t in args:
-            self.map[t] = "plain"
-        for t in ("plain", "date", "base64", "long"):
-            a = kwargs.get(t, None)
-            if a:
-                if isinstance(a, (list, tuple)):
-                    for b in a:
-                        self.map[b] = t
-                else:
-                    self.map[a] = t
+        self.map = dict.fromkeys(args, Identity())
+        self.map.update(kwargs)
+        for prop, typ in self.map.iteritems():
+            if isinstance(typ, list):
+                self.map[prop] = type("ListCodec_" + "_".join(typ), (ListCodec,), {"lst": typ})
 
     def __call__(self, cls):
         cls.Props = self.map.keys()
-        decode = {"plain": lambda x: x,
-                  "date": parse_date,
-                  "base64": b64d,
-                  "long": b64_to_long}
-        encode = {"plain": lambda x: x,
-                  "date": fmt_date,
-                  "base64": b64,
-                  "long": long_to_b64}
         for prop,typ in self.map.iteritems():
-            def prop_getter(self, p=prop, decoder=decode[typ]):
-                return decoder(self.json_.get(p))
-            def prop_setter(self, x, p=prop, encoder=encode[typ]):
-                self.json_[p] = encoder(x)
-            def prop_deleter(self, p=prop, t=typ):
+            def prop_getter(self, p=prop, codec=typ):
+                return codec.decode(self.json_.get(p))
+            def prop_setter(self, x, p=prop, codec=typ):
+                self.json_[p] = codec.encode(x)
+            def prop_deleter(self, p=prop):
                 del self.json_[p]
             setattr(cls, prop, property(prop_getter, prop_setter, prop_deleter))
-
+        cls.PropMap = self.map
+            
         return cls
 
 @Props("Type")
-class CryptoTyped(object):
+class CryptoTyped(Identity):
     """The base class for all crypto objects.  Crypto objects contain
     a dictionary that holds their state in a form easy to be
     translated to JSON.  Getters and setters modify the JSON
     dictionary."""
-    def __init__(self, objectType, json=None):
+    def __init__(self, json=None):
         super(CryptoTyped,self).__init__()
         if json:
-            if objectType:
-                # I *think* this is always a programming error
-                assert(json["Type"] == objectType)
             self.json_ = json
-        elif objectType:
-            self.json_ = {"Type":objectType}
         else:
-            self.json_ = {}
+            self.json_ = {"Type": self.Type}
 
     def JSON(self):
         return self.json_
@@ -178,16 +227,25 @@ class CryptoTyped(object):
     @classmethod
     def schema(cls):
         "Return the schema for this class"
-        pass
+        props = {}
+        
+        for p in cls.Props:
+            t = cls.PropMap[p]
+            props[p] = t.schema()
+        props["Type"] = {"type" : "string",
+                         "enum" : [cls.__name__]}
+        s = {"type" : "object",
+             "properties" : props}
+        return s
 
 @Props("Version")
 class CryptoBase(CryptoTyped):
-    def __init__(self, objectType, json=None, ver=version):
-        super(CryptoBase, self).__init__(objectType, json)
+    def __init__(self, json=None, ver=version):
+        super(CryptoBase, self).__init__(json)
         if json:
             if json.get("Version", None) != ver:
                 raise CryptoException("Invalid version")
-        elif objectType:
+        else:
             self.json_["Version"] = ver
 
     def __cmp__(self, other):
@@ -229,11 +287,12 @@ Closes the file handle when complete."""
         return e
 
 @Props("Name", "Value")
+@TypeName("extension")
 class CertificateExtension(CryptoTyped):
     known_extensions = {}
     
     def __init__(self, name=None, value=None, json=None):
-        super(CertificateExtension, self).__init__("extension", json)
+        super(CertificateExtension, self).__init__(json)
         if name:
             self.Name = name
         if value:
@@ -248,12 +307,13 @@ class CertificateExtension(CryptoTyped):
             return False
         return n(self, cert)
         
-@Props("Name", "PublicKey", "Hash", "Serial", "Extensions", "CriticalExtensions", date=("NotBefore", "NotAfter"))
+@Props("Name", "PublicKey", "Hash", "Serial", "Extensions", "CriticalExtensions", NotBefore=DateCodec, NotAfter=DateCodec)
+@TypeName("certificate")
 class Certificate(CryptoBase):
     def __init__(self, name=None, pubkey=None, serial=None, 
                  validityDays=None, notBefore=None, notAfter=None,
                  json=None):
-        super(Certificate, self).__init__("certificate", json)
+        super(Certificate, self).__init__(json)
 
         if name:
             self.Name = name
@@ -329,10 +389,11 @@ class Certificate(CryptoBase):
             f.append(dig[i*2:(i+1)*2])
         return ":".join(f)
         
-@Props("Algorithm", long=("RsaExponent", "RsaModulus"))
+@Props(Algorithm=["RSA-PKCS1-1.5"], RsaExponent=LongCodec, RsaModulus=LongCodec)
+@TypeName("publickey")
 class PublicKey(CryptoTyped):
     def __init__(self, key=None, json=None):
-        super(PublicKey, self).__init__("publickey", json)
+        super(PublicKey, self).__init__(json)
         if key:
             self.key = key
             self.RsaExponent = key.e
@@ -356,10 +417,11 @@ class PublicKey(CryptoTyped):
     def genCertificate(self, name, validityDays=365):
         return Certificate(name=name, pubkey=self, validityDays=validityDays)
 
-@Props("PublicKey", "Algorithm", long="PrivateExponent")
+@Props("PublicKey", Algorithm=["RSA-PKCS1-1.5"], PrivateExponent=LongCodec)
+@TypeName("privatekey")
 class PrivateKey(CryptoBase):
     def __init__(self, key=None, size=1024, json=None):
-        super(PrivateKey, self).__init__("privatekey", json)
+        super(PrivateKey, self).__init__(json)
         if not json:
             if key:
                 self.key = key
@@ -413,10 +475,11 @@ def check_cert(cert, trusted=False):
         raise CryptoException("Invalid certificate")
     return incert
 
-@Props("Certificate", "Signer", "DigestAlgorithm", "SignatureAlgorithm", long="Value")
+@Props("Signer", SignatureAlgorithm=["RSA-PKCS1-1.5"], Value=LongCodec, Certificate=Certificate, DigestAlgorithm=["SHA1"])
+@TypeName("signature")
 class Signature(CryptoTyped):
     def __init__(self, cert=None, signer=None, digest_algorithm=None, sig_algorithm=None, value=None, json=None):
-        super(Signature, self).__init__("signature", json)
+        super(Signature, self).__init__(json)
         if cert:
             self.Certificate = cert
         if signer:
@@ -436,14 +499,15 @@ class Signature(CryptoTyped):
 
         return cert.PublicKey.verify(data, self.Value, self.SignatureAlgorithm, self.DigestAlgorithm)
 
-@Props("Signature", base64="SignedData")
+@Props(Signature=Signature, SignedData=Base64codec)
+@TypeName("signed")
 class Signed(CryptoBase):
     def __init__(self, data=None, contentType="text/plain", name=None, json=None):
-        super(Signed, self).__init__("signed", json)
+        super(Signed, self).__init__(json)
         if data:
             if not contentType:
                 raise CryptoException("Must supply content type with data")
-            inner = InnerMessage(data, contentType, name=name)
+            inner = Content(data, contentType, name=name)
             self.SignedData = JSONdumps(inner)
 
     def sign(self, key, cert, digest_algorithm="SHA1"):
@@ -466,10 +530,11 @@ class Signed(CryptoBase):
         js = JSONloads(inner.Data)
         return js
 
-@Props("Name", "EncryptionAlgorithm", "CertificateHash", base64="EncryptionKey")
+@Props("Name", "CertificateHash", EncryptionAlgorithm=["RSA-PKCS1-1.5"], EncryptionKey=Base64codec)
+@TypeName("recipient")
 class Recipient(CryptoTyped):
     def __init__(self, cert=None, key=None, json=None):
-        super(Recipient, self).__init__("recipient", json)
+        super(Recipient, self).__init__(json)
         if cert:
             self.EncryptionAlgorithm = cert.PublicKey.Algorithm
             self.CertificateHash = cert.Hash
@@ -477,10 +542,11 @@ class Recipient(CryptoTyped):
         if key:
             self.EncryptionKey = key
 
-@Props("Algorithm", "KDF", base64="IV")
+@Props(Algorithm=["AES-256-CBC"], KDF=["P_SHA256", "PBKDF2_HMAC_SHA1"], IV=Base64codec)
+@TypeName("encryption")
 class Encryption(CryptoTyped):
     def __init__(self, algorithm=None, iv=None, kdf=None, json=None):
-        super(Encryption, self).__init__("encryption", json)
+        super(Encryption, self).__init__(json)
         if algorithm:
             self.Algorithm = algorithm
         if iv:
@@ -488,10 +554,11 @@ class Encryption(CryptoTyped):
         if kdf:
             self.KDF = kdf
 
-@Props("Algorithm", "KDF", base64="Value")
+@Props(Algorithm=["HMAC-SHA1"], KDF=["P_SHA256", "PBKDF2_HMAC_SHA1"], Value=Base64codec)
+@TypeName("integrity")
 class Integrity(CryptoTyped):
     def __init__(self, algorithm=None, value=None, kdf=None, json=None):
-        super(Integrity, self).__init__("integrity", json)
+        super(Integrity, self).__init__(json)
         if algorithm:
             self.Algorithm = algorithm
         if value:
@@ -499,10 +566,11 @@ class Integrity(CryptoTyped):
         if kdf:
             self.KDF = kdf
 
-@Props("ContentType", "Data", "Name", date="Date")
-class InnerMessage(CryptoBase):
+@Props("ContentType", "Data", "Name", Date=DateCodec)
+@TypeName("content")
+class Content(CryptoBase):
     def __init__(self, data=None, contentType=None, date=None, name=None, json=None):
-        super(InnerMessage, self).__init__("inner", json)
+        super(Content, self).__init__(json)
         if data:
             self.Data = data
         if contentType:
@@ -514,14 +582,15 @@ class InnerMessage(CryptoBase):
         elif not json:
             self.Date = get_date()
 
-@Props("Recipients", "Encryption", "Integrity", base64="EncryptedData")
+@Props("Recipients", Encryption=Encryption, Integrity=Integrity, EncryptedData=Base64codec)
+@TypeName("encrypted")
 class Encrypted(CryptoBase):
     def __init__(self, data=None, contentType="text/plain", name=None, json=None):
-        super(Encrypted, self).__init__("encrypted", json)
+        super(Encrypted, self).__init__(json)
         if data:
             if not contentType:
                 raise CryptoException("Must supply content type with data")
-            self.inner = InnerMessage(data, contentType, name=name)
+            self.inner = Content(data, contentType, name=name)
 
     def encrypt(self, toCerts=None, 
                 encryption_algorithm="AES-256-CBC", 

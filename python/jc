@@ -46,6 +46,10 @@ def sample(opts, args):
     pj = pr.decryptJSON("test")
     assert(pj == priv)
 
+def schema(opts, args):
+    for c in [Content, Signed, Encrypted]:
+        print "var %s=%s;" % (c.__name__, JSONdumps(c.schema(), 2))
+
 def private(opts, args):
     pk = PrivateKey(size=opts.size)
     if opts.phrase:
@@ -182,6 +186,7 @@ def get_bundle(option, opt, value, parser):
 
 if __name__ == '__main__':
     ACTIONS = {"sample": sample,
+               "schema": schema,
                "private": private,
                "cert": cert,
                "validate": validate,
