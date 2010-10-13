@@ -65,6 +65,9 @@ class CryptoException(Exception):
     pass
 
 class CoDec(object):
+    """Abstract static class for encoding and decoding from JSON versions.  
+By default, does identity operations."""
+
     @classmethod
     def schema(cls):
         return {"type": "string"}
@@ -78,6 +81,7 @@ class CoDec(object):
         return x
 
 class Identity(CoDec):
+    """It feels more natural to call this 'Identity' when it is being used directly."""
     pass
     
 class Base64codec(CoDec):
@@ -402,7 +406,7 @@ class PublicKey(CryptoTyped):
         else:
             n = self.RsaModulus
             e = self.RsaExponent
-            self.key = RSA.construct((n, e))
+            self.key = create_rsa(n, e)
 
     def verify(self, signed_data, signature, signature_algorithm="RSA-PKCS1-1.5", digest_algorithm="SHA1"):
         dig = Hash(digest_algorithm, signed_data)
@@ -426,15 +430,15 @@ class PrivateKey(CryptoBase):
             if key:
                 self.key = key
             else:
-                self.key = RSA.generate(size)
+                self.key = generate_rsa(size)
             assert(self.key)
             self.PublicKey = PublicKey(key=self.key.publickey())
             self.PrivateExponent = self.key.d
             self.Algorithm = "RSA-PKCS1-1.5"
         else:
-            self.key = RSA.construct((self.PublicKey.key.n, 
-                                      self.PublicKey.key.e,
-                                      self.PrivateExponent))
+            self.key = create_rsa(self.PublicKey.key.n, 
+                                  self.PublicKey.key.e,
+                                  self.PrivateExponent)
 
     def sign(self, signed_data, digest_algorithm="SHA1"):
         dig = Hash(digest_algorithm, signed_data)
@@ -542,7 +546,7 @@ class Recipient(CryptoTyped):
         if key:
             self.EncryptionKey = key
 
-@Props(Algorithm=["AES-256-CBC"], KDF=["P_SHA256", "PBKDF2_HMAC_SHA1"], IV=Base64codec)
+@Props(Algorithm=["AES-128-CBC", "AES-256-CBC", "AES-128-GCM", "AES-256-GCM"], KDF=["P_SHA256", "PBKDF2_HMAC_SHA1"], IV=Base64codec)
 @TypeName("encryption")
 class Encryption(CryptoTyped):
     def __init__(self, algorithm=None, iv=None, kdf=None, json=None):

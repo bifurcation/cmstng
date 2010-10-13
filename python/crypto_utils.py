@@ -248,7 +248,6 @@ def AES_XCBC_MAC(K, M):
         assert(len(mn) == block)
         E = a1.encrypt(xors(xors(mn, E), k2))
 
-
 def P_SHA256(secret, seed, k):
     A = seed
     p = hmac_sha256(secret, A + seed)
@@ -256,3 +255,19 @@ def P_SHA256(secret, seed, k):
         A = hmac_sha256(secret, A + seed)
         p += A
     return p[:k]
+
+def create_rsa(n, e, private=None):
+    if private:
+        return RSA.construct((n, e, private))
+    return RSA.construct((n, e))
+
+def generate_rsa(size):
+    return RSA.generate(size)
+
+def encrypt(m, e, n):
+    # m ^ e (mod n)
+    return pow(m, e, n)
+
+def decrypt(c, d, n):
+    # c^d (mod n)
+    return pow(c, d, n)
