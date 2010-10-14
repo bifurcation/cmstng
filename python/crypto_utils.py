@@ -10,6 +10,10 @@ import math
 import struct
 import operator
 
+class CryptoException(Exception):
+    "All exceptions throw intentionally from this module"
+    pass
+
 def Hash(alg, data):
     "Hash the data according to the given algorithm.  Example algorithm: 'SHA1'"
     h = hashlib.new(alg)
@@ -24,6 +28,7 @@ def get_date(offset=0):
     return n
 
 def fmt_date(d):
+    "Generate an ISO8601-formatted date from a datetime"
     return d.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def parse_date(d):
@@ -54,6 +59,7 @@ __algorithms__ = {
 }
 
 def getAlgorithm(algorithm):
+    "Get am implementation of a crypto algorithm by name"
     ret = __algorithms__.get(algorithm, None)
     if not ret:
         raise CryptoException("Unknown algorithm: " + algorithm)
@@ -70,6 +76,7 @@ def unpad(data):
     return data[:-s]
 
 def pad_1_5(msg, k):
+    "PKCS1-1.5 padding to k octets"
     if len(msg) > (k - 11):
         raise CryptoException("Message too long, max=" + str(k - 11) + " actual: " + str(len(msg)))
     # rfc3447, section 7.2.1
@@ -78,6 +85,7 @@ def pad_1_5(msg, k):
     return "\x00\x02" + ps + "\x00" + msg
 
 def unpad_1_5(msg):
+    "PKCS1-1.5 unpadding"
     if msg[0:2] == '\x00\x02':
         offset = msg.find("\x00", 2)
         if offset<2:
@@ -93,6 +101,7 @@ def unpad_1_5(msg):
 
 # rfc3447#appendix-B.2.1
 def MGF1_sha1(mgfSeed, maskLen):
+    "MGF1 mask generation function"
     hLen = 20
     # Huh?
     # If maskLen > 2^32 hLen, output "mask too long" and stop.
@@ -122,16 +131,12 @@ def pad_oaep_sha1(msg, k):
 # rfc 3447, section 7.1.2
 def unpad_oaep_sha1(EM, k):
     hLen = 20
-    L = ""
-    lHash = hashlib.sha1(L).digest()
-    Y = EM[0]
     maskedSeed = EM[1:1+hLen]
     maskedDB = EM[1+hLen:]
     seedMask = MGF1_sha1(maskedDB, hLen)
     seed = xors(maskedSeed, seedMask)
     dbMask = MGF1_sha1(seed, k - hLen - 1)
     DB = xors(maskedDB, dbMask)
-    lHashP = DB[:hLen]
     i = hLen
     while DB[i] == "\x00":
         i += 1
@@ -202,14 +207,13 @@ def PBKDF2_HMAC_SHA1(pw, salt, iterations, desired):
     hLen = 20 # len(HMAC-SHA1)
     
     if dkLen > (2**32 - 1) * hLen:
-        raise CryptoError("derived key too long")
+        raise CryptoException("derived key too long")
 
     l = int(math.ceil(float(dkLen) / float(hLen)))
-    r = dkLen - ((l - 1) * hLen)
 
     def F(P, S, c, i):
         if c < 1:
-            raise CryptoError("invalid number of iterations")
+            raise CryptoException("invalid number of iterations")
         key_one = S + struct.pack("!I", i)
         prev = hmac_sha1(P, key_one)
         acc = prev
@@ -229,7 +233,7 @@ def AES_XCBC_MAC(K, M):
     a = Crypto.Cipher.AES.new(K)
     block = 16
     k1 = a.encrypt("\x01" * block)
-    a1 = Crypto.Cipher.AES.new(K1)
+    a1 = Crypto.Cipher.AES.new(k1)
     k2 = a.encrypt("\x02" * block)
     k3 = a.encrypt("\x03" * block)
     E = "\x00" * block
