@@ -3,7 +3,6 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 from M2Crypto import X509
 from datetime import datetime
 import crypto
-import string
 
 X509V3_EXT_ERROR_UNKNOWN = (1L << 16)
 

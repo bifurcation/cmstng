@@ -57,12 +57,8 @@ def get_kdf(name):
     kdf_f = {"P_SHA256": P_SHA256,
              "PBKDF2_HMAC_SHA1": PBKDF2_HMAC_SHA1_1024}.get(name)
     if not kdf_f:
-        raise CryptoException("Unknown KDF: %s" % f)
+        raise CryptoException("Unknown KDF: %s" % name)
     return kdf_f
-
-class CryptoException(Exception):
-    "All exceptions throw intentionally from this module"
-    pass
 
 class CoDec(object):
     """Abstract static class for encoding and decoding from JSON versions.  
@@ -114,11 +110,11 @@ class DateCodec(CoDec):
 
 class LongCodec(CoDec):
     @classmethod
-    def encode(self, x):
+    def encode(cls, x):
         return long_to_b64(x)
 
     @classmethod
-    def decode(self, x):
+    def decode(cls, x):
         return b64_to_long(x)
 
 class ListCodec(CoDec):
@@ -410,6 +406,8 @@ class PublicKey(CryptoTyped):
 
     def verify(self, signed_data, signature, signature_algorithm="RSA-PKCS1-1.5", digest_algorithm="SHA1"):
         dig = Hash(digest_algorithm, signed_data)
+        if signature_algorithm != "RSA-PKCS1-1.5":
+            raise CryptoException("Unknown signature algorithm")
         return self.key.verify(dig, (signature, 1))
 
     def encrypt(self, plaintext):
@@ -600,7 +598,6 @@ class Encrypted(CryptoBase):
                 encryption_algorithm="AES-256-CBC", 
                 integrity_algorithm="HMAC-SHA1", 
                 key=None):
-        (alg, size, mode) = getAlgorithm(encryption_algorithm)
         iv = generateIV(encryption_algorithm)
         self.Encryption = Encryption(encryption_algorithm, iv=iv)
 

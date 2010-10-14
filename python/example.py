@@ -3,13 +3,9 @@ from crypto import *
 
 # The interior message we want to protect
 message_text = "This is a test message"
-inner_message = {
-    'ContentType':"text/plain",
-    'Data': message_text
-    }
 
 def sign_message(msg, signer_certs, signer_priv, digest_algorithm="SHA1"):
-    sig = Signed(data=message_text)
+    sig = Signed(data=msg)
     sig.sign(signer_priv, signer_certs, digest_algorithm)
     return sig
 
@@ -30,7 +26,7 @@ if __name__ == '__main__':
     ekr_cert = Certificate('ekr@rtfm.com', ekr_kp.PublicKey, validityDays=7)
 
     # Sign a message
-    signed = sign_message(inner_message, ekr_cert, ekr_kp)
+    signed = sign_message(message_text, ekr_cert, ekr_kp)
     print "***** Signed message ****"
     print JSONdumps(signed, indent=2)
     print "*****"

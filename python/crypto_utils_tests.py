@@ -53,7 +53,6 @@ class TestCryptoUtils(unittest.TestCase):
         self.assertEquals(msg, unpad)
 
     def test_P_SHA256(self):
-        msg = "slithy toves"
         a = P_SHA256("secret", "AES-256-CBC", 40)
         self.assertEquals(40, len(a))
 
