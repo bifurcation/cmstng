@@ -118,6 +118,19 @@ class TestCryptoUtils(unittest.TestCase):
             self.assertEqual(expected, k)
             i += 1
 
+    def test_AES_XCBC_MAC(self):
+        vectors = [
+            ["000102030405060708090a0b0c0d0e0f", "", "75f0251d528ac01c4573dfd584d79f29"],
+            ["000102030405060708090a0b0c0d0e0f", "000102", "5b376580ae2f19afe7219ceef172756f"],
+            ["000102030405060708090a0b0c0d0e0f", "000102030405060708090a0b0c0d0e0f", "d2a246fa349b68a79998a4394ff7a263"],
+            ["000102030405060708090a0b0c0d0e0f", "000102030405060708090a0b0c0d0e0f10111213", "47f51b4564966215b8985c63055ed308"],
+            ["000102030405060708090a0b0c0d0e0f", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "f54f0ec8d2b9f3d36807734bd5283fd4"],
+            ["000102030405060708090a0b0c0d0e0f", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021", "becbb3bccdb518a30677d5481fb6b4d8"],
+            ["000102030405060708090a0b0c0d0e0f", "00" * 1000, "f0dafee895db30253761103b5d84528f"]
+        ]
+        for (K, M, expected) in vectors:
+            self.assertEqual(expected, AES_XCBC_MAC(K.decode('hex'), M.decode('hex')).encode('hex'))
+
 if __name__ == '__main__':
     import sys
     unittest.main(argv=sys.argv)

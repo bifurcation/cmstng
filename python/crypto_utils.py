@@ -243,6 +243,9 @@ def AES_XCBC_MAC(K, M):
         E = a1.encrypt(xors(mi, E))
     mn = M[(numblocks-1)*block:]
     if len(mn) == block:
+        # If the blocksize of M[n] is 128 bits:
+        # XOR M[n] with E[n-1] and Key K2, then encrypt the result with
+        # Key K1, yielding E[n].
         E = a1.encrypt(xors(xors(mn, E), k2))
     else:
         # Pad M[n] with a single "1" bit, followed by the number of
@@ -250,7 +253,8 @@ def AES_XCBC_MAC(K, M):
         # blocksize to 128 bits.
         mn += "\x80" + ("\x00" * (block - len(mn) - 1))
         assert(len(mn) == block)
-        E = a1.encrypt(xors(xors(mn, E), k2))
+        E = a1.encrypt(xors(xors(mn, E), k3))
+    return E
 
 def P_SHA256(secret, seed, k):
     A = seed
