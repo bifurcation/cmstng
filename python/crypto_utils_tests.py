@@ -98,26 +98,27 @@ class TestCryptoUtils(unittest.TestCase):
         # test vectors from draft-josefsson-pbkdf2-test-vectors-02
         tests = [
             ["password", "salt", 1, 20, 
-             "0c60c80f961f0e71f3a9b524af6012062fe037a6".decode('hex')],
+             "0c60c80f961f0e71f3a9b524af6012062fe037a6"],
             ["password", "salt", 2, 20, 
-             "ea6c014dc72d6f8ccd1ed92ace1d41f0d8de8957".decode('hex')],
+             "ea6c014dc72d6f8ccd1ed92ace1d41f0d8de8957"],
             ["password", "salt", 4096, 20, 
-             "4b007901b765489abead49d926f721d065a429c1".decode('hex')],
+             "4b007901b765489abead49d926f721d065a429c1"],
             # takes about 10mins to run on my MacBookPro.
 #            ["password", "salt", 16777216, 20,
-#             "eefe3d61cd4da4e4e9945b3d6ba2158c2634e984".decode('hex')],
+#             "eefe3d61cd4da4e4e9945b3d6ba2158c2634e984"],
             ["passwordPASSWORDpassword", "saltSALTsaltSALTsaltSALTsaltSALTsalt", 4096, 25,
-             "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038".decode('hex')],
+             "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038"],
             ["pass\x00word", "sa\x00lt", 4096, 16,
-             "56fa6aa75548099dcc37d7f03425e0c3".decode('hex')],
+             "56fa6aa75548099dcc37d7f03425e0c3"],
             ]
         i=0
         for (pw, salt, c, dk, expected) in tests:
             k = PBKDF2_HMAC_SHA1(pw, salt, c, dk)
-            self.assertEqual(expected, k)
+            self.assertEqual(expected.decode('hex'), k)
             i += 1
 
     def test_AES_XCBC_MAC(self):
+        # test vectors from RFC 3566, section 4.6
         vectors = [
             ["000102030405060708090a0b0c0d0e0f", "", "75f0251d528ac01c4573dfd584d79f29"],
             ["000102030405060708090a0b0c0d0e0f", "000102", "5b376580ae2f19afe7219ceef172756f"],
@@ -128,7 +129,7 @@ class TestCryptoUtils(unittest.TestCase):
             ["000102030405060708090a0b0c0d0e0f", "00" * 1000, "f0dafee895db30253761103b5d84528f"]
         ]
         for (K, M, expected) in vectors:
-            self.assertEqual(expected, AES_XCBC_MAC(K.decode('hex'), M.decode('hex')).encode('hex'))
+            self.assertEqual(expected.decode('hex'), AES_XCBC_MAC(K.decode('hex'), M.decode('hex')))
 
 if __name__ == '__main__':
     import sys
