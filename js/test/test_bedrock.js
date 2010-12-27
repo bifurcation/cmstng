@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller
+ * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller, Cullen Jennings
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

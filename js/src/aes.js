@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010,  Cullen Jennings, Eric Rescola, Joe Hildebrand, Matthew A. Miller
+ * Copyright (c) 2010,  Cullen Jennings, Eric Rescola, Joe Hildebrand, Matthew A. Miller,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,63 +29,56 @@
 
 (function(){
 
-cmstng.RSA = {
+cmstng.AES = {
      /**
-     * Encrypts the given message via the RSAEP method.
+     * Encrypts the given message via the AESEP method.
      *
-     * @param   {Object} key The key to encrypt with
+     * @param   {Object} key The key with CEK in base64 to encrypt with
      * @param   {String} msg The message to encrypt
-     * @returns {BigInteger} The ciphertext for {msg} from {key}
+     * @returns {Object} The ciphertext for {msg} from {key}
      * @throws  {TypeError} If {key} is invalid
      */
-    RSAEP: function(key, msg) {
-        var ctext;
+    AESEP: function( cek, msg) {
+        var ctext,cekBits,k,p,rp;
         
-        if (!key || !key.e || !key.n) {
+        if (!cek ) {
             throw new TypeError("invalid key");
         }
 
-        e = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( key.e ) );
-        n = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( key.n ) );
-        //console.debug( "rsaenc: e=" + e  );
-        //console.debug( "rsaenc: n=" + n  );
-
-        var rsa = new RSAKey();
-        rsa.setPublic( n, e );
-        var ctext = rsa.encrypt(msg);
+        rp = {};
+        p = {
+            ks : 128 , // key size 
+            ts : 64 // tag size 
+        };
+        cekBits = sjcl.codec.base64.toBits( cek );
+        k = cekBits.slice(0,p.ks/32);
+        ctext  = sjcl.encrypt( k, msg, p, rp );
         
-        return sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( ctext ));
+        return ctext;
     },
     /**
-     * Decrypts the given ciphertext via the RSADP method.
+     * Decrypts the given ciphertext via the AESDP method.
      *
      * @param   {Object} key The key to decrypt with
-     * @param   {Base64} ctext The ciphertext to decrypt
+     * @param   {BigInteger} ctext The ciphertext to decrypt
      * @returns {string} The message for {ctext} from {key}
      * @throws  {TypeError} If {key} is invalid
      */
-    RSADP: function(key, ctext) {
+    AESDP: function( cek, ctext) {
         // TODO: make this broken out into chunks...
-        var msg;
+        var msg,cekBits,k;
         
-        if (!key || !key.d || !key.n) {
+        if (!cek ) {
             throw new TypeError("invalid key");
         }
+        
+        p = {
+            ks : 128 , // key size 
+        };
 
-        e = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( key.e ) );
-        n = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( key.n ) );
-        d = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( key.d ) );
-
-        //console.debug( "rsadec e=" + e  );
-        //console.debug( "rsadec n=" + n  );
-        //console.debug( "rsadec d=" + d  );
-
-        var rsa = new RSAKey();
-        rsa.setPrivate( n, e, d );
-        if( ctext.length == 0) {
-            throw new TypeError("invalid ciphertext");
-        }
-        var msg = rsa.decrypt( sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( ctext )) );
+        cekBits = sjcl.codec.base64.toBits( cek );
+        k = cekBits.slice(0,p.ks/32);
+        msg = sjcl.decrypt( k, ctext );
 
         return msg;
     }

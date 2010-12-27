@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller
+ * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller, Cullen Jennings
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,20 +29,19 @@
 
 // for minimizing namespace pollution
 (function() {
-
-if ("jsms" in window) {
-    return;
-}
-
-/**
- * @namespace
- *
- * CMSTNG is a library for encrypting and signing objects.
- */
-var cmstng = {
-    version: "$version$"
-};
-
-window.cmstng = cmstng;
-
+    if ("jsms" in window) {
+        return;
+    }
+    
+    /**
+     * @namespace
+     *
+     * CMSTNG is a library for encrypting and signing objects.
+     */
+    var cmstng = {
+        version: "$version$"
+    };
+    
+    window.cmstng = cmstng;
+    
 })();

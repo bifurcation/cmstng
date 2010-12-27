@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller
+ * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller, Cullen Jennings
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,35 +30,4 @@
 $(document).ready(function() {
     module("cmstng/util");
     
-    test("octet/integer conversion", function() {
-        var osExp, osAct, ip;
-        
-        osExp = "1234";
-        ip = cmstng.UTIL.OS2IP(osExp);
-        osAct = cmstng.UTIL.I2OSP(ip, osExp.length);
-        equals(osExp, osAct, "basic octet strings equal");
-        
-        osExp = "\x00\x01\x02\x03";
-        ip = cmstng.UTIL.OS2IP(osExp);
-        osAct = cmstng.UTIL.I2OSP(ip, osExp.length);
-        equals(osExp, osAct, "0-start octet strings equal");
-        
-        osExp = "";
-        for (var idx = 0; idx < 16; idx++) {
-            osExp += String.fromCharCode(Math.random() * 256);
-        }
-        ip = cmstng.UTIL.OS2IP(osExp);
-        osAct = cmstng.UTIL.I2OSP(ip, osExp.length);
-        equals(osExp, osAct, "random octet strings equal");
-
-        var caught;
-        try {
-            caught = false;
-            var ip = cmstng.UTIL.I2OSP(Math.pow(256, 16), 4);
-        } catch (ex) {
-            caught = (ex instanceof TypeError) && (ex.message == "integer too large");
-        }
-        ok(caught, "expected TypeError('integer too large') thrown");
-    });
-
 });

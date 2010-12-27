@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller
+ * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller, Cullen Jennings
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,20 +31,33 @@
     // 3rd party dependencies
     var deps = [
         //'http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js',
-       'http://github.com/silentmatt/javascript-biginteger/raw/master/biginteger.js',
-        'http://bitwiseshiftleft.github.com/sjcl/sjcl.js',
-      //  'http://www-cs-students.stanford.edu/~tjw/jsbn/jsbn.js',
-      //  'http://www-cs-students.stanford.edu/~tjw/jsbn/jsbn2.js',
-      //  'http://www-cs-students.stanford.edu/~tjw/jsbn/rsa.js',
+     // 'http://github.com/silentmatt/javascript-biginteger/raw/master/biginteger.js',
+    //   'http://bitwiseshiftleft.github.com/sjcl/sjcl.js',
+     //   'http://www-cs-students.stanford.edu/~tjw/jsbn/jsbn.js',
+     //   'http://www-cs-students.stanford.edu/~tjw/jsbn/jsbn2.js',
+     //   'http://www-cs-students.stanford.edu/~tjw/jsbn/rsa.js',
      //   'http://www-cs-students.stanford.edu/~tjw/jsbn/rsa2.js',
-     //   'http://www-cs-students.stanford.edu/~tjw/jsbn/base64.js',
+     //   'http://www-cs-students.stanford.edu/~tjw/jsbn/prng4.js',
+     //   'http://www-cs-students.stanford.edu/~tjw/jsbn/rng.js',
+     //    'http://www-cs-students.stanford.edu/~tjw/jsbn/base64.js',
+
         ''
     ];
     // our sources
     var sources = [
+    //    'sjcl/sjcl.js',
+        'sjcl/core.js',
+        'twu/jsbn.js',
+        'twu/rsa.js',
+        'twu/prng4.js',
+        'twu/rng.js',
+        'twu/base64.js',
         'src/bedrock.js',
         'src/util.js',
         'src/rsa.js',
+        'src/aes.js',
+        'src/kdf.js',
+        'src/cms.js',
         ''
     ];
 

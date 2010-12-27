@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller, Cullen Jennings
+ * Copyright (c) 2010, Cullen Jennings, Eric Rescola, Joe Hildebrand, Matthew A. Miller
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,44 @@
  */
 
 (function(){
-    cmstng.UTIL = {
-    };
+
+cmstng.KDF = {
+     /**
+     * Dervices keys from master key using P_SHA256 KDF 
+     *
+     * @param   {Object} key CMK in base64 
+     * @param   {String} the label in UTF8  
+     * @returns none
+     * @throws  {TypeError} If {key} is invalid
+     */
+    P_SHA256: function(key,label) {
+
+        if (!key ) {
+            throw new TypeError("invalid key");
+        }
+
+        // TODO - this function needs review and is likely wrong. I don't undertand the "seed" part in spec
+
+        secret = sjcl.codec.base64.toBits( key );
+        seed = sjcl.codec.utf8String.toBits( label );
+        A0 = seed;
+        A1 = cmstng.KDF.HMAC_SHA256( secret, A0 );
+        P1 = cmstng.KDF.HMAC_SHA256( secret, sjcl.bitArray.concat(A1,seed) );
+        cekBits = P1.slice(0,128/32);
+
+        return sjcl.codec.base64.fromBits( cekBits );
+    },
+ /**
+     * Compute HMAC with SHA256 
+     *
+     * @param key is "bits" object   
+     * @param  data is an array of "bits" objects  
+     * @returns 
+     */
+    HMAC_SHA256: function(key,data) {
+        hmac = new sjcl.misc.hmac(key, sjcl.hash.sha256);
+        ret = hmac.encrypt( data );
+        return ret;
+    }
+};
 })();

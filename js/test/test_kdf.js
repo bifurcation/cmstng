@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller, Cullen Jennings
+ * Copyright (c) 2010, Cullen Jennings, Eric Rescola, Joe Hildebrand, Matthew A. Miller
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-(function(){
-    cmstng.UTIL = {
-    };
-})();
+$(document).ready(function() {
+    module("cmstng/kdf");
+      
+    test("HMAC_SHA256 primitives", function() {
+
+        // this test data from section 4.2 of RFC 4231 
+        secret =  sjcl.codec.hex.toBits("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b");
+        data = sjcl.codec.hex.toBits("4869205468657265");
+
+        hmac = cmstng.KDF.HMAC_SHA256( secret, data );
+
+        hmacHex =  sjcl.codec.hex.fromBits( hmac );
+        console.debug( "hmac is " +hmacHex );
+
+        equals( hmacHex, "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7", "messages equal");
+     
+    });
+  
+    test("P_SHA256 primitives", function() {
+
+        var key = {
+            cmk : "MTIzNDU2NzgxMjM0NTY3OAo="
+        };
+
+        console.debug( "CMK is " + key.cmk );
+
+        key.cek = cmstng.KDF.P_SHA256( key.cmk ,  "Encryption" );
+
+        console.debug( "CEK is " + key.cek );
+
+        equals( key.cek, "95yyAo3/1j/h9mHHP3kBiA==", "messages equal");
+     
+    });
+});

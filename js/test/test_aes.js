@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010, Eric Rescola, Joe Hildebrand, Matthew A. Miller, Cullen Jennings
+ * Copyright (c) 2010,  Cullen Jennings, Eric Rescola, Joe Hildebrand, Matthew A. Miller
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,23 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-(function(){
-    cmstng.UTIL = {
-    };
-})();
+$(document).ready(function() {
+    module("cmstng/aes");
+        
+    test("AES encrypt/decrypt primitives", function() {
+        
+        cek = "MTIzNDU2NzgxMjM0NTY3OAo=";
+        
+        msg    = "hello";
+
+        ctext  = cmstng.AES.AESEP( cek, msg );
+
+        console.debug( "ctext is " + ctext );
+
+        msgDec = cmstng.AES.AESDP( cek, ctext );
+        console.debug( "msgDec is " + msgDec );
+
+        equals( msgDec, msg, "messages equal");
+     
+    });
+});
