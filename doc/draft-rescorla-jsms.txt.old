@@ -1,0 +1,952 @@
+
+
+
+Network Working Group                                        E. Rescorla
+Internet-Draft                                                     Skype
+Intended status:  Standards Track                          J. Hildebrand
+Expires:  March 16, 2011                             Cisco Systems, Inc.
+                                                      September 12, 2010
+
+
+                   JavaScript Message Security Format
+                       draft-rescorla-jsms-00.txt
+
+Abstract
+
+   Many applications require the ability to send cryptographically
+   secured messages.  While the IETF has defined a number of formats for
+   such messages [TODO:  REF CMS, PEM, OpenPGP], those formats use
+   encodings which are not congenial for Web applications.  This
+   document describes a new cryptographic message format which is based
+   on JavaScript Object Notation (JSON) and thus is easy for Web
+   applications to generate and parse.
+
+Status of this Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on March 16, 2011.
+
+Copyright Notice
+
+   Copyright (c) 2010 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 1]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+   This document may contain material from IETF Documents or IETF
+   Contributions published or made publicly available before November
+   10, 2008.  The person(s) controlling the copyright in some of this
+   material may not have granted the IETF Trust the right to allow
+   modifications of such material outside the IETF Standards Process.
+   Without obtaining an adequate license from the person(s) controlling
+   the copyright in such materials, this document may not be modified
+   outside the IETF Standards Process, and derivative works of it may
+   not be created outside the IETF Standards Process, except to format
+   it for publication as an RFC or to translate it into languages other
+   than English.
+
+
+Table of Contents
+
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
+   2.  Conventions Used In This Document  . . . . . . . . . . . . . .  3
+   3.  Overview . . . . . . . . . . . . . . . . . . . . . . . . . . .  3
+     3.1.  Operational Modes  . . . . . . . . . . . . . . . . . . . .  3
+     3.2.  Conventions  . . . . . . . . . . . . . . . . . . . . . . .  4
+     3.3.  Certificate Processing . . . . . . . . . . . . . . . . . .  4
+   4.  Message Format . . . . . . . . . . . . . . . . . . . . . . . .  5
+     4.1.  Content Object . . . . . . . . . . . . . . . . . . . . . .  5
+     4.2.  Common Elements  . . . . . . . . . . . . . . . . . . . . .  6
+     4.3.  Signed Data  . . . . . . . . . . . . . . . . . . . . . . .  6
+       4.3.1.  Signature Computation  . . . . . . . . . . . . . . . .  8
+       4.3.2.  Signature Verification . . . . . . . . . . . . . . . .  8
+       4.3.3.  Example  . . . . . . . . . . . . . . . . . . . . . . . 10
+     4.4.  Encrypted Data . . . . . . . . . . . . . . . . . . . . . . 10
+       4.4.1.  Message Encryption . . . . . . . . . . . . . . . . . . 14
+       4.4.2.  Message Decryption . . . . . . . . . . . . . . . . . . 14
+       4.4.3.  Key Derivation . . . . . . . . . . . . . . . . . . . . 15
+       4.4.4.  CMK Encryption . . . . . . . . . . . . . . . . . . . . 15
+     4.5.  Composition  . . . . . . . . . . . . . . . . . . . . . . . 16
+   5.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 16
+   6.  Security Considerations  . . . . . . . . . . . . . . . . . . . 16
+   7.  Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 16
+   8.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+     8.1.  Normative References . . . . . . . . . . . . . . . . . . . 16
+     8.2.  Informative References . . . . . . . . . . . . . . . . . . 17
+   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . 17
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 2]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+1.  Introduction
+
+   Many applications require the ability to send cryptographically
+   secured (encrypted, digitally signed, etc.) messages.  While the IETF
+   has defined a number of formats for such messages [TODO:  REF CMS,
+   PEM, OpenPGP], those formats are widely viewed as being excessively
+   complicated for the demands of Web applications, which typically only
+   need the ability to secure simple messages.  In addition, existing
+   formats use encoding mechanisms (e.g., ASN.1) which are not congenial
+   for Web applications.  This presents an obstacle to the deployment of
+   strong security by such applications.
+
+   This document describes a new cryptographic message format,
+   JavaScript Message Security (JSMS) intended to meet the need of the
+   Web environment.  While JSMS is modelled on existing formats--
+   principally CMS [TODO:  REF]--it uses JavaScript Object Notation
+   (JSON) rather than ASN.1/BER/DER, making it far easier for Web
+   applications to handle.  In the interest of simplicity, JSMS also
+   omits a number of lesser-used CMS modes (multiple signatures,
+   password-based encryption).
+
+
+2.  Conventions Used In This Document
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in [RFC2119].
+
+
+3.  Overview
+
+   The JSMS message format is simply a JSON dictionary with an
+   appropriate collection of fields.  For instance, [TODO:  Need
+   something here.]
+
+3.1.  Operational Modes
+
+   JSMS supports two operational modes:
+
+   Encrypted Data
+      A block of data encrypted under a random message encryption key
+      (MEK).  The MEK is then separately encrypted for each recipient,
+      either via symmetric or asymmetric encryption.  The data is always
+      integrity protected, either via a separate MAC or an AEAD
+      algorithm such as AES-GCM.
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 3]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+
+   Signed Data
+      A block of data signed by a single signer using his asymmetric key
+      and optionally carrying his certificate.  Multiple signatures are
+      not permitted (in our view, this feature has proved to be more
+      trouble than it is generally worth.)
+
+   Any other desired security functions are provided by composition of
+   these modes.  For instance, a signed and encrypted message is
+   produced by first creating a Signed message and then encrypting that
+   data.  (See Section 4.5 for more on composition.
+
+3.2.  Conventions
+
+   In general, JSMS follows the following structural conventions:
+
+   Base64 as the only encoding
+      Any data that does not have a straightforward string
+      representation (binary values, large integers, etc.) is base64-
+      encoded.  In some cases, hexadecimal encodings might be more
+      convenient, but consistency seems even more important.
+
+   No canonicalization
+      In most cryptographic message formats (CMS, PKIX, XML-DSIG [TODO:
+      REF]), canonical encodings are used to allow the same value to be
+      computed at both sender and recipient (e.g., for digital
+      signatures).  This is inconvenient in JSON, which just views
+      messages as a bundle of key/value pairs.  Instead, whenever
+      canonicalization would be required, the relevant data is
+      serialized and base64 encoded for transport.
+
+   In-memory processing
+      We assume that the entire message can fit in main memory and make
+      no effort to design a wire representation which can be handled in
+      small chunks in a single pass.  This means, for instance, that
+      there is no need to have a message digest indicator at the
+      beginning of the message and then the signature at the end, as is
+      done in CMS.  Fields are simply serialized in whatever order is
+      most convenient for the JSON implementation.  The examples in this
+      document are generally shown in whatever order seems most readable
+      and are not normative.
+
+3.3.  Certificate Processing
+
+   Experience has shown that certificate handling path construction) is
+   one of the trickier parts of building a cryptographic system.  While
+   JSMS supports PKIX certificates, its certificate processing is far
+   simpler than that of CMS.  When a JSMS agent provides its
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 4]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+   certificate, it must provide an ordered chain (as in TLS [REF])
+   terminating in its own certificate, thus removing the need to
+   construct certificate paths.  In addition, because many
+   implementations will not want to do any ASN.1/BER processing at all,
+   we define a Web service which applications can use for chain
+   valiation.  (See [TODO]).
+
+
+4.  Message Format
+
+4.1.  Content Object
+
+   JSMS operates by providing transformations on "Content" objects,
+   which are just mime-typed JSON objects.  These objects are then
+   wrapped in a signed/encrypted wrapper:
+
+   [[OPEN ISSUE:  Do we want to have both the schema description and the
+   bullet point description...]
+
+  var content_schema={
+            "description":"Message contents",
+            "type":"object":
+            "properties":{
+                       "ContentType":{
+                                    "description":"A MIME content type",
+                                    "type":"string",
+                       },
+                       "Data":{
+                                    "description":"The underlying data",
+                                    "type":"string",
+                              }
+  }};
+
+   The meaning of the fields is as follows:
+
+
+   ContentType:  A MIME [RFC2045] media type indicating the type of the
+      "Data" field.
+   Data:  The data value.  [OPEN ISSUE:  Do we need an encoding here?]
+
+   Signing and encryption transform a "Content" object into "Signed" and
+   "Encrypted" objects respectively.  Verification and decryption
+   transform "Signed" and "Encrypted" objects back into "Content"
+   objects.
+
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 5]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+4.2.  Common Elements
+
+   A JSMS message is simple a JSON dictionary object containing a set of
+   specific values.
+
+var message_schema={
+         "description":"The basic schema for a JSMS message",
+         "type":"object",
+         "properties":{
+                  "Type":{
+                           "description":"Message type",
+                           "type":"string",
+                           "enum":["signed", "encrypted"]
+                  },
+                  "Version":{
+                           "description":"Version number for the message",
+                           "type":"string",
+                           "enum":["1.0"]
+                  }
+         }};
+
+   The following fields MUST be present in all messages:
+
+
+   Version:  The version number.  For this specification this value MUST
+      be set to the string "1.0".  [TODO:  VErsion processing.]
+
+   Type:  The type of the message.  MUST be either "signed" or
+      "encrypted", to indicate a signed message (Section 4.3) or an
+      encrypted message (Section 4.4) respectively.
+
+4.3.  Signed Data
+
+   A "signed" message contains a signed data block plus a digital
+   signature over that data.  Only one signer is allowed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 6]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+var signed_schema = {
+         "description":"A signed message",
+         "type":"object",
+         "extends":message_schema,
+         "properties":{
+                  "Signature":{
+                           "description":"The signature over the SignedData",
+                           "type":"object",
+                           "properties":{
+                                    "Value":{
+                                             "description":"the content to be signed",
+                                             "type":"string"},
+                                    "DigestAlgorithm":{
+                                             "description":"",
+                                             "type":"string",
+                                             "enum":["SHA1", "SHA256"] },
+                                    "SignatureAlgorithm":{
+                                             "description":"",
+                                             "type":"string",
+                                             "enum":["RSA-PKCS1-1.5"] },
+                                    "Signer":{
+                                             "description":"",
+                                             "type":"string",
+                                             "format":"email" },
+                                    "CertChain": {
+                                        "description":"The signer's cert chain",
+                                            "type":certchain_schema
+                                             }
+                           }}}};
+
+   [[OPEN ISSUE:  How do we represent enums that correspond to algorithm
+   identifiers and hence registries.]]
+
+   The meaning of the fields is described below:
+
+
+   Value:  The data over which the signature is computed.  This value
+      MUST be a base64-encoded version of a "Content" structure (see
+      Section 4.1).  [OPEN ISSUE:  is this exactly what we want?]
+
+   DigestAlgorithm:  The message digest used to compute the signature.
+      This field MUST be present for RSA-based signatures but MAY be
+      omitted for future signatures which do not allow flexible digests.
+
+
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 7]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+   SignatureAlgorithm:  The signature algorithm used to compute the
+      signature.  This field MUST be present.
+
+   Signer:  The signer's identity, expressed as a URI [RFC3986] This
+      field MUST be present.
+
+   CertChain:  The signer's certificate chain, if any (see
+      Section 4.3.2.1).
+
+4.3.1.  Signature Computation
+
+   The signature is computed over the string prior to base64 encoding.
+   I.e., the processing order for encoding is:
+
+   1.  Serialize the inner "Content" value into a string X.
+   2.  Compute the signature value over X. (In the case of signatures
+       which use digests, this means feed the literal bytes of the
+       signature into the digest function.).  Insert the result into the
+       "Signature" field.
+   3.  Compute the base64 representation of X and insert it into the
+       "Value" field of the message.
+
+   This procedure removes dependencies on the exact serialization
+   algorithm:  variation in spacing, field order, etc. do not affect
+   signature validity since the base64 representation preserves them on
+   the wire and protects them from modification by intermediaries.
+
+   Note:  An alternative algorithm would be to compute the signature on
+      the base64 representation itself, but this has two disadvantages:
+      (1) any intermediaries which change spacing/line breaks would
+      break the signature. (2) it is inconsistent with the algorithm for
+      encryption (Section 4.4), which is designed to avoid multiple
+      base64 encoding.
+
+   This procedure only specifies the input to the signature computation.
+   The details of the computation depend on the signature algorithm
+   itself.  The mapping from code points to algorithms is found in
+   Section 5.
+
+4.3.2.  Signature Verification
+
+   In order to verify the signature, the steps of the previous section
+   are reversed.
+
+   1.  Process the provided "Signer" and "CertChain" fields as described
+       in Section 4.3.2.1 in order to determine the sender's public key.
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 8]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+   2.  Base64 decode the "Value" field in order to recover a string X.
+   3.  Verify the "Signature" field against X using the sender's public
+       key and the "SignatureAlgorithm" and "DigestAlgorithm" fields.
+       If the signature fails, return an error.
+   4.  Deserialize X to recover the inner "Content" value.
+
+4.3.2.1.  Certificate Processing
+
+   JSMS uses the "CertChain" element to carry certificate chains.
+
+var certchain_schema = {
+         "description":"A certificate chain",
+         "type":"object",
+};
+
+var certchain_pkix_schema = {
+        "description":"A chain of PKIX certificates",
+         "extends":certchain_schema,
+         "properties":{
+                 "Type:{
+                       "description":"The type of certificate chain",
+                       "type":"string",
+                       "enum":["PKIX"] },
+                  "Chain":{
+                       "description":"PKIX certificates in order from root to end-entity",
+                       "type":"array",
+                       "items":{
+                              "description":"A base64-encoded BER certificate",
+                              "type":"string",
+                               }
+
+}}};
+
+   The meaning of the fields is described below:
+
+
+   Type:  The type of the certificate chain.  The only defined value is
+      "PKIX", referring to PKIX [REF] certificates.
+
+   Chain:  An array of certificate values.  In the case of "PKIX"
+      certificates this is a list of base64-encoded DER/BER PKIX
+      certificate values.  PKIX certificates MUST be represented in
+      order with each certificate certifying the next and the final
+      certificate representing the end-entity.
+
+   The recipient MUST verify the certificate chain (in the case of PKIX
+   certificates according to RFC 5280 [RFC5280]).  If any validation
+   failure occurs, the implementation MUST abort processing and return
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                 [Page 9]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+   an error.
+
+   Once the certificate chain is validated, the end-entity certificate
+   must contain an identity which matches the "Signer" field.  In the
+   case of PKIX certificates, the certificate MUST contain a
+   subjectAltName field of type "uniformResourceIdentifier".  This field
+   MUST be equivalent to the URI in the "Signer" field.  If not, an
+   error MUST be returned.
+
+4.3.3.  Example
+
+   TODO
+
+4.4.  Encrypted Data
+
+   An "encrypted" message contains an encrypted "Content" block.  All
+   "encrypted" messages contain a symmetric integrity check, either via
+   a MAC or via an AEAD [RFC5116] algorithm such as GCM [REF].  A
+   message may be encrypted to an arbitrary number of recipients.  Each
+   recipient is represented by a "Recipient" block, which contains a
+   copy of the keying material encrypted for that recipient.  Both
+   symmetric and asymmetric key establishment is supported.  In order to
+   support both integrity and encryption, what is carried in the
+   Recipient block is a Content Master Key (CMK) which is then used with
+   a KDF to generate the Content Encryption Key (CEK) used to encrypt
+   the message and the Content Integrity Key (CIK) used with the MAC.
+
+var encrypted_schema = {
+  "description":"An encrypted object",
+  "type":"object",
+  "extends":message_schema,
+  "properties":{
+    "Recipients":{
+      "description":"The list of recipient blocks",
+      "type":"array",
+      "items":{
+         "description":"A single recipient block"
+         "type":"recipient_schema",
+       }
+    },
+
+    "KDF":{
+      "description":"The KDF used to derive the MAC and encryption keys",
+      "type":"string",
+      "enum":["P_SHA256"]
+    },
+
+    "Encryption":{
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                [Page 10]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+      "description":"The encryption control information for the entire message",
+      "type":"object",
+      "properties":{
+        "Algorithm":{
+          "description":"The algorithm used to encrypt the message",
+          "type":"string",
+          "enum":["AES-128-CBC", "AES-256-CBC", "AES-128-GCM", "AES-256-GCM"]
+        }
+        "IV":{
+          "description":"The initialization vector for the message (base64-encoded)",
+          "type":"string"
+        }
+     }
+    },
+
+     "Integrity":{
+      "description":"The integrity control information for the entire message",
+      "type":"object",
+      "properties":{
+        "Algorithm":{
+          "description":"The algorithm used to compute the MAC",
+          "type":"string",
+          "enum":["HMAC-SHA-256"],
+        },
+        "Value":{
+          "description":"The MAC value (base64-encoded)",
+          "type":"string",
+        }
+      }
+    },
+
+    "Data":{
+      "description":"The ciphertext (base64-encoded)",
+      "type":"string",
+    }
+  }
+}
+
+   The meaning of the fields is as follows:
+
+
+   Recipients:  The list of recipients.  This is an array of
+      recipient_schema structures, each of which establishes the CMK for
+      that recipient.
+
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                [Page 11]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+
+   KDF:  Specifies the key derivation function used to generate the CEK
+      and the CIK from the CMK.  This field MAY be absent if an AEAD
+      algorithm is used, in which case the CEK is derived by copying the
+      CMK.
+
+   Encryption:  Specifies the properties of the encryption.  The
+      Algorithm field specifies the encryption algorithm and the IV
+      field specifies the initialization vector (if required for the
+      algorithm.
+
+   Integrity:  Specifies the properties of the integrity check.  The
+      Algorithm field specifies the MAC algorithm and the Value field
+      contains the MAC.  This field MAY be absent if no integrity check
+      is used.
+
+   Data:  Contains the ciphertext.
+
+   Each Recipient element provides an encrypted copy of the CMK for a
+   single recipient.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                [Page 12]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+var encrypted_schema = {
+  "description":"An encrypted object",
+  "type":"object",
+  "extends":message_schema,
+  "properties":{
+    "KEK":{
+      "type":"object",
+      "description:"Identifies the key used to encrypt the CMK",
+      "properties":{
+        "RecipientName":{
+         "type":"string",
+         "description":"The recipients name represented as a URI",
+        },
+        "CertificateDigest":{
+         "type":"string",
+         "description":"A digest of the recipient's certificate",
+        },
+        "KeyIdentifier",
+         "type":"string",
+         "description":"An opaque string representing a shared symmetric key"
+        }
+      }
+    },
+    "Algorithm":{
+      "description":"The algorithm used to protect the CMK",
+      "type":"string",
+      "enum":["RSA-PKCS1-1.5", "AES-128-CBC", "AES-256-CBC", "AES-128-GCM", "AES-256-GCM"]
+    },
+    "Value":{
+      "description":"The binary representation of the encrypted CMK (base64-encoded)",
+      "type":string"
+    }
+  }
+}
+
+   The meaning of the fields is described below:
+
+
+   KEK  Indicates the key used to encrypt the CMK.  Either a
+      "RecipientName" or a "KeyIdentifier" MUST be provided.  If the
+      "RecipientName" is provided, then a "CertificateDigest" SHOULD be
+      provided.
+
+      RecipientName:  Provides the recipient's name in URI form.
+
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                [Page 13]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+      CertificateDigest:  [TODO:  Canonicalization?  TODO]
+      KeyIdentifier  The name of a shared symmetric key known to both
+         sender and recipient.  This need not be globally unique as long
+         as it is unique within the recipient's context.
+   Algorithm:  The algorithm used to encrypt the CMK.  Note the JSMS
+      only supports key transport and not key agreement (since key
+      agreement can always be turned into key transport).
+   Value:  The CMK encrypted under the specified algorithm and key.
+
+4.4.1.  Message Encryption
+
+   The message encryption process is as follows.
+
+   1.  Generate a random CMK.  The CMK MUST have a length at least equal
+       to that of the larger of the required integrity or encryption
+       keys and MUST be generated randomly.  See [RFC4086] for
+       considerations on generating random values.
+   2.  Encrypt the CMK for each recipient (see Section 4.4.4)
+   3.  Generate a random IV (if required for the algorithm).
+   4.  Run the key derivation algorithm (see Section 4.4.3) to generate
+       the CEK and CIK (if not using an AEAD algorithm).
+   5.  Serialize the content into a bitstring M.
+   6.  Encrypt M using the CEK and IV to form the bitstring C.
+   7.  Set the Value element equal to the base64-encoded representation
+       of C.
+   8.  If not using an AEAD algorithm, compute the function I = MAC(CIK,
+       C) using the chosen integrity algorithm.  Note that this is EtA
+       encryption which is considered the best cryptographic choice
+       ([TODO:  REF Canetti]).  Set the Integrity.Value element equal to
+       the base64-encoded representation of I.
+
+4.4.2.  Message Decryption
+
+   The message decryption process is the reverse of the encryption
+   process.
+
+   1.  Identify a Recipient block which appears to reference a key known
+       to the recipient.
+   2.  Decrypt the CMK.  If this fails and another Recipient block
+       appears plausible, that MAY be tried.
+   3.  Run the key derivation algorithm (see Section 4.4.3) to generate
+       the CEK and CIK (if not using an AEAD algorithm).
+   4.  If not using an AEAD algorithm, compute the integrity check value
+       I' on the binary representation of the Value element using the
+       indicated integrity check.  If the Integrity.Value does not match
+       I', then an error MUST be reported and processing MUST be
+       aborted.
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                [Page 14]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+   5.  Decrypt the binary representation of the Value element and output
+       the result
+
+4.4.3.  Key Derivation
+
+   The key derivation process converts the CMK into a CEK.  It assumes
+   as a primitive a Key Derivation Function (KDF) which notionally takes
+   three arguments:
+   MasterKey:  The master key used to compute the individual use keys
+   Label:  The use key label, used to differentiate individual use keys
+   Length:  The length of the desired use key
+
+   The only real KDF specified in this document is the TLS PRF, which is
+   invoked as PRF(MasterKey, Label) with an empty seed and produces an
+   arbitrary length output.  The appropriate number of bits (Length) is
+   simply extracted from the beginning of the output.  The KDF name
+   "P_XXX" in this document refers the the TLS [RFC5246] PRF using P_XXX
+   as the underlying P_hash function.
+
+   To compute the CEK from the CMK, the label "Encryption" is used.
+
+   To compute the CIK from the CMK, the label "Integrity" is used.
+
+   When AEAD algorithms are used the KDF element MUST not be present.
+   When they are not used, it MUST be present.
+
+4.4.4.  CMK Encryption
+
+   JSMS supports two forms of CMK encryption:
+
+   o  Asymmetric encryption under the recipient's public key.
+   o  Symmetric encryption under a shared key.
+
+4.4.4.1.  Asymmetric Encryption
+
+   In the asymmetric encryption mode, the CMK is encrypted under the
+   recipient's public key.  The only currently defined asymmetric
+   encryption mode is RSA-PKCS1-1.5, which refers to [RFC3447] RSAES-
+   PKCS1-v1_5.
+
+4.4.4.2.  Symmetric Encryption
+
+   In the symmetric encryption mode, the CMK is encrypted under a
+   symmetric key shared between the sender and receiver.  All such modes
+   MUST provide integrity for the CMK.  This document defines four such
+   modes:  AES-128-CBC, AES-256-CBC referring to the [RFC5649] AES key
+   wrapping modes and AES-128-GCM, AES-256-GCM, referring to AES
+   encryption with GCM.  For GCM the random 64-bit IV is prepended to
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                [Page 15]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+   the ciphertext.
+
+4.5.  Composition
+
+   This document does not specify a combination signed and encrypted
+   mode.  However, because the contents of a message can be arbitrary,
+   and encryption and data origin authentication can be provided by
+   recursively encapsulating multiple JSMS messages.  In general,
+   senders SHOULD sign the message and then encrypt the result (thus
+   encrypting the signature).  This prevents attacks in which the
+   signature is stripped, leaving just an encrypted message, as well as
+   providing privacy for the signer.
+
+
+5.  IANA Considerations
+
+   [TODO]
+   o  Register MIME types
+   o  Registries for signature, encryption, MAC
+
+
+6.  Security Considerations
+
+
+7.  Acknowledgments
+
+   [TODO]
+
+
+8.  References
+
+8.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
+
+   [RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
+              Housley, R., and W. Polk, "Internet X.509 Public Key
+              Infrastructure Certificate and Certificate Revocation List
+              (CRL) Profile", RFC 5280, May 2008.
+
+   [RFC5116]  McGrew, D., "An Interface and Algorithms for Authenticated
+              Encryption", RFC 5116, January 2008.
+
+   [RFC2045]  Freed, N. and N. Borenstein, "Multipurpose Internet Mail
+              Extensions (MIME) Part One: Format of Internet Message
+              Bodies", RFC 2045, November 1996.
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                [Page 16]
+
+Internet-Draft                    JSMS                    September 2010
+
+
+   [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
+              Resource Identifier (URI): Generic Syntax", STD 66,
+              RFC 3986, January 2005.
+
+   [RFC4086]  Eastlake, D., Schiller, J., and S. Crocker, "Randomness
+              Requirements for Security", BCP 106, RFC 4086, June 2005.
+
+   [RFC5246]  Dierks, T. and E. Rescorla, "The Transport Layer Security
+              (TLS) Protocol Version 1.2", RFC 5246, August 2008.
+
+   [RFC3447]  Jonsson, J. and B. Kaliski, "Public-Key Cryptography
+              Standards (PKCS) #1: RSA Cryptography Specifications
+              Version 2.1", RFC 3447, February 2003.
+
+   [RFC5649]  Housley, R. and M. Dworkin, "Advanced Encryption Standard
+              (AES) Key Wrap with Padding Algorithm", RFC 5649,
+              September 2009.
+
+8.2.  Informative References
+
+
+Authors' Addresses
+
+   Eric Rescorla
+   Skype
+   8000 Marina Blvd
+   Brisbane, CA  94005
+   USA
+
+   Email:  ekr@skype.net
+
+
+   Joe Hildebrand
+   Cisco Systems, Inc.
+   1899 Wyknoop Street, Suite 600
+   Denver, CO  80202
+   USA
+
+   Email:  jhildebr@cisco.com
+
+
+
+
+
+
+
+
+
+
+
+
+Rescorla & Hildebrand    Expires March 16, 2011                [Page 17]
+

@@ -1,0 +1,1233 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en"><head><title>JavaScript Message Security Format</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content="JavaScript Message Security Format">
+<meta name="generator" content="xml2rfc v1.35 (http://xml.resource.org/)">
+<style type='text/css'><!--
+        body {
+                font-family: verdana, charcoal, helvetica, arial, sans-serif;
+                font-size: small; color: #000; background-color: #FFF;
+                margin: 2em;
+        }
+        h1, h2, h3, h4, h5, h6 {
+                font-family: helvetica, monaco, "MS Sans Serif", arial, sans-serif;
+                font-weight: bold; font-style: normal;
+        }
+        h1 { color: #900; background-color: transparent; text-align: right; }
+        h3 { color: #333; background-color: transparent; }
+
+        td.RFCbug {
+                font-size: x-small; text-decoration: none;
+                width: 30px; height: 30px; padding-top: 2px;
+                text-align: justify; vertical-align: middle;
+                background-color: #000;
+        }
+        td.RFCbug span.RFC {
+                font-family: monaco, charcoal, geneva, "MS Sans Serif", helvetica, verdana, sans-serif;
+                font-weight: bold; color: #666;
+        }
+        td.RFCbug span.hotText {
+                font-family: charcoal, monaco, geneva, "MS Sans Serif", helvetica, verdana, sans-serif;
+                font-weight: normal; text-align: center; color: #FFF;
+        }
+
+        table.TOCbug { width: 30px; height: 15px; }
+        td.TOCbug {
+                text-align: center; width: 30px; height: 15px;
+                color: #FFF; background-color: #900;
+        }
+        td.TOCbug a {
+                font-family: monaco, charcoal, geneva, "MS Sans Serif", helvetica, sans-serif;
+                font-weight: bold; font-size: x-small; text-decoration: none;
+                color: #FFF; background-color: transparent;
+        }
+
+        td.header {
+                font-family: arial, helvetica, sans-serif; font-size: x-small;
+                vertical-align: top; width: 33%;
+                color: #FFF; background-color: #666;
+        }
+        td.author { font-weight: bold; font-size: x-small; margin-left: 4em; }
+        td.author-text { font-size: x-small; }
+
+        /* info code from SantaKlauss at http://www.madaboutstyle.com/tooltip2.html */
+        a.info {
+                /* This is the key. */
+                position: relative;
+                z-index: 24;
+                text-decoration: none;
+        }
+        a.info:hover {
+                z-index: 25;
+                color: #FFF; background-color: #900;
+        }
+        a.info span { display: none; }
+        a.info:hover span.info {
+                /* The span will display just on :hover state. */
+                display: block;
+                position: absolute;
+                font-size: smaller;
+                top: 2em; left: -5em; width: 15em;
+                padding: 2px; border: 1px solid #333;
+                color: #900; background-color: #EEE;
+                text-align: left;
+        }
+
+        a { font-weight: bold; }
+        a:link    { color: #900; background-color: transparent; }
+        a:visited { color: #633; background-color: transparent; }
+        a:active  { color: #633; background-color: transparent; }
+
+        p { margin-left: 2em; margin-right: 2em; }
+        p.copyright { font-size: x-small; }
+        p.toc { font-size: small; font-weight: bold; margin-left: 3em; }
+        table.toc { margin: 0 0 0 3em; padding: 0; border: 0; vertical-align: text-top; }
+        td.toc { font-size: small; font-weight: bold; vertical-align: text-top; }
+
+        ol.text { margin-left: 2em; margin-right: 2em; }
+        ul.text { margin-left: 2em; margin-right: 2em; }
+        li      { margin-left: 3em; }
+
+        /* RFC-2629 <spanx>s and <artwork>s. */
+        em     { font-style: italic; }
+        strong { font-weight: bold; }
+        dfn    { font-weight: bold; font-style: normal; }
+        cite   { font-weight: normal; font-style: normal; }
+        tt     { color: #036; }
+        tt, pre, pre dfn, pre em, pre cite, pre span {
+                font-family: "Courier New", Courier, monospace; font-size: small;
+        }
+        pre {
+                text-align: left; padding: 4px;
+                color: #000; background-color: #CCC;
+        }
+        pre dfn  { color: #900; }
+        pre em   { color: #66F; background-color: #FFC; font-weight: normal; }
+        pre .key { color: #33C; font-weight: bold; }
+        pre .id  { color: #900; }
+        pre .str { color: #000; background-color: #CFF; }
+        pre .val { color: #066; }
+        pre .rep { color: #909; }
+        pre .oth { color: #000; background-color: #FCF; }
+        pre .err { background-color: #FCC; }
+
+        /* RFC-2629 <texttable>s. */
+        table.all, table.full, table.headers, table.none {
+                font-size: small; text-align: center; border-width: 2px;
+                vertical-align: top; border-collapse: collapse;
+        }
+        table.all, table.full { border-style: solid; border-color: black; }
+        table.headers, table.none { border-style: none; }
+        th {
+                font-weight: bold; border-color: black;
+                border-width: 2px 2px 3px 2px;
+        }
+        table.all th, table.full th { border-style: solid; }
+        table.headers th { border-style: none none solid none; }
+        table.none th { border-style: none; }
+        table.all td {
+                border-style: solid; border-color: #333;
+                border-width: 1px 2px;
+        }
+        table.full td, table.headers td, table.none td { border-style: none; }
+
+        hr { height: 1px; }
+        hr.insert {
+                width: 80%; border-style: none; border-width: 0;
+                color: #CCC; background-color: #CCC;
+        }
+--></style>
+</head>
+<body>
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<table summary="layout" width="66%" border="0" cellpadding="0" cellspacing="0"><tr><td><table summary="layout" width="100%" border="0" cellpadding="2" cellspacing="1">
+<tr><td class="header">Network Working Group</td><td class="header">E. Rescorla</td></tr>
+<tr><td class="header">Internet-Draft</td><td class="header">Skype</td></tr>
+<tr><td class="header">Intended status:  Standards Track</td><td class="header">J. Hildebrand</td></tr>
+<tr><td class="header">Expires:  June 29, 2011</td><td class="header">Cisco Systems, Inc.</td></tr>
+<tr><td class="header">&nbsp;</td><td class="header">December 26, 2010</td></tr>
+</table></td></tr></table>
+<h1><br />JavaScript Message Security Format<br />draft-rescorla-jsms-00.txt</h1>
+
+<h3>Abstract</h3>
+
+<p>Many applications require the ability to send cryptographically
+      secured messages. While the IETF has defined a number of formats for
+      such messages [TODO: REF CMS, PEM, OpenPGP], those formats use encodings
+      which are not congenial for Web applications. This document describes a
+      new cryptographic message format which is based on JavaScript Object
+      Notation (JSON) and thus is easy for Web applications to generate and
+      parse.
+</p>
+<h3>Status of this Memo</h3>
+<p>
+This Internet-Draft is submitted  in full
+conformance with the provisions of BCP&nbsp;78 and BCP&nbsp;79.</p>
+<p>
+Internet-Drafts are working documents of the Internet Engineering
+Task Force (IETF).  Note that other groups may also distribute
+working documents as Internet-Drafts.  The list of current
+Internet-Drafts is at http://datatracker.ietf.org/drafts/current/.</p>
+<p>
+Internet-Drafts are draft documents valid for a maximum of six months
+and may be updated, replaced, or obsoleted by other documents at any time.
+It is inappropriate to use Internet-Drafts as reference material or to cite
+them other than as &ldquo;work in progress.&rdquo;</p>
+<p>
+This Internet-Draft will expire on June 29, 2011.</p>
+
+<h3>Copyright Notice</h3>
+<p>
+Copyright (c) 2010 IETF Trust and the persons identified as the
+document authors.  All rights reserved.</p>
+<p>
+This document is subject to BCP 78 and the IETF Trust's Legal
+Provisions Relating to IETF Documents
+(http://trustee.ietf.org/license-info) in effect on the date of
+publication of this document.  Please review these documents
+carefully, as they describe your rights and restrictions with respect
+to this document. Code Components extracted from this document must
+include Simplified BSD License text as described in Section 4.e of
+the Trust Legal Provisions and are provided without warranty as
+described in the Simplified BSD License.</p>
+<p>
+This document may contain material from IETF Documents or IETF
+Contributions published or made publicly available before November
+10, 2008.  The person(s) controlling the copyright in some of this
+material may not have granted the IETF Trust the right to allow
+modifications of such material outside the IETF Standards Process.
+Without obtaining an adequate license from the person(s) controlling
+the copyright in such materials, this document may not be modified
+outside the IETF Standards Process, and derivative works of it may
+not be created outside the IETF Standards Process, except to format
+it for publication as an RFC or to translate it into languages other
+than English.</p>
+<a name="toc"></a><br /><hr />
+<h3>Table of Contents</h3>
+<p class="toc">
+<a href="#anchor1">1.</a>&nbsp;
+Introduction<br />
+<a href="#anchor2">2.</a>&nbsp;
+Conventions Used In This Document<br />
+<a href="#anchor3">3.</a>&nbsp;
+Overview<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor4">3.1.</a>&nbsp;
+Operational Modes<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor5">3.2.</a>&nbsp;
+Conventions<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor6">3.3.</a>&nbsp;
+Certificate Processing<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor7">3.4.</a>&nbsp;
+Certificate Discovery<br />
+<a href="#anchor8">4.</a>&nbsp;
+Message Format<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.content">4.1.</a>&nbsp;
+Content Object<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.message-common">4.2.</a>&nbsp;
+Common Elements<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.signed">4.3.</a>&nbsp;
+Signed Data<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.signature_computation">4.3.1.</a>&nbsp;
+Signature Computation<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.signature_verification">4.3.2.</a>&nbsp;
+Signature Verification<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.signed-example">4.3.3.</a>&nbsp;
+Example<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.encrypted">4.4.</a>&nbsp;
+Encrypted Data<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.encryption">4.4.1.</a>&nbsp;
+Message Encryption<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.decryption">4.4.2.</a>&nbsp;
+Message Decryption<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.key_derivation">4.4.3.</a>&nbsp;
+Key Derivation<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.encrypt_cmk">4.4.4.</a>&nbsp;
+CMK Encryption<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#sec.msg-composition">4.5.</a>&nbsp;
+Composition<br />
+<a href="#sec.iana-cons">5.</a>&nbsp;
+IANA Considerations<br />
+<a href="#anchor9">6.</a>&nbsp;
+Open Issues<br />
+<a href="#sec.sec-cons">7.</a>&nbsp;
+Security Considerations<br />
+<a href="#anchor10">8.</a>&nbsp;
+XML Schemas for types<br />
+<a href="#anchor11">9.</a>&nbsp;
+Interoperabilty<br />
+<a href="#anchor12">10.</a>&nbsp;
+Acknowledgments<br />
+<a href="#rfc.references1">11.</a>&nbsp;
+References<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#rfc.references1">11.1.</a>&nbsp;
+Normative References<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#rfc.references2">11.2.</a>&nbsp;
+Informative References<br />
+<a href="#rfc.authors">&#167;</a>&nbsp;
+Authors' Addresses<br />
+</p>
+<br clear="all" />
+
+<a name="anchor1"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.1"></a><h3>1.&nbsp;
+Introduction</h3>
+
+<p>Many applications require the ability to send cryptographically
+      secured (encrypted, digitally signed, etc.) messages. While the IETF has
+      defined a number of formats for such messages [TODO: REF CMS, PEM,
+      OpenPGP], those formats are widely viewed as being excessively
+      complicated for the demands of Web applications, which typically only
+      need the ability to secure simple messages. In addition, existing
+      formats use encoding mechanisms (e.g., ASN.1) which are not congenial
+      for Web applications. This presents an obstacle to the deployment of
+      strong security by such applications.
+</p>
+<p>This document describes a new cryptographic message format,
+      JavaScript Message Security (JSMS) intended to meet the need of the Web
+      environment. While JSMS is modelled on existing formats - principally
+      CMS [TODO: REF]--it uses JavaScript Object Notation (JSON) rather than
+      ASN.1/BER/DER, making it far easier for Web applications to handle. In
+      the interest of simplicity, JSMS also omits as many as possible of the
+      CMS modes (multiple signatures, password-based encryption).
+</p>
+<a name="anchor2"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.2"></a><h3>2.&nbsp;
+Conventions Used In This Document</h3>
+
+<p>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+      "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+      document are to be interpreted as described in <a class='info' href='#RFC2119'>[RFC2119]<span> (</span><span class='info'>Bradner, S., &ldquo;Key words for use in RFCs to Indicate Requirement Levels,&rdquo; March&nbsp;1997.</span><span>)</span></a>.
+</p>
+<a name="anchor3"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.3"></a><h3>3.&nbsp;
+Overview</h3>
+
+<p>The JSMS message format is simply a JSON dictionary with an
+      appropriate collection of fields. For instance, [TODO: Need something
+      here.]
+</p>
+<a name="anchor4"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.3.1"></a><h3>3.1.&nbsp;
+Operational Modes</h3>
+
+<p>JSMS supports two operational modes:
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt>Encrypted Data</dt>
+<dd>
+</dd>
+<dt></dt>
+<dd>A block of data encrypted under a random message encryption key
+            (MEK). The MEK is then separately encrypted for each recipient,
+            either via symmetric or asymmetric encryption. The data is always
+            integrity protected, either via a separate MAC or an AEAD
+            algorithm such as AES-GCM.
+</dd>
+<dt></dt>
+<dd>CJ - can we just use AES-CCM here ?
+</dd>
+<dt>Signed Data</dt>
+<dd>
+</dd>
+<dt></dt>
+<dd>A block of data signed by a single signer using his asymmetric
+            key and optionally carrying his certificate. Multiple signatures
+            are not permitted to keep things simple.
+</dd>
+</dl></blockquote>
+
+<p>Any other desired security functions are provided by composition of
+        these modes. For instance, a signed and encrypted message is produced
+        by first creating a Signed message and then encrypting that data. (See
+        <a class='info' href='#sec.msg-composition'>Section&nbsp;4.5<span> (</span><span class='info'>Composition</span><span>)</span></a> for more on
+        composition.
+</p>
+<a name="anchor5"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.3.2"></a><h3>3.2.&nbsp;
+Conventions</h3>
+
+<p>In general, JSMS follows the following structural conventions:
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt>Base64 as the only encoding</dt>
+<dd>
+</dd>
+<dt></dt>
+<dd>Any data that does not have a straightforward string
+            representation (binary values, large integers, etc.) is
+            base64-encoded. In some cases, hexadecimal encodings might be more
+            convenient, but consistency seems even more important.
+</dd>
+<dt></dt>
+<dd>
+</dd>
+<dt>No canonicalization</dt>
+<dd>
+</dd>
+<dt></dt>
+<dd>In most cryptographic message formats (CMS, PKIX, XML-DSIG
+            [TODO: REF]), canonical encodings are used to allow the same value
+            to be computed at both sender and recipient (e.g., for digital
+            signatures). This is inconvenient in JSON, which just views
+            messages as a bundle of key/value pairs. Instead, whenever
+            canonicalization would be required, the relevant data is
+            serialized and base64 encoded for transport or a well defined
+            order of the relevant fields is defines so both sides can compute
+            the relevant data.
+</dd>
+<dt></dt>
+<dd>
+</dd>
+<dt>In-memory processing</dt>
+<dd>
+</dd>
+<dt></dt>
+<dd>We assume that the entire message can fit in main memory and
+            make no effort to design a wire representation which can be
+            handled in small chunks in a single pass. This means, for
+            instance, that there is no need to have a message digest indicator
+            at the beginning of the message and then the signature at the end,
+            as is done in CMS. Fields are simply serialized in whatever order
+            is most convenient for the JSON implementation. The examples in
+            this document are generally shown in whatever order seems most
+            readable and are not normative.
+</dd>
+</dl></blockquote>
+
+<a name="anchor6"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.3.3"></a><h3>3.3.&nbsp;
+Certificate Processing</h3>
+
+<p>Experience has shown that certificate handling path construction)
+        is one of the trickier parts of building a cryptographic system. While
+        JSMS supports PKIX certificates, its certificate processing is far
+        simpler than that of CMS. When a JSMS agent provides its certificate,
+        it must provide an ordered chain (as in TLS [REF]) terminating in its
+        own certificate, thus removing the need to construct certificate
+        paths. In addition, because many implementations will not want to do
+        any ASN.1/BER processing at all, we define a Web service which
+        applications can use for chain validation. (See [TODO]).
+</p>
+<a name="anchor7"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.3.4"></a><h3>3.4.&nbsp;
+Certificate Discovery</h3>
+
+<p>As this will generally be used in an online messaging environment
+        with suers that have an address of the form user@domain, such as
+        email, XMPP, or SIP, this specification defines a way to use HTTPS
+        using a well known URL [TODO REF[ to find other users certificates and
+        public keys. (See [TODO]).
+</p>
+<a name="anchor8"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4"></a><h3>4.&nbsp;
+Message Format</h3>
+
+<a name="sec.content"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.1"></a><h3>4.1.&nbsp;
+Content Object</h3>
+
+<p>JSMS operates by providing transformations on "Content" objects,
+        which are just mime-typed JSON objects. These objects are then wrapped
+        in a signed/encrypted wrapper:
+</p>
+<p>[[OPEN ISSUE: Do we want to have both the schema description and
+        the bullet point description... CJ: Lets move all scheme to relax NG
+        and move it to an appendix and put simple XML examples here. Like w3c
+        docs. ]
+</p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
+var content_schema={
+  "description":"Message contents",
+  "type":"object":
+  "properties":{
+      "ContentType":{
+        "description":"A MIME content type",
+        "type":"string",
+        },
+        "Data":{
+        "description":"The underlying data",
+        "type":"string",
+        }
+}};
+</pre></div>
+<p>The meaning of the fields is as follows:
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt></dt>
+<dd>
+</dd>
+<dt>ContentType:</dt>
+<dd>A MIME <a class='info' href='#RFC2045'>[RFC2045]<span> (</span><span class='info'>Freed, N. and N. Borenstein, &ldquo;Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies,&rdquo; November&nbsp;1996.</span><span>)</span></a>
+            media type indicating the type of the "Data" field.
+</dd>
+<dt>Data:</dt>
+<dd>The data value. [OPEN ISSUE: Do we need an
+            encoding here? CJ - Yes Base64]
+</dd>
+</dl></blockquote>
+
+<p>Signing and encryption transform a "Content" object into "Signed"
+        and "Encrypted" objects respectively. Verification and decryption
+        transform "Signed" and "Encrypted" objects back into "Content"
+        objects.
+</p>
+<a name="sec.message-common"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.2"></a><h3>4.2.&nbsp;
+Common Elements</h3>
+
+<p>A JSMS message is simple a JSON dictionary object containing a set
+        of specific values.
+</p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
+var message_schema={
+  "description":"The basic schema for a JSMS message",
+  "type":"object",
+  "properties":{
+    "Type":{
+       "description":"Message type",
+       "type":"string",
+       "enum":["signed", "encrypted"]
+     },
+     "Version":{
+       "description":"Version number for the message",
+       "type":"string",
+       "enum":["1.0"]
+       }
+   }
+};
+</pre></div>
+<p>The following fields MUST be present in all messages:
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt></dt>
+<dd>
+</dd>
+<dt>Version:</dt>
+<dd>The version number. For this specification
+            this value MUST be set to the string "1.0". [TODO: Version
+            processing.]
+</dd>
+<dt></dt>
+<dd>
+</dd>
+<dt>Type:</dt>
+<dd>The type of the message. MUST be either
+            "signed" or "encrypted", to indicate a signed message (<a class='info' href='#sec.signed'>Section&nbsp;4.3<span> (</span><span class='info'>Signed Data</span><span>)</span></a>) or an encrypted message (<a class='info' href='#sec.encrypted'>Section&nbsp;4.4<span> (</span><span class='info'>Encrypted Data</span><span>)</span></a>) respectively.
+</dd>
+</dl></blockquote>
+
+<p>
+</p>
+<a name="sec.signed"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.3"></a><h3>4.3.&nbsp;
+Signed Data</h3>
+
+<p>A "signed" message contains a signed data block plus a digital
+        signature over that data. Only one signer is allowed.
+</p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
+var signed_schema = {
+  "description":"A signed message",
+  "type":"object",
+  "extends":message_schema,
+  "properties":{
+    "Signature":{
+       "description":"The signature over the SignedData",
+       "type":"object",
+       "properties":{
+           "Value":{
+               "description":"the content to be signed",
+               "type":"string"},
+            "DigestAlgorithm":{
+               "description":"",
+               "type":"string",
+               "enum":["SHA1", "SHA256"] },
+             "SignatureAlgorithm":{
+               "description":"",
+               "type":"string",
+               "enum":["RSA-PKCS1-1.5"] },
+            "Signer":{
+               "description":"",
+               "type":"string",
+               "format":"email" },
+            "CertChain": {
+               "description":"The signer's cert chain",
+               "type":certchain_schema
+               }
+}}}};
+</pre></div>
+<p>[[OPEN ISSUE: How do we represent enums that correspond to
+        algorithm identifiers and hence registries. CJ: Make new registries.
+        ]]
+</p>
+<p>The meaning of the fields is described below:
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt></dt>
+<dd>
+</dd>
+<dt>Value:</dt>
+<dd>The data over which the signature is
+            computed. This value MUST be a base64-encoded version of a
+            "Content" structure (see <a class='info' href='#sec.content'>Section&nbsp;4.1<span> (</span><span class='info'>Content Object</span><span>)</span></a>).
+            [OPEN ISSUE: is this exactly what we want?]
+</dd>
+<dt></dt>
+<dd>
+</dd>
+<dt>DigestAlgorithm:</dt>
+<dd>The message digest used to compute
+            the signature. This field MUST be present for RSA-based signatures
+            but MAY be omitted for future signatures which do not allow
+            flexible digests.
+</dd>
+<dt></dt>
+<dd>
+</dd>
+<dt>SignatureAlgorithm:</dt>
+<dd>The signature algorithm used to
+            compute the signature. This field MUST be present.
+</dd>
+<dt></dt>
+<dd>
+</dd>
+<dt>Signer:</dt>
+<dd>The signer's identity, expressed as a URI
+            <a class='info' href='#RFC3986'>[RFC3986]<span> (</span><span class='info'>Berners-Lee, T., Fielding, R., and L. Masinter, &ldquo;Uniform Resource Identifier (URI): Generic Syntax,&rdquo; January&nbsp;2005.</span><span>)</span></a> This field MUST be present.
+</dd>
+<dt></dt>
+<dd>
+</dd>
+<dt>CertChain:</dt>
+<dd>The signer's certificate chain, if any
+            (see <a class='info' href='#sec.certificates'>Section&nbsp;4.3.2.1<span> (</span><span class='info'>Certificate Processing</span><span>)</span></a>).
+</dd>
+</dl></blockquote>
+
+<a name="sec.signature_computation"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.3.1"></a><h3>4.3.1.&nbsp;
+Signature Computation</h3>
+
+<p>The signature is computed over the string prior to base64
+          encoding. I.e., the processing order for encoding is:
+</p>
+<p></p>
+<ol class="text">
+<li>Serialize the inner "Content" value into a string X.
+</li>
+<li>Compute the signature value over X. (In the case of
+              signatures which use digests, this means feed the literal bytes
+              of the signature into the digest function.). Insert the result
+              into the "Signature" field.
+</li>
+<li>Compute the base64 representation of X and insert it into the
+              "Value" field of the message.
+</li>
+</ol>
+
+<p>This procedure removes dependencies on the exact serialization
+          algorithm: variation in spacing, field order, etc. do not affect
+          signature validity since the base64 representation preserves them on
+          the wire and protects them from modification by intermediaries.
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt>Note:</dt>
+<dd>An alternative algorithm would be to compute
+              the signature on the base64 representation itself, but this has
+              two disadvantages: (1) any intermediaries which change
+              spacing/line breaks would break the signature. (2) it is
+              inconsistent with the algorithm for encryption (<a class='info' href='#sec.encrypted'>Section&nbsp;4.4<span> (</span><span class='info'>Encrypted Data</span><span>)</span></a>), which is designed to avoid
+              multiple base64 encoding.
+</dd>
+</dl></blockquote>
+
+<p>This procedure only specifies the input to the signature
+          computation. The details of the computation depend on the signature
+          algorithm itself. The mapping from code points to algorithms is
+          found in <a class='info' href='#sec.iana-cons'>Section&nbsp;5<span> (</span><span class='info'>IANA Considerations</span><span>)</span></a>.
+</p>
+<a name="sec.signature_verification"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.3.2"></a><h3>4.3.2.&nbsp;
+Signature Verification</h3>
+
+<p>In order to verify the signature, the steps of the previous
+          section are reversed.
+</p>
+<p></p>
+<ol class="text">
+<li>Process the provided "Signer" and "CertChain" fields as
+              described in <a class='info' href='#sec.certificates'>Section&nbsp;4.3.2.1<span> (</span><span class='info'>Certificate Processing</span><span>)</span></a> in order to
+              determine the sender's public key.
+</li>
+<li>Base64 decode the "Value" field in order to recover a string
+              X.
+</li>
+<li>Verify the "Signature" field against X using the sender's
+              public key and the "SignatureAlgorithm" and "DigestAlgorithm"
+              fields. If the signature fails, return an error.
+</li>
+<li>Deserialize X to recover the inner "Content" value.
+</li>
+</ol>
+
+<p>
+</p>
+<a name="sec.certificates"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.3.2.1"></a><h3>4.3.2.1.&nbsp;
+Certificate Processing</h3>
+
+<p>JSMS uses the "CertChain" element to carry certificate
+            chains.
+</p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
+var certchain_schema = {
+  "description":"A certificate chain",
+  "type":"object",
+};
+
+var certchain_pkix_schema = {
+  "description":"A chain of PKIX certificates",
+  "extends":certchain_schema,
+  "properties":{
+    "Type:{
+      "description":"The type of certificate chain",
+      "type":"string",
+      "enum":["PKIX"] },
+    "Chain":{
+      "description":
+      "PKIX certificates in order from root to end-entity",
+      "type":"array",
+      "items":{
+        "description":"A base64-encoded BER certificate",
+        "type":"string",
+        }
+}}};
+</pre></div>
+<p>The meaning of the fields is described below:
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt></dt>
+<dd>
+</dd>
+<dt>Type:</dt>
+<dd>The type of the certificate chain. The
+                only defined value is "PKIX", referring to PKIX [REF]
+                certificates.
+</dd>
+<dt></dt>
+<dd>
+</dd>
+<dt>Chain:</dt>
+<dd>An array of certificate values. In the
+                case of "PKIX" certificates this is a list of base64-encoded
+                DER/BER PKIX certificate values. PKIX certificates MUST be
+                represented in order with each certificate certifying the next
+                and the final certificate representing the end-entity.
+</dd>
+</dl></blockquote>
+
+<p>The recipient MUST verify the certificate chain (in the case of
+            PKIX certificates according to RFC 5280 <a class='info' href='#RFC5280'>[RFC5280]<span> (</span><span class='info'>Cooper, D., Santesson, S., Farrell, S., Boeyen, S., Housley, R., and W. Polk, &ldquo;Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile,&rdquo; May&nbsp;2008.</span><span>)</span></a>). If any validation failure occurs, the
+            implementation MUST abort processing and return an error.
+</p>
+<p>Once the certificate chain is validated, the end-entity
+            certificate must contain an identity which matches the "Signer"
+            field. In the case of PKIX certificates, the certificate MUST
+            contain a subjectAltName field of type
+            "uniformResourceIdentifier". This field MUST be equivalent to the
+            URI in the "Signer" field. If not, an error MUST be returned.
+</p>
+<a name="sec.signed-example"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.3.3"></a><h3>4.3.3.&nbsp;
+Example</h3>
+
+<p>TODO
+</p>
+<a name="sec.encrypted"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.4"></a><h3>4.4.&nbsp;
+Encrypted Data</h3>
+
+<p>An "encrypted" message contains an encrypted "Content" block. All
+        "encrypted" messages contain a symmetric integrity check, either via a
+        MAC or via an AEAD <a class='info' href='#RFC5116'>[RFC5116]<span> (</span><span class='info'>McGrew, D., &ldquo;An Interface and Algorithms for Authenticated Encryption,&rdquo; January&nbsp;2008.</span><span>)</span></a> algorithm such as
+        GCM [REF]. A message may be encrypted to an arbitrary number of
+        recipients. Each recipient is represented by a "Recipient" block,
+        which contains a copy of the keying material encrypted for that
+        recipient. Both symmetric and asymmetric key establishment is
+        supported. In order to support both integrity and encryption, what is
+        carried in the Recipient block is a Content Master Key (CMK) which is
+        then used with a KDF to generate the Content Encryption Key (CEK) used
+        to encrypt the message and the Content Integrity Key (CIK) used with
+        the MAC.
+</p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
+var encrypted_schema = {
+  "description":"An encrypted object",
+  "type":"object",
+  "extends":message_schema,
+  "properties":{
+    "Recipients":{
+      "description":"The list of recipient blocks",
+      "type":"array",
+      "items":{
+         "description":"A single recipient block"
+         "type":"recipient_schema",
+       }
+    },
+
+    "KDF":{
+      "description":
+       "The KDF used to derive the MAC and encryption keys",
+      "type":"string",
+      "enum":["P_SHA256"]
+    },
+
+    "Encryption":{
+      "description":
+      "The encryption control information for the entire message",
+      "type":"object",
+      "properties":{
+        "Algorithm":{
+          "description":"The algorithm used to encrypt the message",
+          "type":"string",
+          "enum":["AES-128-CBC", "AES-256-CBC",
+                  "AES-128-GCM", "AES-256-GCM"]
+        }
+        "IV":{
+          "description":
+          "The initialization vector for the message (base64)",
+          "type":"string"
+        }
+     }
+    },
+
+     "Integrity":{
+      "description"
+      "The integrity control information for the entire message",
+      "type":"object",
+      "properties":{
+        "Algorithm":{
+          "description":"The algorithm used to compute the MAC",
+          "type":"string",
+          "enum":["HMAC-SHA-256"],
+        },
+        "Value":{
+          "description":"The MAC value (base64-encoded)",
+          "type":"string",
+        }
+      }
+    },
+
+    "Data":{
+      "description":"The ciphertext (base64-encoded)",
+      "type":"string",
+    }
+  }
+}
+</pre></div>
+<p>The meaning of the fields is as follows:
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt>Recipients:</dt>
+<dd>The list of recipients. This is an array
+            of recipient_schema structures, each of which establishes the CMK
+            for that recipient.
+</dd>
+<dt>KDF:</dt>
+<dd>Specifies the key derivation function used to
+            generate the CEK and the CIK from the CMK. This field MAY be
+            absent if an AEAD algorithm is used, in which case the CEK is
+            derived by copying the CMK.
+</dd>
+<dt>Encryption:</dt>
+<dd>Specifies the properties of the
+            encryption. The Algorithm field specifies the encryption algorithm
+            and the IV field specifies the initialization vector (if required
+            for the algorithm.
+</dd>
+<dt>Integrity:</dt>
+<dd>Specifies the properties of the integrity
+            check. The Algorithm field specifies the MAC algorithm and the
+            Value field contains the MAC. This field MAY be absent if no
+            integrity check is used.
+</dd>
+<dt>Data:</dt>
+<dd>Contains the ciphertext.
+</dd>
+</dl></blockquote>
+
+<p>Each Recipient element provides an encrypted copy of the CMK for a
+        single recipient.
+</p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
+var encrypted_schema = {
+  "description":"An encrypted object",
+  "type":"object",
+  "extends":message_schema,
+  "properties":{
+    "KEK":{
+      "type":"object",
+      "description:"Identifies the key used to encrypt the CMK",
+      "properties":{
+        "RecipientName":{
+         "type":"string",
+         "description":
+         "The recipients name represented as a URI",
+        },
+        "CertificateDigest":{
+         "type":"string",
+         "description":
+         "A digest of the recipient's certificate",
+  },
+        "KeyIdentifier",
+         "type":"string",
+         "description":
+         "An opaque string representing a shared symmetric key"
+        }
+      }
+    },
+    "Algorithm":{
+      "description":"The algorithm used to protect the CMK",
+      "type":"string",
+      "enum":["RSA-PKCS1-1.5", "AES-128-CBC",
+      "AES-256-CBC", "AES-128-GCM", "AES-256-GCM"]
+    },
+    "Value":{
+      "description":
+      "The binary representation of the encrypted CMK (base64)",
+      "type":string"
+    }
+  }
+}
+</pre></div>
+<p>The meaning of the fields is described below:
+</p>
+<p></p>
+<blockquote class="text"><dl>
+<dt></dt>
+<dd>
+</dd>
+<dt>KEK</dt>
+<dd>Indicates the key used to encrypt the CMK.
+            Either a "RecipientName" or a "KeyIdentifier" MUST be provided. If
+            the "RecipientName" is provided, then a "CertificateDigest" SHOULD
+            be provided.
+</dd>
+<dt></dt>
+<dd>
+<blockquote class="text"><dl>
+<dt>RecipientName:</dt>
+<dd>Provides the recipient's name in
+                URI form.
+</dd>
+<dt>CertificateDigest:</dt>
+<dd>[TODO: Canonicalization?
+                TODO]
+</dd>
+<dt>KeyIdentifier</dt>
+<dd>The name of a shared symmetric key
+                known to both sender and recipient. This need not be globally
+                unique as long as it is unique within the recipient's
+                context.
+</dd>
+</dl></blockquote>
+</dd>
+<dt>Algorithm:</dt>
+<dd>The algorithm used to encrypt the CMK.
+            Note the JSMS only supports key transport and not key agreement
+            (since key agreement can always be turned into key transport)
+            [TODO - prev sentence does not make sense].
+</dd>
+<dt>Value:</dt>
+<dd>The CMK encrypted under the specified
+            algorithm and key.
+</dd>
+</dl></blockquote>
+
+<a name="sec.encryption"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.4.1"></a><h3>4.4.1.&nbsp;
+Message Encryption</h3>
+
+<p>The message encryption process is as follows.
+</p>
+<p></p>
+<ol class="text">
+<li>Generate a random CMK. The CMK MUST have a length at least
+              equal to that of the larger of the required integrity or
+              encryption keys and MUST be generated randomly. See <a class='info' href='#RFC4086'>[RFC4086]<span> (</span><span class='info'>Eastlake, D., Schiller, J., and S. Crocker, &ldquo;Randomness Requirements for Security,&rdquo; June&nbsp;2005.</span><span>)</span></a> for considerations on generating random
+              values. [[ TODO - we need a section on generating randomness in
+              browsers - it's easy to screw up ]]
+</li>
+<li>Encrypt the CMK for each recipient (see <a class='info' href='#sec.encrypt_cmk'>Section&nbsp;4.4.4<span> (</span><span class='info'>CMK Encryption</span><span>)</span></a>)
+</li>
+<li>Generate a random IV (if required for the algorithm).
+</li>
+<li>Run the key derivation algorithm (see <a class='info' href='#sec.key_derivation'>Section&nbsp;4.4.3<span> (</span><span class='info'>Key Derivation</span><span>)</span></a>) to generate the CEK and CIK
+              (if not using an AEAD algorithm).
+</li>
+<li>Serialize the content into a bitstring M.
+</li>
+<li>Encrypt M using the CEK and IV to form the bitstring C.
+</li>
+<li>Set the Value element equal to the base64-encoded
+              representation of C.
+</li>
+<li>If not using an AEAD algorithm, compute the function I =
+              MAC(CIK, C) using the chosen integrity algorithm. Note that this
+              is EtA encryption which is considered the best cryptographic
+              choice ([TODO: REF Canetti]). Set the Integrity.Value element
+              equal to the base64-encoded representation of I.
+</li>
+</ol>
+
+<a name="sec.decryption"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.4.2"></a><h3>4.4.2.&nbsp;
+Message Decryption</h3>
+
+<p>The message decryption process is the reverse of the encryption
+          process.
+</p>
+<p></p>
+<ol class="text">
+<li>Identify a Recipient block which appears to reference a key
+              known to the recipient.
+</li>
+<li>Decrypt the CMK. If this fails and another Recipient block
+              appears plausible, that MAY be tried.
+</li>
+<li>Run the key derivation algorithm (see <a class='info' href='#sec.key_derivation'>Section&nbsp;4.4.3<span> (</span><span class='info'>Key Derivation</span><span>)</span></a>) to generate the CEK and CIK
+              (if not using an AEAD algorithm).
+</li>
+<li>If not using an AEAD algorithm, compute the integrity check
+              value I' on the binary representation of the Value element using
+              the indicated integrity check. If the Integrity.Value does not
+              match I', then an error MUST be reported and processing MUST be
+              aborted.
+</li>
+<li>Decrypt the binary representation of the Value element and
+              output the result
+</li>
+</ol>
+
+<a name="sec.key_derivation"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.4.3"></a><h3>4.4.3.&nbsp;
+Key Derivation</h3>
+
+<p>The key derivation process converts the CMK into a CEK. It
+          assumes as a primitive a Key Derivation Function (KDF) which
+          notionally takes three arguments: </p>
+<blockquote class="text"><dl>
+<dt>MasterKey:</dt>
+<dd>The master key used to compute the
+              individual use keys
+</dd>
+<dt>Label:</dt>
+<dd>The use key label, used to differentiate
+              individual use keys
+</dd>
+<dt>Length:</dt>
+<dd>The length of the desired use key
+</dd>
+</dl></blockquote><p> The only real KDF specified in this document is the TLS
+          PRF, which is invoked as PRF(MasterKey, Label) with an empty seed
+          and produces an arbitrary length output. The appropriate number of
+          bits (Length) is simply extracted from the beginning of the output.
+          The KDF name "P_XXX" in this document refers the the TLS <a class='info' href='#RFC5246'>[RFC5246]<span> (</span><span class='info'>Dierks, T. and E. Rescorla, &ldquo;The Transport Layer Security (TLS) Protocol Version 1.2,&rdquo; August&nbsp;2008.</span><span>)</span></a> PRF using P_XXX as the underlying P_hash
+          function. [[ CJ - when I went to implimnet this, I could not figure
+          out the seed stuff so some clarification of 5246 for implementors
+          might be needed here ]]
+</p>
+<p>To compute the CEK from the CMK, the label "Encryption" is
+          used.
+</p>
+<p>To compute the CIK from the CMK, the label "Integrity" is
+          used.
+</p>
+<p>When AEAD algorithms are used the KDF element MUST not be
+          present. When they are not used, it MUST be present.
+</p>
+<a name="sec.encrypt_cmk"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.4.4"></a><h3>4.4.4.&nbsp;
+CMK Encryption</h3>
+
+<p>JSMS supports two forms of CMK encryption:
+</p>
+<p></p>
+<ul class="text">
+<li>Asymmetric encryption under the recipient's public key.
+</li>
+<li>Symmetric encryption under a shared key.
+</li>
+</ul>
+
+<a name="sec.asymmetric_encryption"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.4.4.1"></a><h3>4.4.4.1.&nbsp;
+Asymmetric Encryption</h3>
+
+<p>In the asymmetric encryption mode, the CMK is encrypted under
+            the recipient's public key. The only currently defined asymmetric
+            encryption mode is RSA-PKCS1-1.5, which refers to <a class='info' href='#RFC3447'>[RFC3447]<span> (</span><span class='info'>Jonsson, J. and B. Kaliski, &ldquo;Public-Key Cryptography Standards (PKCS) #1: RSA Cryptography Specifications Version 2.1,&rdquo; February&nbsp;2003.</span><span>)</span></a> RSAES-PKCS1-v1_5.
+</p>
+<a name="sec.symmetric_encryption"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.4.4.2"></a><h3>4.4.4.2.&nbsp;
+Symmetric Encryption</h3>
+
+<p>In the symmetric encryption mode, the CMK is encrypted under a
+            symmetric key shared between the sender and receiver. All such
+            modes MUST provide integrity for the CMK. This document defines
+            four such modes: AES-128-CBC, AES-256-CBC referring to the <a class='info' href='#RFC5649'>[RFC5649]<span> (</span><span class='info'>Housley, R. and M. Dworkin, &ldquo;Advanced Encryption Standard (AES) Key Wrap with Padding Algorithm,&rdquo; September&nbsp;2009.</span><span>)</span></a> AES key wrapping modes and AES-128-GCM,
+            AES-256-GCM, referring to AES encryption with GCM. For GCM the
+            random 64-bit IV is prepended to the ciphertext.
+</p>
+<a name="sec.msg-composition"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.4.5"></a><h3>4.5.&nbsp;
+Composition</h3>
+
+<p>This document does not specify a combination signed and encrypted
+        mode. However, because the contents of a message can be arbitrary, and
+        encryption and data origin authentication can be provided by
+        recursively encapsulating multiple JSMS messages. In general, senders
+        SHOULD sign the message and then encrypt the result (thus encrypting
+        the signature). This prevents attacks in which the signature is
+        stripped, leaving just an encrypted message, as well as providing
+        privacy for the signer.
+</p>
+<a name="sec.iana-cons"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.5"></a><h3>5.&nbsp;
+IANA Considerations</h3>
+
+<p>[TODO] </p>
+<ul class="text">
+<li>Register MIME types
+</li>
+<li>Registries for signature, encryption, MAC
+</li>
+<li>Well known HTTP URLs
+</li>
+</ul>
+
+<a name="anchor9"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.6"></a><h3>6.&nbsp;
+Open Issues</h3>
+
+<p>Reading the number of ways AEAD is handled differently, I don't want
+      it.
+</p>
+<a name="sec.sec-cons"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.7"></a><h3>7.&nbsp;
+Security Considerations</h3>
+
+<a name="anchor10"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.8"></a><h3>8.&nbsp;
+XML Schemas for types</h3>
+
+<a name="anchor11"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.9"></a><h3>9.&nbsp;
+Interoperabilty</h3>
+
+<p>Can you take a CMS message you don't have the keys for and tear it
+      apart and form a JSMS message and visa versa?
+</p>
+<a name="anchor12"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.10"></a><h3>10.&nbsp;
+Acknowledgments</h3>
+
+<p>[TODO]
+</p>
+<a name="rfc.references"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.11"></a><h3>11.&nbsp;
+References</h3>
+
+<a name="rfc.references1"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<h3>11.1.&nbsp;Normative References</h3>
+<table width="99%" border="0">
+<tr><td class="author-text" valign="top"><a name="RFC2119">[RFC2119]</a></td>
+<td class="author-text"><a href="mailto:sob@harvard.edu">Bradner, S.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>,&rdquo; BCP&nbsp;14, RFC&nbsp;2119, March&nbsp;1997 (<a href="http://www.rfc-editor.org/rfc/rfc2119.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2119.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2119.xml">XML</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5280">[RFC5280]</a></td>
+<td class="author-text">Cooper, D., Santesson, S., Farrell, S., Boeyen, S., Housley, R., and W. Polk, &ldquo;<a href="http://tools.ietf.org/html/rfc5280">Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile</a>,&rdquo; RFC&nbsp;5280, May&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5280.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5116">[RFC5116]</a></td>
+<td class="author-text">McGrew, D., &ldquo;<a href="http://tools.ietf.org/html/rfc5116">An Interface and Algorithms for Authenticated Encryption</a>,&rdquo; RFC&nbsp;5116, January&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5116.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC2045">[RFC2045]</a></td>
+<td class="author-text"><a href="mailto:ned@innosoft.com">Freed, N.</a> and <a href="mailto:nsb@nsb.fv.com">N. Borenstein</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2045">Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies</a>,&rdquo; RFC&nbsp;2045, November&nbsp;1996 (<a href="http://www.rfc-editor.org/rfc/rfc2045.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4086">[RFC4086]</a></td>
+<td class="author-text">Eastlake, D., Schiller, J., and S. Crocker, &ldquo;<a href="http://tools.ietf.org/html/rfc4086">Randomness Requirements for Security</a>,&rdquo; BCP&nbsp;106, RFC&nbsp;4086, June&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4086.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5246">[RFC5246]</a></td>
+<td class="author-text">Dierks, T. and E. Rescorla, &ldquo;<a href="http://tools.ietf.org/html/rfc5246">The Transport Layer Security (TLS) Protocol Version 1.2</a>,&rdquo; RFC&nbsp;5246, August&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5246.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3447">[RFC3447]</a></td>
+<td class="author-text">Jonsson, J. and B. Kaliski, &ldquo;<a href="http://tools.ietf.org/html/rfc3447">Public-Key Cryptography Standards (PKCS) #1: RSA Cryptography Specifications Version 2.1</a>,&rdquo; RFC&nbsp;3447, February&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3447.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5649">[RFC5649]</a></td>
+<td class="author-text">Housley, R. and M. Dworkin, &ldquo;<a href="http://tools.ietf.org/html/rfc5649">Advanced Encryption Standard (AES) Key Wrap with Padding Algorithm</a>,&rdquo; RFC&nbsp;5649, September&nbsp;2009 (<a href="http://www.rfc-editor.org/rfc/rfc5649.txt">TXT</a>).</td></tr>
+</table>
+
+<a name="rfc.references2"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<h3>11.2.&nbsp;Informative References</h3>
+<table width="99%" border="0">
+<tr><td class="author-text" valign="top"><a name="RFC3986">[RFC3986]</a></td>
+<td class="author-text"><a href="mailto:timbl@w3.org">Berners-Lee, T.</a>, <a href="mailto:fielding@gbiv.com">Fielding, R.</a>, and <a href="mailto:LMM@acm.org">L. Masinter</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc3986">Uniform Resource Identifier (URI): Generic Syntax</a>,&rdquo; STD&nbsp;66, RFC&nbsp;3986, January&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc3986.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc3986.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc3986.xml">XML</a>).</td></tr>
+</table>
+
+<a name="rfc.authors"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<h3>Authors' Addresses</h3>
+<table width="99%" border="0" cellpadding="0" cellspacing="0">
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Eric Rescorla</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Skype</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">8000 Marina Blvd</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Brisbane, CA  94005</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">USA</td></tr>
+<tr><td class="author" align="right">Email:&nbsp;</td>
+<td class="author-text"><a href="mailto:ekr@skype.net">ekr@skype.net</a></td></tr>
+<tr cellpadding="3"><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Joe Hildebrand</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Cisco Systems, Inc.</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">1899 Wyknoop Street, Suite 600</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Denver, CO  80202</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">USA</td></tr>
+<tr><td class="author" align="right">Email:&nbsp;</td>
+<td class="author-text"><a href="mailto:jhildebr@cisco.com">jhildebr@cisco.com</a></td></tr>
+</table>
+</body></html>
