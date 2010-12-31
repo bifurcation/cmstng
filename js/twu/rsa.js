@@ -64,8 +64,8 @@ function byte2Hex(b) {
 // PKCS#1 (type 2, random) pad input string s to n bytes, and return a bigint
 function pkcs1pad2(s,n) {
   if(n < s.length + 11) { // TODO: fix for utf-8
-    alert("Message too long for RSA");
-    return null;
+      alert("Message too long for RSA");
+      return null;
   }
   var ba = new Array();
   var i = s.length - 1;
@@ -88,9 +88,9 @@ function pkcs1pad2(s,n) {
   var rng = new SecureRandom();
   var x = new Array();
   while(n > 2) { // random non-zero pad
-    x[0] = 0;
-    while(x[0] == 0) rng.nextBytes(x);
-    ba[--n] = x[0];
+      x[0] = 0;
+      while( (x[0] == 0) || (x[0] > 127) ) rng.nextBytes(x); // hack to work around UTF-8 issues 
+      ba[--n] = x[0];
   }
   ba[--n] = 2;
   ba[--n] = 0;
@@ -127,12 +127,25 @@ function RSADoPublic(x) {
 
 // Return the PKCS#1 RSA encryption of "text" as an even-length hex string
 function RSAEncrypt(text) {
-  var m = pkcs1pad2(text,(this.n.bitLength()+7)>>3);
-  if(m == null) return null;
-  var c = this.doPublic(m);
-  if(c == null) return null;
-  var h = c.toString(16);
-  if((h.length & 1) == 0) return h; else return "0" + h;
+    var byteLen = (this.n.bitLength()+7)>>3;
+
+    var m = pkcs1pad2(text,byteLen);
+    if (m == null) {
+        return null;
+    }
+
+    var c = this.doPublic(m);
+    if (c == null) {
+        return null;
+    }
+
+    var h = c.toString(16);
+    if ((h.length & 1) == 0) {
+        return h; 
+    }
+    else {
+        return "0" + h;
+    }
 }
 
 // Return the PKCS#1 RSA encryption of "text" as a Base64-encoded string
@@ -156,30 +169,40 @@ RSAKey.prototype.encrypt = RSAEncrypt;
 
 // Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
 function pkcs1unpad2(d,n) {
-  var b = d.toByteArray();
-  var i = 0;
-  while(i < b.length && b[i] == 0) ++i;
-  if(b.length-i != n-1 || b[i] != 2)
-    return null;
-  ++i;
-  while(b[i] != 0)
-    if(++i >= b.length) return null;
-  var ret = "";
-  while(++i < b.length) {
-    var c = b[i] & 255;
-    if(c < 128) { // utf-8 decode
-      ret += String.fromCharCode(c);
+    var b = d.toByteArray();
+    var i = 0;
+    while(i < b.length && b[i] == 0) ++i;
+ 
+    if(b.length-i != n-1) { // check length of whole things including pad matches the rsa size
+        return null;
     }
-    else if((c > 191) && (c < 224)) {
-      ret += String.fromCharCode(((c & 31) << 6) | (b[i+1] & 63));
-      ++i;
+
+    if( b[i] != 2) { // check we have the PKCS1.5 marker chacater before random padding 
+        return null;
     }
-    else {
-      ret += String.fromCharCode(((c & 15) << 12) | ((b[i+1] & 63) << 6) | (b[i+2] & 63));
-      i += 2;
+
+    ++i;
+    while(b[i] != 0) // skip over random padding 
+        if(++i >= b.length) {
+            return null; // failed to find mark at end of padding before real message 
+        }
+
+    var ret = "";
+    while(++i < b.length) {
+        var c = b[i] & 255;
+        if(c < 128) { // utf-8 decode
+            ret += String.fromCharCode(c);
+        }
+        else if((c > 191) && (c < 224)) {
+            ret += String.fromCharCode(((c & 31) << 6) | (b[i+1] & 63));
+            ++i;
+        }
+        else {
+            ret += String.fromCharCode(((c & 15) << 12) | ((b[i+1] & 63) << 6) | (b[i+2] & 63));
+            i += 2;
+        }
     }
-  }
-  return ret;
+    return ret;
 }
 
 // Set the private key fields N, e, and d from hex strings
@@ -261,10 +284,14 @@ function RSADoPrivate(x) {
 // Return the PKCS#1 RSA decryption of "ctext".
 // "ctext" is an even-length hex string and the output is a plain string.
 function RSADecrypt(ctext) {
-  var c = parseBigInt(ctext, 16);
-  var m = this.doPrivate(c);
-  if(m == null) return null;
-  return pkcs1unpad2(m, (this.n.bitLength()+7)>>3);
+    var c = parseBigInt(ctext, 16);
+    var m = this.doPrivate(c);
+    if (m == null) {
+        return null;
+    }
+    var byteLen = (this.n.bitLength()+7)>>3;
+    var ret = pkcs1unpad2( m, byteLen );
+    return ret;
 }
 
 // Return the PKCS#1 RSA decryption of "ctext".

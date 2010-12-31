@@ -513,7 +513,8 @@ sjcl.codec.base64 = {
   /** The base64 alphabet.
    * @private
    */
-  _chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+  //_chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", //  base64 from RFC 4648 
+  _chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", // base64url from RFC 4648
   
   /** Convert from a bitArray to a base64 string. */
   fromBits: function (arr, _noEquals) {

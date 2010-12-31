@@ -39,7 +39,7 @@ cmstng.RSA = {
      * @throws  {TypeError} If {key} is invalid
      */
     RSAEP: function(key, msg) {
-        var ctext;
+        var ctext,e,n,rsa,ctextHex;
         
         if (!key || !key.e || !key.n) {
             throw new TypeError("invalid key");
@@ -49,12 +49,17 @@ cmstng.RSA = {
         n = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( key.n ) );
         //console.debug( "rsaenc: e=" + e  );
         //console.debug( "rsaenc: n=" + n  );
+        //console.debug( "rsaenc: msg=" + msg  );
 
-        var rsa = new RSAKey();
+        rsa = new RSAKey();
         rsa.setPublic( n, e );
-        var ctext = rsa.encrypt(msg);
+        ctextHex = rsa.encrypt(msg);
         
-        return sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( ctext ));
+        //console.debug( "rsaenc: CTextHex=" + ctextHex  );
+        ctext = sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( ctextHex ));
+        //console.debug( "rsaenc: CTextB64=" + ctext );
+
+        return ctext;
     },
     /**
      * Decrypts the given ciphertext via the RSADP method.
@@ -65,8 +70,7 @@ cmstng.RSA = {
      * @throws  {TypeError} If {key} is invalid
      */
     RSADP: function(key, ctext) {
-        // TODO: make this broken out into chunks...
-        var msg;
+        var msg,e,n,d,rsa,ctextHex;
         
         if (!key || !key.d || !key.n) {
             throw new TypeError("invalid key");
@@ -80,14 +84,43 @@ cmstng.RSA = {
         //console.debug( "rsadec n=" + n  );
         //console.debug( "rsadec d=" + d  );
 
-        var rsa = new RSAKey();
+        rsa = new RSAKey();
         rsa.setPrivate( n, e, d );
         if( ctext.length == 0) {
             throw new TypeError("invalid ciphertext");
         }
-        var msg = rsa.decrypt( sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( ctext )) );
+        //console.debug( "rsadec CTextB64=" + ctext  );
+        ctextHex = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( ctext ));
+        //console.debug( "rsadec CTextHEX=" + ctextHex  );
 
+        msg = rsa.decrypt( ctextHex );
+        //console.debug( "rsadec msg=" + msg  );
+        
         return msg;
+    },
+  /**
+     * Generate a new RSA Key Pair .
+     *
+     * @param   {bits} Integer number of bits in key 
+     * @returns {Object} Key/Cert with base64 encoding
+     */
+    RSAGEN: function( bits ) {
+        var e,rsa,key;
+
+        if (!bits || bits<512 || bits>2024 ) {
+            throw new TypeError("invalid bits value");
+        }
+
+        e = "010001"; // public exponent in hex 
+        rsa = new RSAKey();
+        rsa.generate( bits, e );
+
+        key = {};
+        key.e = sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( e ) );
+        key.n = sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( rsa.n.toString(16) ) );
+        key.d = sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( rsa.d.toString(16) ) );
+
+        return key;
     }
 };
 })();

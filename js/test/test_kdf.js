@@ -57,7 +57,8 @@ $(document).ready(function() {
 
         console.debug( "CEK is " + key.cek );
 
-        equals( key.cek, "95yyAo3/1j/h9mHHP3kBiA==", "messages equal");
+        //equals( key.cek, "95yyAo3/1j/h9mHHP3kBiA==", "messages equal");
+        equals( key.cek, "95yyAo3_1j_h9mHHP3kBiA==", "messages equal");
      
     });
 });

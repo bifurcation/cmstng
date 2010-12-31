@@ -39,6 +39,7 @@ cmstng.KDF = {
      * @throws  {TypeError} If {key} is invalid
      */
     P_SHA256: function(key,label) {
+        var secret,seed,A0,A1,P1,cekBits;
 
         if (!key ) {
             throw new TypeError("invalid key");
@@ -63,6 +64,7 @@ cmstng.KDF = {
      * @returns 
      */
     HMAC_SHA256: function(key,data) {
+        var hmac,ret;
         hmac = new sjcl.misc.hmac(key, sjcl.hash.sha256);
         ret = hmac.encrypt( data );
         return ret;

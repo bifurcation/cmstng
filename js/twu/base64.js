@@ -35,7 +35,8 @@ Address all questions regarding this license to:
   tjw@cs.Stanford.EDU
 */
 
-var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+//var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";  // base64 from RFC 4648 
+var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";  // base64url from RFC 4648
 var b64pad="=";
 
 function hex2b64(h) {

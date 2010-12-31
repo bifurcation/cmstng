@@ -39,6 +39,8 @@ cmstng.CMS = {
      * @throws  {TypeError} If {key} is invalid
      */
     CMSEP: function(cert, msg) {
+        var cmkBits, cmkB64, cmkEnc, cekB64, ctext, cobj, msgObj, msg;
+
         if (!cert || !cert.e || !cert.n || !cert.name ) {
             throw new TypeError("invalid public key");
         }
@@ -94,10 +96,10 @@ cmstng.CMS = {
      * @throws  {TypeError} If {key} is invalid
      */
     CMSDP: function(cert, ctext) {
-        var msg;
+        var msg,e,n,d,msg,ivB64,ctB64,cmkB64,cekB64,msg2,text;
         
         if (!cert || !cert.d || !cert.n || !cert.e ) {
-            throw new TypeError("invalid private key");
+            throw new TypeError("invalid private key in CMSDP");
         }
 
         e = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( cert.e ) );
@@ -122,6 +124,10 @@ cmstng.CMS = {
         // decode the CMK 
         cmkB64  = cmstng.RSA.RSADP( cert, msg.cmkEnc );
         //console.debug( "cmkB64 = " +cmkB64  );
+        if ( ! cmkB64 )
+        {
+            throw new TypeError("Can not decrypt Master Key in CMSDP");
+        }
 
         // generate the CEK 
         cekB64 = cmstng.KDF.P_SHA256( cmkB64 ,  "Encryption" );

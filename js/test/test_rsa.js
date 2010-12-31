@@ -32,6 +32,15 @@ $(document).ready(function() {
         
     test("RSA encrypt/decrypt primitives", function() {
 
+        hexIn = "5b419a171412113d89c8f13195444c98c3d5f15a00108e6d61fc103f624283976ad3c280c6361c7c0fd96776387f20fa92fde267e898993d68b93974a18797af123979f3b9174b7279d5bf6df7e4302602631d66ad08c9d5b0589ae5b126b493757b7bea0cf34c2b34d89c839b5a88c95a8357057cc2853ad8b1e00877ab"
+
+        b64 = sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( hexIn ));
+        //equals( b64,"W0GaFxQSET2JyPExlURMmMPV8VoAEI5tYfwQP2JCg5dq08KAxjYcfA/ZZ3Y4fyD6kv3iZiYmT1ouTl0oYeXrxI5efO5F0tyedW/bffkMCYCYx1mrQjJ1bBYmuWxJrSTdXt76gzzTCs02JyDm1qIyVqDVwV8woU62LHgCHer" , "conver to B64" );
+
+        hexOut = sjcl.codec.hex.fromBits( sjcl.codec.base64.toBits( b64 ));
+
+        equals( hexOut, hexIn, "hex base64 conversion");
+        
         // yes, it's a combined key...just testing the primitives
         var key = {
             e: "010001", // public exponent 
@@ -59,6 +68,8 @@ $(document).ready(function() {
         //console.debug( "rsa decode text is " + msgDec );
         
         equals( msgDec, msg, "messages equal");
+        
+        key =  cmstng.RSA.RSAGEN( 512 );
         
     });
 });

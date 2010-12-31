@@ -66,14 +66,14 @@ cmstng.AES = {
      */
     AESDP: function( cek, ctext) {
         // TODO: make this broken out into chunks...
-        var msg,cekBits,k;
+        var msg,cekBits,k,p;
         
         if (!cek ) {
             throw new TypeError("invalid key");
         }
         
         p = {
-            ks : 128 , // key size 
+            ks : 128  // key size 
         };
 
         cekBits = sjcl.codec.base64.toBits( cek );

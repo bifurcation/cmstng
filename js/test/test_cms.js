@@ -32,7 +32,6 @@ $(document).ready(function() {
         
     test("CMS encrypt/decrypt primitives", function() {
 
-        // yes, it's a combined key...just testing the primitives
         var cert = {
             e: "010001", // public exponent 
             n: "c6df51ffb8156b287862f11866926c923393b36782eae3e8b0d4c3cb2e78eb6a381fe0e9cc91608416a8cf1f1a59d832132edab2e2d1d529d727686988594aeb",  // modulus (public)
@@ -43,19 +42,27 @@ $(document).ready(function() {
         cert.n = sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( cert.n ) );
         cert.d = sjcl.codec.base64.fromBits( sjcl.codec.hex.toBits( cert.d ) );
 
-        cert.name = "fluffy@cisco.com";
+        cert.name = "fluffy@example.org";
 
-        //console.debug( "cert.e=" + cert.e  );
-        //console.debug( "cert.n=" + cert.n  );
-        //console.debug( "cert.d=" + cert.d  );
+        console.debug( "cert.e=" + cert.e  );
+        console.debug( "cert.n=" + cert.n  );
+        console.debug( "cert.d=" + cert.d  );
 
         var msgExp, msgAct, ctext;
 
         console.debug( "STARTING CMS TEST ----------------" );
+ 
+        cert2 = cmstng.RSA.RSAGEN( 512 );
+        cert2.name = "fluffy@example.com";
+
+        console.debug( "cert2.e=" + cert2.e  );
+        console.debug( "cert2.n=" + cert2.n  );
+        console.debug( "cert2.d=" + cert2.d  );
+        
+        cert = cert2
 
         msg    = "cms hello"
         ctext  = cmstng.CMS.CMSEP(cert, msg );
-      
         console.debug( "cms ctext is " + ctext );
 
         msgDec = cmstng.CMS.CMSDP(cert, ctext);
