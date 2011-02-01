@@ -239,7 +239,7 @@ and must be drawn from the following list: """ + repr(action_names))
                     help='Size of the private key to generate, in bits [default: %default]', 
                     dest='size',
                     type=int,
-                    default=512)
+                    default=1024)
     optp.add_option('-o','--outfile', 
                     help='File to output [default: stdout]', 
                     dest='outfile',

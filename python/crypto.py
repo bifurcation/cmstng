@@ -23,11 +23,11 @@ def _JSONdefault(o):
 
 def JSONdumps(o, indent=None):
     "Dump crypto objects to string"
-    return json.dumps(o, default=_JSONdefault, indent=indent)
+    return json.dumps(o, default=_JSONdefault, indent=indent, sort_keys=True)
 
 def JSONwrite(o, fp=None, indent=None):
     def wj(p):
-        r = json.dump(o, p, default=_JSONdefault, indent=indent)
+        r = json.dump(o, p, default=_JSONdefault, indent=indent, sort_keys=True)
         if indent:
             p.write("\n")
         return r
@@ -373,7 +373,7 @@ class Certificate(CryptoBase):
                   self.json_["NotAfter"], self.json_["NotBefore"],
                   unicode(self.Serial)]
         source = [s.encode('utf8') for s in source]
-        source += [long_to_bytes(pk.RsaExponent), long_to_bytes(pk.RsaModulus)]
+        source += [long_to_bytes(pk.Exponent), long_to_bytes(pk.Modulus)]
         if "CriticalExtensions" in self.json_:
             source += [e.cannon() for e in self.CriticalExtensions]
         if "Extensions" in self.json_:
@@ -389,19 +389,19 @@ class Certificate(CryptoBase):
             f.append(dig[i*2:(i+1)*2])
         return ":".join(f)
         
-@Props(Algorithm=["RSA-PKCS1-1.5"], RsaExponent=LongCodec, RsaModulus=LongCodec)
+@Props(Algorithm=["RSA-PKCS1-1.5"], Exponent=LongCodec, Modulus=LongCodec)
 @TypeName("publickey")
 class PublicKey(CryptoTyped):
     def __init__(self, key=None, json=None):
         super(PublicKey, self).__init__(json)
         if key:
             self.key = key
-            self.RsaExponent = key.e
-            self.RsaModulus = key.n
+            self.Exponent = key.e
+            self.Modulus = key.n
             self.Algorithm = "RSA-PKCS1-1.5"
         else:
-            n = self.RsaModulus
-            e = self.RsaExponent
+            n = self.Modulus
+            e = self.Exponent
             self.key = create_rsa(n, e)
 
     def verify(self, signed_data, signature, signature_algorithm="RSA-PKCS1-1.5", digest_algorithm="SHA1"):
@@ -419,7 +419,7 @@ class PublicKey(CryptoTyped):
     def genCertificate(self, name, validityDays=365):
         return Certificate(name=name, pubkey=self, validityDays=validityDays)
 
-@Props("PublicKey", Algorithm=["RSA-PKCS1-1.5"], PrivateExponent=LongCodec)
+@Props("PublicKey", Algorithm=["RSA-PKCS1-1.5"], PrivateExponent=LongCodec, Prime1=LongCodec, Prime2=LongCodec, Exponent1=LongCodec, Exponent2=LongCodec, Coefficient=LongCodec)
 @TypeName("privatekey")
 class PrivateKey(CryptoBase):
     def __init__(self, key=None, size=1024, json=None):
@@ -432,11 +432,19 @@ class PrivateKey(CryptoBase):
             assert(self.key)
             self.PublicKey = PublicKey(key=self.key.publickey())
             self.PrivateExponent = self.key.d
+            self.Prime1 = self.key.p
+            self.Prime2 = self.key.q
+            self.Exponent1 = self.key.d % (self.key.p - 1)
+            self.Exponent2 = self.key.d % (self.key.q - 1)
+            self.Coefficient = self.key.u
             self.Algorithm = "RSA-PKCS1-1.5"
         else:
             self.key = create_rsa(self.PublicKey.key.n, 
                                   self.PublicKey.key.e,
-                                  self.PrivateExponent)
+                                  self.PrivateExponent,
+                                  self.Prime1,
+                                  self.Prime2,
+                                  self.Coefficient)
 
     def sign(self, signed_data, digest_algorithm="SHA1"):
         dig = Hash(digest_algorithm, signed_data)

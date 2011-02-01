@@ -264,9 +264,9 @@ def P_SHA256(secret, seed, k):
         p += A
     return p[:k]
 
-def create_rsa(n, e, private=None):
+def create_rsa(n, e, private=None, p=None, q=None, u=None):
     if private:
-        return RSA.construct((n, e, private))
+        return RSA.construct((n, e, private, p, q, u))
     return RSA.construct((n, e))
 
 def generate_rsa(size):
