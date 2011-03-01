@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="US-ASCII"?>
 <!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
-<!ENTITY rfc2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
-<!ENTITY rfc5280 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5280.xml">
-<!ENTITY rfc5116 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5116.xml">
 <!ENTITY rfc2045 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2045.xml">
+<!ENTITY rfc2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
+<!ENTITY rfc3447 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3447.xml">
 <!ENTITY rfc3986 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3986.xml">
 <!ENTITY rfc4086 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.4086.xml">
+<!ENTITY rfc4627 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.4627.xml">
+<!ENTITY rfc4648 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.4648.xml">
+<!ENTITY rfc5116 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5116.xml">
 <!ENTITY rfc5246 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5246.xml">
-<!ENTITY rfc3447 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3447.xml">
+<!ENTITY rfc5280 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5280.xml">
 <!ENTITY rfc5649 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5649.xml">
+<!ENTITY webfinger SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-hammer-webfinger-00.xml">
+<!ENTITY jsonschema SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-zyp-json-schema-03.xml">
 ]>
 <!-- $Id -->
 <?rfc inline="yes"?>
@@ -64,7 +68,7 @@
       </address>
     </author>
 
-    <date day="26" month="December" year="2010" />
+    <date day="28" month="February" year="2011" />
 
     <abstract>
       <t>Many applications require the ability to send cryptographically
@@ -85,7 +89,7 @@
       OpenPGP], those formats are widely viewed as being excessively
       complicated for the demands of Web applications, which typically only
       need the ability to secure simple messages. In addition, existing
-      formats use encoding mechanisms (e.g., ASN.1) which are not congenial
+      formats use encoding mechanisms (e.g., ASN.1 BER/DER) which are not congenial
       for Web applications. This presents an obstacle to the deployment of
       strong security by such applications.</t>
 
@@ -106,9 +110,12 @@
     </section>
 
     <section title="Overview">
-      <t>The JSMS message format is simply a JSON dictionary with an
-      appropriate collection of fields. For instance, [TODO: Need something
-      here.]</t>
+      <t>The JSMS message format is simply a JSON <xref
+      target="RFC4627"></xref> dictionary with an appropriate
+      collection of fields.  Each operating mode will have a separate
+      set of fields, with a common field to distinguish between the
+      modes.
+      </t>
 
       <section title="Operational Modes">
         <t>JSMS supports two operational modes:</t>
@@ -120,15 +127,13 @@
             (MEK). The MEK is then separately encrypted for each recipient,
             either via symmetric or asymmetric encryption. The data is always
             integrity protected, either via a separate MAC or an AEAD
-            algorithm such as AES-GCM.</t>
-
-            <t>CJ - can we just use AES-CCM here ?</t>
+            algorithm such as AES-GCM or AES-CCM.</t>
 
             <t hangText="Signed Data"></t>
 
             <t>A block of data signed by a single signer using his asymmetric
             key and optionally carrying his certificate. Multiple signatures
-            are not permitted to keep things simple.</t>
+            are not permitted in order to keep things simple.</t>
           </list></t>
 
         <t>Any other desired security functions are provided by composition of
@@ -142,93 +147,108 @@
         <t>In general, JSMS follows the following structural conventions:</t>
 
         <t><list style="hanging">
-            <t hangText="Base64 as the only encoding"></t>
+          <t hangText="Minimize implementation complexity"></t>
 
-            <t>Any data that does not have a straightforward string
-            representation (binary values, large integers, etc.) is
-            base64-encoded. In some cases, hexadecimal encodings might be more
-            convenient, but consistency seems even more important.</t>
+          <t>Wherever possible, protocol choices have been made such
+          that the time and effort required to implement the protocol
+          in many different programming languages will be minimized.
+          This means that optimizations for bandwidth, CPU, and memory
+          utilization have been explicitly avoided.</t>
 
-            <t></t>
+          <t hangText="Base64 as the only encoding"></t>
 
-            <t hangText="No canonicalization"></t>
+          <t>Any data that does not have a straightforward string
+          representation (binary values, large integers, etc.) is
+          base64-encoded (see: <xref target="RFC4648"></xref>). In
+          some cases, hexadecimal encodings might be more convenient,
+          but consistency is even more important to reduce
+          implementation complexity.</t>
 
-            <t>In most cryptographic message formats (CMS, PKIX, XML-DSIG
-            [TODO: REF]), canonical encodings are used to allow the same value
-            to be computed at both sender and recipient (e.g., for digital
-            signatures). This is inconvenient in JSON, which just views
-            messages as a bundle of key/value pairs. Instead, whenever
-            canonicalization would be required, the relevant data is
-            serialized and base64 encoded for transport or a well defined
-            order of the relevant fields is defines so both sides can compute
-            the relevant data.</t>
+          <t hangText="No canonicalization"></t>
 
-            <t></t>
+          <t>In most cryptographic message formats (CMS, PKIX,
+          XML-DSIG [TODO: REF]), canonical encodings are used to allow
+          the same value to be computed at both sender and recipient
+          (e.g., for digital signatures). This is inconvenient in
+          JSON, which just views messages as a bundle of key/value
+          pairs. Instead, whenever canonicalization would be required,
+          the relevant data is serialized and base64-encoded for
+          transport, allowing both sides to run computations over the
+          same original set of octets.</t>
 
-            <t hangText="In-memory processing"></t>
+          <t hangText="In-memory processing"></t>
 
-            <t>We assume that the entire message can fit in main memory and
-            make no effort to design a wire representation which can be
-            handled in small chunks in a single pass. This means, for
-            instance, that there is no need to have a message digest indicator
-            at the beginning of the message and then the signature at the end,
-            as is done in CMS. Fields are simply serialized in whatever order
-            is most convenient for the JSON implementation. The examples in
-            this document are generally shown in whatever order seems most
-            readable and are not normative.</t>
-          </list></t>
+          <t>We assume that the entire message can fit in main memory
+          and make no effort to design a wire representation which can
+          be handled in small chunks in a single pass. This means, for
+          instance, that there is no need to have a message digest
+          indicator at the beginning of the message and then the
+          signature at the end, as is done in CMS. Fields are simply
+          serialized in whatever order is most convenient for the JSON
+          implementation. The examples in this document are generally
+          shown in whatever order seems most readable and are not
+          normative.</t>
+        </list></t>
       </section>
 
       <section title="Certificate Processing">
-        <t>Experience has shown that certificate handling path construction)
+        <t>Experience has shown that certificate handling (path construction)
         is one of the trickier parts of building a cryptographic system. While
         JSMS supports PKIX certificates, its certificate processing is far
         simpler than that of CMS. When a JSMS agent provides its certificate,
         it must provide an ordered chain (as in TLS [REF]) terminating in its
         own certificate, thus removing the need to construct certificate
         paths. In addition, because many implementations will not want to do
-        any ASN.1/BER processing at all, we define a Web service which
+        any ASN.1/BER processing at all, we define a Web Service which
         applications can use for chain validation. (See [TODO]).</t>
       </section>
 
       <section title="Certificate Discovery">
-        <t>As this will generally be used in an online messaging environment
-        with suers that have an address of the form user@domain, such as
-        email, XMPP, or SIP, this specification defines a way to use HTTPS
-        using a well known URL [TODO REF[ to find other users certificates and
-        public keys. (See [TODO]).</t>
+        <t>JSMS will often be used in an online messaging environment
+        with users that have an address of the form user@domain, such as
+        email, XMPP, or SIP.  As such, protocols such as WebFinger
+        <xref target="I-D.hammer-webfinger"></xref> or an end-to-end
+        protocol can be used to retrieve appropriate certificates.
+        Downstream uses of JSMS SHOULD define a discovery mechanism
+        suitable for the intended use.</t>
       </section>
     </section>
 
     <section title="Message Format">
+      <t>All of the field definitions in this section make use of JSON
+      Schema <xref target="I-D.zyp-json-schema"></xref>.  For each of the
+	  fields that is designed to hold an enumerated value, a registry
+	  will be created allowing other values to be used in addition to
+	  the values enumerated in the schema.</t>
+
       <section anchor="sec.content" title="Content Object">
         <t>JSMS operates by providing transformations on "Content" objects,
         which are just mime-typed JSON objects. These objects are then wrapped
         in a signed/encrypted wrapper:</t>
 
-        <t>[[OPEN ISSUE: Do we want to have both the schema description and
-        the bullet point description... CJ: Lets move all scheme to relax NG
-        and move it to an appendix and put simple XML examples here. Like w3c
-        docs. ]</t>
-
-        <figure>
+       <figure>
           <!--begin-pdu-->
 
           <artwork><![CDATA[
-var content_schema={
-  "description":"Message contents",
-  "type":"object":
-  "properties":{
-      "ContentType":{
-        "description":"A MIME content type",
-        "type":"string",
+{
+    "description":"Message contents",
+    "type":"object",
+    "properties":{
+        "ContentType":{
+            "description":"A MIME content type",
+            "type":"string"
+        },
+        "Type":{
+            "description":"Dictionary type",
+            "type":"string",
+            "enum":["content"]
         },
         "Data":{
-        "description":"The underlying data",
-        "type":"string",
+            "description":"The underlying data",
+            "type":"string"
         }
-}};
-               ]]></artwork>
+    }
+}]]></artwork>
         </figure>
 
         <t>The meaning of the fields is as follows:</t>
@@ -239,8 +259,13 @@ var content_schema={
             <t hangText="ContentType:">A MIME <xref target="RFC2045"></xref>
             media type indicating the type of the "Data" field.</t>
 
-            <t hangText="Data:">The data value. [OPEN ISSUE: Do we need an
-            encoding here? CJ - Yes Base64]</t>
+            <t hangText="Type:">The constant string "content", to
+            facilitate easy determination that this is the target
+            content.  This is useful (for example) in certain
+            operating conditions where you must continue to unwrap
+            layers of signatures until you get to the content.</t>
+
+            <t hangText="Data:">The data value, base64-encoded.</t>
           </list></t>
 
         <t>Signing and encryption transform a "Content" object into "Signed"
@@ -250,30 +275,29 @@ var content_schema={
       </section>
 
       <section anchor="sec.message-common" title="Common Elements">
-        <t>A JSMS message is simple a JSON dictionary object containing a set
+        <t>A JSMS message is a JSON dictionary object containing a set
         of specific values.</t>
 
         <figure>
           <!--begin-pdu-->
 
           <artwork><![CDATA[
-var message_schema={
-  "description":"The basic schema for a JSMS message",
-  "type":"object",
-  "properties":{
-    "Type":{
-       "description":"Message type",
-       "type":"string",
-       "enum":["signed", "encrypted"]
-     },
-     "Version":{
-       "description":"Version number for the message",
-       "type":"string",
-       "enum":["1.0"]
-       }
-   }
-};
-               ]]></artwork>
+{
+    "description":"The basic schema for a JSMS message",
+    "type":"object",
+    "properties":{
+        "Type":{
+            "description":"Message type",
+            "type":"string",
+            "enum":["signed", "encrypted"]
+        },
+        "Version":{
+            "description":"Version number for the message",
+            "type":"string",
+            "enum":["1.0"]
+        }
+    }
+}]]></artwork>
         </figure>
 
         <t>The following fields MUST be present in all messages:</t>
@@ -304,36 +328,42 @@ var message_schema={
           <!--begin-pdu-->
 
           <artwork><![CDATA[
-var signed_schema = {
-  "description":"A signed message",
-  "type":"object",
-  "extends":message_schema,
-  "properties":{
-    "Signature":{
-       "description":"The signature over the SignedData",
-       "type":"object",
-       "properties":{
-           "Value":{
-               "description":"the content to be signed",
-               "type":"string"},
-            "DigestAlgorithm":{
-               "description":"",
-               "type":"string",
-               "enum":["SHA1", "SHA256"] },
-             "SignatureAlgorithm":{
-               "description":"",
-               "type":"string",
-               "enum":["RSA-PKCS1-1.5"] },
-            "Signer":{
-               "description":"",
-               "type":"string",
-               "format":"email" },
-            "CertChain": {
-               "description":"The signer's cert chain",
-               "type":certchain_schema
-               }
-}}}};
-               ]]></artwork>
+{
+    "description":"A signed message",
+    "type":"object",
+    "extends":message_schema,
+    "properties":{
+        "Signature":{
+            "description":"The signature over the SignedData",
+            "type":"object",
+            "properties":{
+                "Value":{
+                    "description":"the content to be signed",
+                    "type":"string"
+                },
+                "DigestAlgorithm":{
+                    "description":"",
+                    "type":"string",
+                    "enum":["SHA256"] 
+                },
+                "SignatureAlgorithm":{
+                    "description":"",
+                    "type":"string",
+                    "enum":["RSA-PKCS1-1.5"] 
+                },
+                "Signer":{
+                    "description":"",
+                    "type":"string",
+                    "format":"email" 
+                },
+                "CertChain": {
+                    "description":"The signer's cert chain",
+                    "type":certchain_schema
+                }
+            }
+        }
+    }
+}]]></artwork>
         </figure>
 
         <t>[[OPEN ISSUE: How do we represent enums that correspond to
@@ -858,25 +888,33 @@ var encrypted_schema = {
 
   <back>
     <references title="Normative References">
+     &rfc2045;
+
       &rfc2119;
-
-      &rfc5280;
-
-      &rfc5116;
-
-      &rfc2045;
-
-      &rfc4086;
-
-      &rfc5246;
 
       &rfc3447;
 
+      &rfc4086;
+
+      &rfc4627;
+
+      &rfc4648;
+
+      &rfc5116;
+
+      &rfc5246;
+
+      &rfc5280;
+
       &rfc5649;
+
+      &jsonschema;
     </references>
 
     <references title="Informative References">
       &rfc3986;
+
+      &webfinger;
     </references>
   </back>
 </rfc>

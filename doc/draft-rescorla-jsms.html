@@ -144,8 +144,8 @@
 <tr><td class="header">Network Working Group</td><td class="header">E. Rescorla</td></tr>
 <tr><td class="header">Internet-Draft</td><td class="header">Skype</td></tr>
 <tr><td class="header">Intended status:  Standards Track</td><td class="header">J. Hildebrand</td></tr>
-<tr><td class="header">Expires:  June 29, 2011</td><td class="header">Cisco Systems, Inc.</td></tr>
-<tr><td class="header">&nbsp;</td><td class="header">December 26, 2010</td></tr>
+<tr><td class="header">Expires:  September 1, 2011</td><td class="header">Cisco Systems, Inc.</td></tr>
+<tr><td class="header">&nbsp;</td><td class="header">February 28, 2011</td></tr>
 </table></td></tr></table>
 <h1><br />JavaScript Message Security Format<br />draft-rescorla-jsms-00.txt</h1>
 
@@ -174,11 +174,11 @@ and may be updated, replaced, or obsoleted by other documents at any time.
 It is inappropriate to use Internet-Drafts as reference material or to cite
 them other than as &ldquo;work in progress.&rdquo;</p>
 <p>
-This Internet-Draft will expire on June 29, 2011.</p>
+This Internet-Draft will expire on September 1, 2011.</p>
 
 <h3>Copyright Notice</h3>
 <p>
-Copyright (c) 2010 IETF Trust and the persons identified as the
+Copyright (c) 2011 IETF Trust and the persons identified as the
 document authors.  All rights reserved.</p>
 <p>
 This document is subject to BCP 78 and the IETF Trust's Legal
@@ -279,7 +279,7 @@ Introduction</h3>
       OpenPGP], those formats are widely viewed as being excessively
       complicated for the demands of Web applications, which typically only
       need the ability to secure simple messages. In addition, existing
-      formats use encoding mechanisms (e.g., ASN.1) which are not congenial
+      formats use encoding mechanisms (e.g., ASN.1 BER/DER) which are not congenial
       for Web applications. This presents an obstacle to the deployment of
       strong security by such applications.
 </p>
@@ -305,9 +305,11 @@ Conventions Used In This Document</h3>
 <a name="rfc.section.3"></a><h3>3.&nbsp;
 Overview</h3>
 
-<p>The JSMS message format is simply a JSON dictionary with an
-      appropriate collection of fields. For instance, [TODO: Need something
-      here.]
+<p>The JSMS message format is simply a JSON <a class='info' href='#RFC4627'>[RFC4627]<span> (</span><span class='info'>Crockford, D., &ldquo;The application/json Media Type for JavaScript Object Notation (JSON),&rdquo; July&nbsp;2006.</span><span>)</span></a> dictionary with an appropriate
+      collection of fields.  Each operating mode will have a separate
+      set of fields, with a common field to distinguish between the
+      modes.
+      
 </p>
 <a name="anchor4"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
@@ -326,10 +328,7 @@ Operational Modes</h3>
             (MEK). The MEK is then separately encrypted for each recipient,
             either via symmetric or asymmetric encryption. The data is always
             integrity protected, either via a separate MAC or an AEAD
-            algorithm such as AES-GCM.
-</dd>
-<dt></dt>
-<dd>CJ - can we just use AES-CCM here ?
+            algorithm such as AES-GCM or AES-CCM.
 </dd>
 <dt>Signed Data</dt>
 <dd>
@@ -337,7 +336,7 @@ Operational Modes</h3>
 <dt></dt>
 <dd>A block of data signed by a single signer using his asymmetric
             key and optionally carrying his certificate. Multiple signatures
-            are not permitted to keep things simple.
+            are not permitted in order to keep things simple.
 </dd>
 </dl></blockquote>
 
@@ -356,48 +355,55 @@ Conventions</h3>
 </p>
 <p></p>
 <blockquote class="text"><dl>
+<dt>Minimize implementation complexity</dt>
+<dd>
+</dd>
+<dt></dt>
+<dd>Wherever possible, protocol choices have been made such
+          that the time and effort required to implement the protocol
+          in many different programming languages will be minimized.
+          This means that optimizations for bandwidth, CPU, and memory
+          utilization have been explicitly avoided.
+</dd>
 <dt>Base64 as the only encoding</dt>
 <dd>
 </dd>
 <dt></dt>
 <dd>Any data that does not have a straightforward string
-            representation (binary values, large integers, etc.) is
-            base64-encoded. In some cases, hexadecimal encodings might be more
-            convenient, but consistency seems even more important.
-</dd>
-<dt></dt>
-<dd>
+          representation (binary values, large integers, etc.) is
+          base64-encoded (see: <a class='info' href='#RFC4648'>[RFC4648]<span> (</span><span class='info'>Josefsson, S., &ldquo;The Base16, Base32, and Base64 Data Encodings,&rdquo; October&nbsp;2006.</span><span>)</span></a>). In
+          some cases, hexadecimal encodings might be more convenient,
+          but consistency is even more important to reduce
+          implementation complexity.
 </dd>
 <dt>No canonicalization</dt>
 <dd>
 </dd>
 <dt></dt>
-<dd>In most cryptographic message formats (CMS, PKIX, XML-DSIG
-            [TODO: REF]), canonical encodings are used to allow the same value
-            to be computed at both sender and recipient (e.g., for digital
-            signatures). This is inconvenient in JSON, which just views
-            messages as a bundle of key/value pairs. Instead, whenever
-            canonicalization would be required, the relevant data is
-            serialized and base64 encoded for transport or a well defined
-            order of the relevant fields is defines so both sides can compute
-            the relevant data.
-</dd>
-<dt></dt>
-<dd>
+<dd>In most cryptographic message formats (CMS, PKIX,
+          XML-DSIG [TODO: REF]), canonical encodings are used to allow
+          the same value to be computed at both sender and recipient
+          (e.g., for digital signatures). This is inconvenient in
+          JSON, which just views messages as a bundle of key/value
+          pairs. Instead, whenever canonicalization would be required,
+          the relevant data is serialized and base64-encoded for
+          transport, allowing both sides to run computations over the
+          same original set of octets.
 </dd>
 <dt>In-memory processing</dt>
 <dd>
 </dd>
 <dt></dt>
-<dd>We assume that the entire message can fit in main memory and
-            make no effort to design a wire representation which can be
-            handled in small chunks in a single pass. This means, for
-            instance, that there is no need to have a message digest indicator
-            at the beginning of the message and then the signature at the end,
-            as is done in CMS. Fields are simply serialized in whatever order
-            is most convenient for the JSON implementation. The examples in
-            this document are generally shown in whatever order seems most
-            readable and are not normative.
+<dd>We assume that the entire message can fit in main memory
+          and make no effort to design a wire representation which can
+          be handled in small chunks in a single pass. This means, for
+          instance, that there is no need to have a message digest
+          indicator at the beginning of the message and then the
+          signature at the end, as is done in CMS. Fields are simply
+          serialized in whatever order is most convenient for the JSON
+          implementation. The examples in this document are generally
+          shown in whatever order seems most readable and are not
+          normative.
 </dd>
 </dl></blockquote>
 
@@ -406,14 +412,14 @@ Conventions</h3>
 <a name="rfc.section.3.3"></a><h3>3.3.&nbsp;
 Certificate Processing</h3>
 
-<p>Experience has shown that certificate handling path construction)
+<p>Experience has shown that certificate handling (path construction)
         is one of the trickier parts of building a cryptographic system. While
         JSMS supports PKIX certificates, its certificate processing is far
         simpler than that of CMS. When a JSMS agent provides its certificate,
         it must provide an ordered chain (as in TLS [REF]) terminating in its
         own certificate, thus removing the need to construct certificate
         paths. In addition, because many implementations will not want to do
-        any ASN.1/BER processing at all, we define a Web service which
+        any ASN.1/BER processing at all, we define a Web Service which
         applications can use for chain validation. (See [TODO]).
 </p>
 <a name="anchor7"></a><br /><hr />
@@ -421,17 +427,25 @@ Certificate Processing</h3>
 <a name="rfc.section.3.4"></a><h3>3.4.&nbsp;
 Certificate Discovery</h3>
 
-<p>As this will generally be used in an online messaging environment
-        with suers that have an address of the form user@domain, such as
-        email, XMPP, or SIP, this specification defines a way to use HTTPS
-        using a well known URL [TODO REF[ to find other users certificates and
-        public keys. (See [TODO]).
+<p>JSMS will often be used in an online messaging environment
+        with users that have an address of the form user@domain, such as
+        email, XMPP, or SIP.  As such, protocols such as WebFinger
+        <a class='info' href='#I-D.hammer-webfinger'>[I&#8209;D.hammer&#8209;webfinger]<span> (</span><span class='info'>Hammer-Lahav, E., Fitzpatrick, B., and B. Cook, &ldquo;The WebFinger Protocol,&rdquo; October&nbsp;2009.</span><span>)</span></a> or an end-to-end
+        protocol can be used to retrieve appropriate certificates.
+        Downstream uses of JSMS SHOULD define a discovery mechanism
+        suitable for the intended use.
 </p>
 <a name="anchor8"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
 <a name="rfc.section.4"></a><h3>4.&nbsp;
 Message Format</h3>
 
+<p>All of the field definitions in this section make use of JSON
+      Schema <a class='info' href='#I-D.zyp-json-schema'>[I&#8209;D.zyp&#8209;json&#8209;schema]<span> (</span><span class='info'>Zyp, K. and G. Court, &ldquo;A JSON Media Type for Describing the Structure and Meaning of JSON Documents,&rdquo; November&nbsp;2010.</span><span>)</span></a>.  For each of the
+	  fields that is designed to hold an enumerated value, a registry
+	  will be created allowing other values to be used in addition to
+	  the values enumerated in the schema.
+</p>
 <a name="sec.content"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
 <a name="rfc.section.4.1"></a><h3>4.1.&nbsp;
@@ -440,26 +454,26 @@ Content Object</h3>
 <p>JSMS operates by providing transformations on "Content" objects,
         which are just mime-typed JSON objects. These objects are then wrapped
         in a signed/encrypted wrapper:
-</p>
-<p>[[OPEN ISSUE: Do we want to have both the schema description and
-        the bullet point description... CJ: Lets move all scheme to relax NG
-        and move it to an appendix and put simple XML examples here. Like w3c
-        docs. ]
 </p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
-var content_schema={
-  "description":"Message contents",
-  "type":"object":
-  "properties":{
-      "ContentType":{
-        "description":"A MIME content type",
-        "type":"string",
+{
+    "description":"Message contents",
+    "type":"object",
+    "properties":{
+        "ContentType":{
+            "description":"A MIME content type",
+            "type":"string"
+        },
+        "Type":{
+            "description":"Dictionary type",
+            "type":"string",
+            "enum":["content"]
         },
         "Data":{
-        "description":"The underlying data",
-        "type":"string",
+            "description":"The underlying data",
+            "type":"string"
         }
-}};
-</pre></div>
+    }
+}</pre></div>
 <p>The meaning of the fields is as follows:
 </p>
 <p></p>
@@ -471,9 +485,15 @@ var content_schema={
 <dd>A MIME <a class='info' href='#RFC2045'>[RFC2045]<span> (</span><span class='info'>Freed, N. and N. Borenstein, &ldquo;Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies,&rdquo; November&nbsp;1996.</span><span>)</span></a>
             media type indicating the type of the "Data" field.
 </dd>
+<dt>Type:</dt>
+<dd>The constant string "content", to
+            facilitate easy determination that this is the target
+            content.  This is useful (for example) in certain
+            operating conditions where you must continue to unwrap
+            layers of signatures until you get to the content.
+</dd>
 <dt>Data:</dt>
-<dd>The data value. [OPEN ISSUE: Do we need an
-            encoding here? CJ - Yes Base64]
+<dd>The data value, base64-encoded.
 </dd>
 </dl></blockquote>
 
@@ -487,26 +507,25 @@ var content_schema={
 <a name="rfc.section.4.2"></a><h3>4.2.&nbsp;
 Common Elements</h3>
 
-<p>A JSMS message is simple a JSON dictionary object containing a set
+<p>A JSMS message is a JSON dictionary object containing a set
         of specific values.
 </p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
-var message_schema={
-  "description":"The basic schema for a JSMS message",
-  "type":"object",
-  "properties":{
-    "Type":{
-       "description":"Message type",
-       "type":"string",
-       "enum":["signed", "encrypted"]
-     },
-     "Version":{
-       "description":"Version number for the message",
-       "type":"string",
-       "enum":["1.0"]
-       }
-   }
-};
-</pre></div>
+{
+    "description":"The basic schema for a JSMS message",
+    "type":"object",
+    "properties":{
+        "Type":{
+            "description":"Message type",
+            "type":"string",
+            "enum":["signed", "encrypted"]
+        },
+        "Version":{
+            "description":"Version number for the message",
+            "type":"string",
+            "enum":["1.0"]
+        }
+    }
+}</pre></div>
 <p>The following fields MUST be present in all messages:
 </p>
 <p></p>
@@ -538,36 +557,42 @@ Signed Data</h3>
 <p>A "signed" message contains a signed data block plus a digital
         signature over that data. Only one signer is allowed.
 </p><div style='display: table; width: 0; margin-left: 3em; margin-right: auto'><pre>
-var signed_schema = {
-  "description":"A signed message",
-  "type":"object",
-  "extends":message_schema,
-  "properties":{
-    "Signature":{
-       "description":"The signature over the SignedData",
-       "type":"object",
-       "properties":{
-           "Value":{
-               "description":"the content to be signed",
-               "type":"string"},
-            "DigestAlgorithm":{
-               "description":"",
-               "type":"string",
-               "enum":["SHA1", "SHA256"] },
-             "SignatureAlgorithm":{
-               "description":"",
-               "type":"string",
-               "enum":["RSA-PKCS1-1.5"] },
-            "Signer":{
-               "description":"",
-               "type":"string",
-               "format":"email" },
-            "CertChain": {
-               "description":"The signer's cert chain",
-               "type":certchain_schema
-               }
-}}}};
-</pre></div>
+{
+    "description":"A signed message",
+    "type":"object",
+    "extends":message_schema,
+    "properties":{
+        "Signature":{
+            "description":"The signature over the SignedData",
+            "type":"object",
+            "properties":{
+                "Value":{
+                    "description":"the content to be signed",
+                    "type":"string"
+                },
+                "DigestAlgorithm":{
+                    "description":"",
+                    "type":"string",
+                    "enum":["SHA256"]
+                },
+                "SignatureAlgorithm":{
+                    "description":"",
+                    "type":"string",
+                    "enum":["RSA-PKCS1-1.5"]
+                },
+                "Signer":{
+                    "description":"",
+                    "type":"string",
+                    "format":"email"
+                },
+                "CertChain": {
+                    "description":"The signer's cert chain",
+                    "type":certchain_schema
+                }
+            }
+        }
+    }
+}</pre></div>
 <p>[[OPEN ISSUE: How do we represent enums that correspond to
         algorithm identifiers and hence registries. CJ: Make new registries.
         ]]
@@ -1174,22 +1199,28 @@ References</h3>
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
 <h3>11.1.&nbsp;Normative References</h3>
 <table width="99%" border="0">
-<tr><td class="author-text" valign="top"><a name="RFC2119">[RFC2119]</a></td>
-<td class="author-text"><a href="mailto:sob@harvard.edu">Bradner, S.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>,&rdquo; BCP&nbsp;14, RFC&nbsp;2119, March&nbsp;1997 (<a href="http://www.rfc-editor.org/rfc/rfc2119.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2119.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2119.xml">XML</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC5280">[RFC5280]</a></td>
-<td class="author-text">Cooper, D., Santesson, S., Farrell, S., Boeyen, S., Housley, R., and W. Polk, &ldquo;<a href="http://tools.ietf.org/html/rfc5280">Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile</a>,&rdquo; RFC&nbsp;5280, May&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5280.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC5116">[RFC5116]</a></td>
-<td class="author-text">McGrew, D., &ldquo;<a href="http://tools.ietf.org/html/rfc5116">An Interface and Algorithms for Authenticated Encryption</a>,&rdquo; RFC&nbsp;5116, January&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5116.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2045">[RFC2045]</a></td>
 <td class="author-text"><a href="mailto:ned@innosoft.com">Freed, N.</a> and <a href="mailto:nsb@nsb.fv.com">N. Borenstein</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2045">Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies</a>,&rdquo; RFC&nbsp;2045, November&nbsp;1996 (<a href="http://www.rfc-editor.org/rfc/rfc2045.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC4086">[RFC4086]</a></td>
-<td class="author-text">Eastlake, D., Schiller, J., and S. Crocker, &ldquo;<a href="http://tools.ietf.org/html/rfc4086">Randomness Requirements for Security</a>,&rdquo; BCP&nbsp;106, RFC&nbsp;4086, June&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4086.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC5246">[RFC5246]</a></td>
-<td class="author-text">Dierks, T. and E. Rescorla, &ldquo;<a href="http://tools.ietf.org/html/rfc5246">The Transport Layer Security (TLS) Protocol Version 1.2</a>,&rdquo; RFC&nbsp;5246, August&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5246.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC2119">[RFC2119]</a></td>
+<td class="author-text"><a href="mailto:sob@harvard.edu">Bradner, S.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>,&rdquo; BCP&nbsp;14, RFC&nbsp;2119, March&nbsp;1997 (<a href="http://www.rfc-editor.org/rfc/rfc2119.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2119.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2119.xml">XML</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3447">[RFC3447]</a></td>
 <td class="author-text">Jonsson, J. and B. Kaliski, &ldquo;<a href="http://tools.ietf.org/html/rfc3447">Public-Key Cryptography Standards (PKCS) #1: RSA Cryptography Specifications Version 2.1</a>,&rdquo; RFC&nbsp;3447, February&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3447.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4086">[RFC4086]</a></td>
+<td class="author-text">Eastlake, D., Schiller, J., and S. Crocker, &ldquo;<a href="http://tools.ietf.org/html/rfc4086">Randomness Requirements for Security</a>,&rdquo; BCP&nbsp;106, RFC&nbsp;4086, June&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4086.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4627">[RFC4627]</a></td>
+<td class="author-text">Crockford, D., &ldquo;<a href="http://tools.ietf.org/html/rfc4627">The application/json Media Type for JavaScript Object Notation (JSON)</a>,&rdquo; RFC&nbsp;4627, July&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4627.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4648">[RFC4648]</a></td>
+<td class="author-text">Josefsson, S., &ldquo;<a href="http://tools.ietf.org/html/rfc4648">The Base16, Base32, and Base64 Data Encodings</a>,&rdquo; RFC&nbsp;4648, October&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4648.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5116">[RFC5116]</a></td>
+<td class="author-text">McGrew, D., &ldquo;<a href="http://tools.ietf.org/html/rfc5116">An Interface and Algorithms for Authenticated Encryption</a>,&rdquo; RFC&nbsp;5116, January&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5116.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5246">[RFC5246]</a></td>
+<td class="author-text">Dierks, T. and E. Rescorla, &ldquo;<a href="http://tools.ietf.org/html/rfc5246">The Transport Layer Security (TLS) Protocol Version 1.2</a>,&rdquo; RFC&nbsp;5246, August&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5246.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5280">[RFC5280]</a></td>
+<td class="author-text">Cooper, D., Santesson, S., Farrell, S., Boeyen, S., Housley, R., and W. Polk, &ldquo;<a href="http://tools.ietf.org/html/rfc5280">Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile</a>,&rdquo; RFC&nbsp;5280, May&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5280.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC5649">[RFC5649]</a></td>
 <td class="author-text">Housley, R. and M. Dworkin, &ldquo;<a href="http://tools.ietf.org/html/rfc5649">Advanced Encryption Standard (AES) Key Wrap with Padding Algorithm</a>,&rdquo; RFC&nbsp;5649, September&nbsp;2009 (<a href="http://www.rfc-editor.org/rfc/rfc5649.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.zyp-json-schema">[I-D.zyp-json-schema]</a></td>
+<td class="author-text">Zyp, K. and G. Court, &ldquo;<a href="http://www.ietf.org/internet-drafts/draft-zyp-json-schema-03.txt">A JSON Media Type for Describing the Structure and Meaning of JSON Documents</a>,&rdquo; draft-zyp-json-schema-03 (work in progress), November&nbsp;2010 (<a href="http://www.ietf.org/internet-drafts/draft-zyp-json-schema-03.txt">TXT</a>).</td></tr>
 </table>
 
 <a name="rfc.references2"></a><br /><hr />
@@ -1198,6 +1229,8 @@ References</h3>
 <table width="99%" border="0">
 <tr><td class="author-text" valign="top"><a name="RFC3986">[RFC3986]</a></td>
 <td class="author-text"><a href="mailto:timbl@w3.org">Berners-Lee, T.</a>, <a href="mailto:fielding@gbiv.com">Fielding, R.</a>, and <a href="mailto:LMM@acm.org">L. Masinter</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc3986">Uniform Resource Identifier (URI): Generic Syntax</a>,&rdquo; STD&nbsp;66, RFC&nbsp;3986, January&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc3986.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc3986.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc3986.xml">XML</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.hammer-webfinger">[I-D.hammer-webfinger]</a></td>
+<td class="author-text">Hammer-Lahav, E., Fitzpatrick, B., and B. Cook, &ldquo;<a href="http://www.ietf.org/internet-drafts/draft-hammer-webfinger-00.txt">The WebFinger Protocol</a>,&rdquo; draft-hammer-webfinger-00 (work in progress), October&nbsp;2009 (<a href="http://www.ietf.org/internet-drafts/draft-hammer-webfinger-00.txt">TXT</a>).</td></tr>
 </table>
 
 <a name="rfc.authors"></a><br /><hr />
