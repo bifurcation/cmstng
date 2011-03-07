@@ -4,9 +4,8 @@
 Network Working Group                                        E. Rescorla
 Internet-Draft                                                     Skype
 Intended status:  Standards Track                          J. Hildebrand
-Expires:  <strike><font color='red'>June 29,</font></strike>  <strong><font color='green'>September 1,</font></strong> 2011                          Cisco Systems, Inc.
-                                                       <strike><font color='red'>December 26, 2010</font></strike>
-                                                       <strong><font color='green'>February 28, 2011</font></strong>
+Expires:  September 1, 2011                          Cisco Systems, Inc.
+                                                       February 28, 2011
 
                    JavaScript Message Security Format
                        draft-rescorla-jsms-00.txt
@@ -36,11 +35,11 @@ Status of this Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on <strike><font color='red'>June 29,</font></strike> <strong><font color='green'>September 1,</font></strong> 2011.
+   This Internet-Draft will expire on September 1, 2011.
 
 Copyright Notice
 
-   Copyright (c) <strike><font color='red'>2010</font></strike> <strong><font color='green'>2011</font></strong> IETF Trust and the persons identified as the
+   Copyright (c) 2011 IETF Trust and the persons identified as the
    document authors.  All rights reserved.
 
    This document is subject to BCP 78 and the IETF Trust's Legal
@@ -72,31 +71,35 @@ Table of Contents
    3.  Overview . . . . . . . . . . . . . . . . . . . . . . . . . . .  4
      3.1.  Operational Modes  . . . . . . . . . . . . . . . . . . . .  4
      3.2.  Conventions  . . . . . . . . . . . . . . . . . . . . . . .  5
-     3.3.  Certificate Processing . . . . . . . . . . . . . . . . . .  <strike><font color='red'>5</font></strike>  <strong><font color='green'>6</font></strong>
+     3.3.  Certificate Processing . . . . . . . . . . . . . . . . . .  6
      3.4.  Certificate Discovery  . . . . . . . . . . . . . . . . . .  6
    4.  Message Format . . . . . . . . . . . . . . . . . . . . . . . .  6
      4.1.  Content Object . . . . . . . . . . . . . . . . . . . . . .  6
      4.2.  Common Elements  . . . . . . . . . . . . . . . . . . . . .  7
-     4.3.  Signed Data  . . . . . . . . . . . . . . . . . . . . . . .  <strike><font color='red'>7</font></strike>  <strong><font color='green'>8</font></strong>
-       4.3.1.  Signature Computation  . . . . . . . . . . . . . . . .  <strike><font color='red'>9</font></strike> <strong><font color='green'>10</font></strong>
-       4.3.2.  Signature Verification . . . . . . . . . . . . . . . .  <strike><font color='red'>9</font></strike> <strong><font color='green'>10</font></strong>
-       4.3.3.  Example  . . . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>11</font></strike> <strong><font color='green'>12</font></strong>
-     4.4.  Encrypted Data . . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>11</font></strike> <strong><font color='green'>12</font></strong>
-       4.4.1.  Message Encryption . . . . . . . . . . . . . . . . . . <strike><font color='red'>15</font></strike> <strong><font color='green'>16</font></strong>
-       4.4.2.  Message Decryption . . . . . . . . . . . . . . . . . . <strike><font color='red'>15</font></strike> <strong><font color='green'>16</font></strong>
-       4.4.3.  Key Derivation . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>16</font></strike> <strong><font color='green'>17</font></strong>
-       4.4.4.  CMK Encryption . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>16</font></strike> <strong><font color='green'>17</font></strong>
-     4.5.  Composition  . . . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>17</font></strike> <strong><font color='green'>18</font></strong>
-   5.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>17</font></strike> <strong><font color='green'>18</font></strong>
-   6.  Open Issues  . . . . . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>17</font></strike> <strong><font color='green'>18</font></strong>
-   7.  Security Considerations  . . . . . . . . . . . . . . . . . . . <strike><font color='red'>17</font></strike> <strong><font color='green'>18</font></strong>
-   8.  XML Schemas for types  . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>17</font></strike> <strong><font color='green'>18</font></strong>
-   9.  Interoperabilty  . . . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>17</font></strike> <strong><font color='green'>18</font></strong>
-   10. Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>18</font></strike> <strong><font color='green'>19</font></strong>
-   11. References . . . . . . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>18</font></strike> <strong><font color='green'>19</font></strong>
-     11.1. Normative References . . . . . . . . . . . . . . . . . . . <strike><font color='red'>18</font></strike> <strong><font color='green'>19</font></strong>
-     11.2. Informative References . . . . . . . . . . . . . . . . . . <strike><font color='red'>18</font></strike> <strong><font color='green'>20</font></strong>
-   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . <strike><font color='red'>18</font></strike> <strong><font color='green'>20</font></strong>
+     4.3.  Signed Data  . . . . . . . . . . . . . . . . . . . . . . .  8
+       4.3.1.  Signature Computation  . . . . . . . . . . . . . . . . 10
+       4.3.2.  Signature Verification . . . . . . . . . . . . . . . . 10
+       4.3.3.  Example  . . . . . . . . . . . . . . . . . . . . . . . 12
+     4.4.  Encrypted Data . . . . . . . . . . . . . . . . . . . . . . 12
+       4.4.1.  Message Encryption . . . . . . . . . . . . . . . . . . 16
+       4.4.2.  Message Decryption . . . . . . . . . . . . . . . . . . 16
+       4.4.3.  Key Derivation . . . . . . . . . . . . . . . . . . . . 17
+       4.4.4.  CMK Encryption . . . . . . . . . . . . . . . . . . . . 17
+     4.5.  Composition  . . . . . . . . . . . . . . . . . . . . . . . 18
+   5.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 18
+   6.  Open Issues  . . . . . . . . . . . . . . . . . . . . . . . . . 18
+   7.  Security Considerations  . . . . . . . . . . . . . . . . . . . 18
+   8.  XML Schemas for types  . . . . . . . . . . . . . . . . . . . . 18
+   9.  Interoperabilty  . . . . . . . . . . . . . . . . . . . . . . . 18
+   10. <strike><font color='red'>Acknowledgments</font></strike> <strong><font color='green'>References . . .</font></strong> . . . . . . . . . . . . . . . . . . . . . . . 19
+   <strike><font color='red'>11.</font></strike>
+     <strong><font color='green'>10.1. Normative</font></strong> References . . . . . . . . . . . . . . . . . . . <strong><font color='green'>19
+     10.2. Informative References</font></strong> . . . . . . . <strike><font color='red'>19
+     11.1. Normative References</font></strike> . . . . . . . . . . . <strong><font color='green'>20
+   Appendix A.  JSON Schema .</font></strong> . . . . . . . . <strike><font color='red'>19
+     11.2. Informative References</font></strike> <strong><font color='green'>. . . . . . . . . . . . 20
+   Appendix B.  Acknowledgments .</font></strong> . . . . . . . . . . . . . . . . . . 20
+   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . 20
 
 1.  Introduction
 
@@ -106,7 +109,7 @@ Table of Contents
    PEM, OpenPGP], those formats are widely viewed as being excessively
    complicated for the demands of Web applications, which typically only
    need the ability to secure simple messages.  In addition, existing
-   formats use encoding mechanisms (e.g., <strike><font color='red'>ASN.1)</font></strike> <strong><font color='green'>ASN.1 BER/DER)</font></strong> which are not
+   formats use encoding mechanisms (e.g., ASN.1 BER/DER) which are not
    congenial for Web applications.  This presents an obstacle to the
    deployment of strong security by such applications.
 
@@ -127,11 +130,10 @@ Table of Contents
 
 3.  Overview
 
-   The JSMS message format is simply a JSON <strong><font color='green'>[RFC4627]</font></strong> dictionary with an
-   appropriate collection of fields.  <strike><font color='red'>For instance, [TODO:  Need
-   something here.]</font></strike>  <strong><font color='green'>Each operating mode will have a
+   The JSMS message format is simply a JSON [RFC4627] dictionary with an
+   appropriate collection of fields.  Each operating mode will have a
    separate set of fields, with a common field to distinguish between
-   the modes.</font></strong>
+   the modes.
 
 3.1.  Operational Modes
 
@@ -142,14 +144,12 @@ Table of Contents
       (MEK).  The MEK is then separately encrypted for each recipient,
       either via symmetric or asymmetric encryption.  The data is always
       integrity protected, either via a separate MAC or an AEAD
-      algorithm such as <strike><font color='red'>AES-GCM.
-
-      CJ - can we just use AES-CCM here ?</font></strike> <strong><font color='green'>AES-GCM or AES-CCM.</font></strong>
+      algorithm such as AES-GCM or AES-CCM.
 
    Signed Data
       A block of data signed by a single signer using his asymmetric key
       and optionally carrying his certificate.  Multiple signatures are
-      not permitted <strong><font color='green'>in order</font></strong> to keep things simple.
+      not permitted in order to keep things simple.
 
    Any other desired security functions are provided by composition of
    these modes.  For instance, a signed and encrypted message is
@@ -160,19 +160,18 @@ Table of Contents
 
    In general, JSMS follows the following structural conventions:
 
-   <strong><font color='green'>Minimize implementation complexity
+   Minimize implementation complexity
       Wherever possible, protocol choices have been made such that the
       time and effort required to implement the protocol in many
       different programming languages will be minimized.  This means
       that optimizations for bandwidth, CPU, and memory utilization have
-      been explicitly avoided.</font></strong>
+      been explicitly avoided.
    Base64 as the only encoding
       Any data that does not have a straightforward string
       representation (binary values, large integers, etc.) is base64-
-      <strike><font color='red'>encoded.</font></strike>
-      <strong><font color='green'>encoded (see:  [RFC4648]).</font></strong>  In some cases, hexadecimal encodings
-      might be more convenient, but consistency <strike><font color='red'>seems</font></strike> <strong><font color='green'>is</font></strong> even more <strike><font color='red'>important.</font></strike> <strong><font color='green'>important
-      to reduce implementation complexity.</font></strong>
+      encoded (see:  [RFC4648]).  In some cases, hexadecimal encodings
+      might be more convenient, but consistency is even more important
+      to reduce implementation complexity.
    No canonicalization
       In most cryptographic message formats (CMS, PKIX, XML-DSIG [TODO:
       REF]), canonical encodings are used to allow the same value to be
@@ -180,9 +179,8 @@ Table of Contents
       signatures).  This is inconvenient in JSON, which just views
       messages as a bundle of key/value pairs.  Instead, whenever
       canonicalization would be required, the relevant data is
-      serialized and <strike><font color='red'>base64 encoded</font></strike> <strong><font color='green'>base64-encoded</font></strong> for <strike><font color='red'>transport or a well defined
-      order of the relevant fields is defines so</font></strike> <strong><font color='green'>transport, allowing</font></strong> both sides <strike><font color='red'>can compute</font></strike>
-      <strong><font color='green'>to run computations over</font></strong> the <strike><font color='red'>relevant data.</font></strike> <strong><font color='green'>same original set of octets.</font></strong>
+      serialized and base64-encoded for transport, allowing both sides
+      to run computations over the same original set of octets.
    In-memory processing
       We assume that the entire message can fit in main memory and make
       no effort to design a wire representation which can be handled in
@@ -196,7 +194,7 @@ Table of Contents
 
 3.3.  Certificate Processing
 
-   Experience has shown that certificate handling <strike><font color='red'>path</font></strike> <strong><font color='green'>(path</font></strong> construction) is
+   Experience has shown that certificate handling (path construction) is
    one of the trickier parts of building a cryptographic system.  While
    JSMS supports PKIX certificates, its certificate processing is far
    simpler than that of CMS.  When a JSMS agent provides its
@@ -204,28 +202,24 @@ Table of Contents
    terminating in its own certificate, thus removing the need to
    construct certificate paths.  In addition, because many
    implementations will not want to do any ASN.1/BER processing at all,
-   we define a Web <strike><font color='red'>service</font></strike> <strong><font color='green'>Service</font></strong> which applications can use for chain
+   we define a Web Service which applications can use for chain
    validation.  (See [TODO]).
 
 3.4.  Certificate Discovery
 
-   <strike><font color='red'>As this</font></strike>
-
-   <strong><font color='green'>JSMS</font></strong> will <strike><font color='red'>generally</font></strike> <strong><font color='green'>often</font></strong> be used in an online messaging environment with <strike><font color='red'>suers</font></strike> <strong><font color='green'>users</font></strong>
-   that have an address of the form user@domain, such as email, XMPP, or <strike><font color='red'>SIP, this specification defines a way</font></strike>
-   <strong><font color='green'>SIP.  As such, protocols such as WebFinger [I-D.hammer-webfinger] or
-   an end-to-end protocol can be used</font></strong> to <strike><font color='red'>use HTTPS
-   using</font></strike> <strong><font color='green'>retrieve appropriate
-   certificates.  Downstream uses of JSMS SHOULD define</font></strong> a <strike><font color='red'>well known URL [TODO REF[ to find other users certificates
-   and public keys.  (See [TODO]).</font></strike> <strong><font color='green'>discovery
-   mechanism suitable for the intended use.</font></strong>
+   JSMS will often be used in an online messaging environment with users
+   that have an address of the form user@domain, such as email, XMPP, or
+   SIP.  As such, protocols such as WebFinger [I-D.hammer-webfinger] or
+   an end-to-end protocol can be used to retrieve appropriate
+   certificates.  Downstream uses of JSMS SHOULD define a discovery
+   mechanism suitable for the intended use.
 
 4.  Message Format
 
-   <strong><font color='green'>All of the field definitions in this section make use of JSON Schema
+   All of the field definitions in this section make use of JSON Schema
    [I-D.zyp-json-schema].  For each of the fields that is designed to
    hold an enumerated value, a registry will be created allowing other
-   values to be used in addition to the values enumerated in the schema.</font></strong>
+   values to be used in addition to the values enumerated in the schema.
 
 4.1.  Content Object
 
@@ -233,47 +227,36 @@ Table of Contents
    which are just mime-typed JSON objects.  These objects are then
    wrapped in a signed/encrypted wrapper:
 
-   <strike><font color='red'>[[OPEN ISSUE:  Do we want to have both the schema description and the
-   bullet point description...  CJ:  Lets move all scheme to relax NG
-   and move it to an appendix and put simple XML examples here.  Like
-   w3c docs. ]
-
-   var content_schema={</font></strike>
-
-   <strong><font color='green'>{</font></strong>
+   {
        "description":"Message contents",
-     <strike><font color='red'>"type":"object":</font></strike>
-       <strong><font color='green'>"type":"object",</font></strong>
+       "type":"object",
        "properties":{
            "ContentType":{
                "description":"A MIME content type",
-               <strong><font color='green'>"type":"string"
+               "type":"string"
            },
            "Type":{
-               "description":"Dictionary type",</font></strong>
+               "description":"Dictionary type",
                "type":"string",
-               <strong><font color='green'>"enum":["content"]</font></strong>
+               "enum":["content"]
            },
            "Data":{
                "description":"The underlying data",
-           <strike><font color='red'>"type":"string",</font></strike>
-               <strong><font color='green'>"type":"string"
+               "type":"string"
            }
-       }</font></strong>
+       }
    }
-   <strike><font color='red'>}};</font></strike>
 
    The meaning of the fields is as follows:
 
    ContentType:  A MIME [RFC2045] media type indicating the type of the
       "Data" field.
-   <strong><font color='green'>Type:  The constant string "content", to facilitate easy
+   Type:  The constant string "content", to facilitate easy
       determination that this is the target content.  This is useful
       (for example) in certain operating conditions where you must
       continue to unwrap layers of signatures until you get to the
-      content.</font></strong>
-   Data:  The data <strike><font color='red'>value.  [OPEN ISSUE:  Do we need an encoding here?
-      CJ - Yes Base64]</font></strike> <strong><font color='green'>value, base64-encoded.</font></strong>
+      content.
+   Data:  The data value, base64-encoded.
 
    Signing and encryption transform a "Content" object into "Signed" and
    "Encrypted" objects respectively.  Verification and decryption
@@ -282,12 +265,10 @@ Table of Contents
 
 4.2.  Common Elements
 
-   A JSMS message is <strike><font color='red'>simple</font></strike> a JSON dictionary object containing a set of
+   A JSMS message is a JSON dictionary object containing a set of
    specific values.
 
-   <strike><font color='red'>var message_schema={</font></strike>
-
-   <strong><font color='green'>{</font></strong>
+   {
        "description":"The basic schema for a JSMS message",
        "type":"object",
        "properties":{
@@ -302,8 +283,7 @@ Table of Contents
                "enum":["1.0"]
            }
        }
-   <strike><font color='red'>};</font></strike>
-   <strong><font color='green'>}</font></strong>
+   }
 
    The following fields MUST be present in all messages:
 
@@ -319,8 +299,6 @@ Table of Contents
    A "signed" message contains a signed data block plus a digital
    signature over that data.  Only one signer is allowed.
 
-   <strike><font color='red'>var signed_schema =</font></strike>
-
    {
        "description":"A signed message",
        "type":"object",
@@ -332,14 +310,12 @@ Table of Contents
                "properties":{
                    "Value":{
                        "description":"the content to be signed",
-                  <strike><font color='red'>"type":"string"},</font></strike>
-                       <strong><font color='green'>"type":"string"
-                   },</font></strong>
+                       "type":"string"
+                   },
                    "DigestAlgorithm":{
                        "description":"",
                        "type":"string",
-                  <strike><font color='red'>"enum":["SHA1", "SHA256"]</font></strike>
-                       <strong><font color='green'>"enum":["SHA256"]</font></strong>
+                       "enum":["SHA256"]
                    },
                    "SignatureAlgorithm":{
                        "description":"",
@@ -355,11 +331,10 @@ Table of Contents
                        "description":"The signer's cert chain",
                        "type":certchain_schema
                    }
-   <strike><font color='red'>}}}};</font></strike>
-               <strong><font color='green'>}
+               }
            }
        }
-   }</font></strong>
+   }
 
    [[OPEN ISSUE:  How do we represent enums that correspond to algorithm
    identifiers and hence registries.  CJ:  Make new registries. ]]
@@ -761,80 +736,77 @@ Table of Contents
    Can you take a CMS message you don't have the keys for and tear it
    apart and form a JSMS message and visa versa?
 
-10.  Acknowledgments
+10.  <strike><font color='red'>Acknowledgments
 
    [TODO]
 
-11.  References
+11.</font></strike>  References
 
-11.1.  Normative References
+<strike><font color='red'>11.1.</font></strike>
 
-   <strike><font color='red'>[RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", BCP 14, RFC 2119, March 1997.
-
-   [RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
-              Housley, R., and W. Polk, "Internet X.509 Public Key
-              Infrastructure Certificate and Certificate Revocation List
-              (CRL) Profile", RFC 5280, May 2008.
-
-   [RFC5116]  McGrew, D., "An Interface and Algorithms for Authenticated
-              Encryption", RFC 5116, January 2008.</font></strike>
+<strong><font color='green'>10.1.</font></strong>  Normative References
 
    [RFC2045]  Freed, N. and N. Borenstein, "Multipurpose Internet Mail
               Extensions (MIME) Part One: Format of Internet Message
               Bodies", RFC 2045, November 1996.
 
-   <strong><font color='green'>[RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119, March 1997.
 
    [RFC3447]  Jonsson, J. and B. Kaliski, "Public-Key Cryptography
               Standards (PKCS) #1: RSA Cryptography Specifications
-              Version 2.1", RFC 3447, February 2003.</font></strong>
+              Version 2.1", RFC 3447, February 2003.
 
    [RFC4086]  Eastlake, D., Schiller, J., and S. Crocker, "Randomness
               Requirements for Security", BCP 106, RFC 4086, June 2005.
 
-   <strong><font color='green'>[RFC4627]  Crockford, D., "The application/json Media Type for
+   [RFC4627]  Crockford, D., "The application/json Media Type for
               JavaScript Object Notation (JSON)", RFC 4627, July 2006.
 
    [RFC4648]  Josefsson, S., "The Base16, Base32, and Base64 Data
               Encodings", RFC 4648, October 2006.
 
    [RFC5116]  McGrew, D., "An Interface and Algorithms for Authenticated
-              Encryption", RFC 5116, January 2008.</font></strong>
+              Encryption", RFC 5116, January 2008.
 
    [RFC5246]  Dierks, T. and E. Rescorla, "The Transport Layer Security
               (TLS) Protocol Version 1.2", RFC 5246, August 2008.
 
-   <strike><font color='red'>[RFC3447]  Jonsson, J.</font></strike>
-
-   <strong><font color='green'>[RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
-              Housley, R.,</font></strong> and <strike><font color='red'>B. Kaliski, "Public-Key Cryptography
-              Standards (PKCS) #1: RSA Cryptography Specifications
-              Version 2.1",</font></strike> <strong><font color='green'>W. Polk, "Internet X.509 Public Key
+   [RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
+              Housley, R., and W. Polk, "Internet X.509 Public Key
               Infrastructure Certificate and Certificate Revocation List
-              (CRL) Profile",</font></strong> RFC <strike><font color='red'>3447, February 2003.</font></strike> <strong><font color='green'>5280, May 2008.</font></strong>
+              (CRL) Profile", RFC 5280, May 2008.
 
    [RFC5649]  Housley, R. and M. Dworkin, "Advanced Encryption Standard
               (AES) Key Wrap with Padding Algorithm", RFC 5649,
               September 2009.
 
-   <strong><font color='green'>[I-D.zyp-json-schema]
+   [I-D.zyp-json-schema]
               Zyp, K. and G. Court, "A JSON Media Type for Describing
               the Structure and Meaning of JSON Documents",
               draft-zyp-json-schema-03 (work in progress),
-              November 2010.</font></strong>
+              November 2010.
 
-11.2.  Informative References
+<strike><font color='red'>11.2.</font></strike>
+
+<strong><font color='green'>10.2.</font></strong>  Informative References
 
    [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
               Resource Identifier (URI): Generic Syntax", STD 66,
               RFC 3986, January 2005.
 
-   <strong><font color='green'>[I-D.hammer-webfinger]
+   [I-D.hammer-webfinger]
               Hammer-Lahav, E., Fitzpatrick, B., and B. Cook, "The
               WebFinger Protocol", draft-hammer-webfinger-00 (work in
-              progress), October 2009.</font></strong>
+              progress), October 2009.
+
+<strong><font color='green'>Appendix A.  JSON Schema
+
+   [TODO]
+
+Appendix B.  Acknowledgments
+
+   [TODO]</font></strong>
 
 Authors' Addresses
 

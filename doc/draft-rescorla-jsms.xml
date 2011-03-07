@@ -2,6 +2,8 @@
 <!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
 <!ENTITY rfc2045 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2045.xml">
 <!ENTITY rfc2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
+<!ENTITY rfc2437 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2437.xml">
+<!ENTITY rfc3339 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3339.xml">
 <!ENTITY rfc3447 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3447.xml">
 <!ENTITY rfc3986 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3986.xml">
 <!ENTITY rfc4086 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.4086.xml">
@@ -123,10 +125,12 @@
         <t><list style="hanging">
             <t hangText="Encrypted Data"></t>
 
-            <t>A block of data encrypted under a random message encryption key
-            (MEK). The MEK is then separately encrypted for each recipient,
-            either via symmetric or asymmetric encryption. The data is always
-            integrity protected, either via a separate MAC or an AEAD
+            <t>A block of data encrypted under a random message
+            encryption key (MEK). The MEK is then separately encrypted
+            for each recipient, either via symmetric or asymmetric
+            encryption. The data is always integrity protected, either
+            via a separate Message Authentication Code (MAC) or an
+            Authenticated Encryption with Associated Data (AEAD)
             algorithm such as AES-GCM or AES-CCM.</t>
 
             <t hangText="Signed Data"></t>
@@ -217,88 +221,82 @@
     <section title="Message Format">
       <t>All of the field definitions in this section make use of JSON
       Schema <xref target="I-D.zyp-json-schema"></xref>.  For each of the
-	  fields that is designed to hold an enumerated value, a registry
-	  will be created allowing other values to be used in addition to
-	  the values enumerated in the schema.</t>
+      fields that is designed to hold an enumerated value, a registry
+      will be created allowing other values to be used in addition to
+      the values enumerated in the schema.</t>
+
+      <section anchor="sec.base64" title="Base64 Handling">
+        <t>As stated in section 3.1 of <xref target="RFC4648"/>,
+        Base64 does not require linefeeds after a specific number of
+        characters.  Since linefeeds are not valid characters in a
+        JSON string, whenever a field is specified to be
+        Base64-encoded in this document, it MUST NOT include any line
+        breaks.  Base64-encoded fields also MUST NOT include
+        JSON-encoded linefeeds such as "\n".  Any linebreaks in the
+        middle of Base64-encoded sections of the examples are
+        unintended side-effects of the production process.</t>
+
+        <t><list style="hanging">
+              <t hangText="Implementation Note:">Much existing Base64-encoding code
+              will generate linefeeds every 64 or 76 characters of output.
+              Ensure that these linefeeds are removed before inserting the
+              output into a JSON structure.</t>
+        </list></t>
+      </section>
 
       <section anchor="sec.content" title="Content Object">
         <t>JSMS operates by providing transformations on "Content" objects,
         which are just mime-typed JSON objects. These objects are then wrapped
-        in a signed/encrypted wrapper:</t>
-
-       <figure>
-          <!--begin-pdu-->
-
-          <artwork><![CDATA[
-{
-    "description":"Message contents",
-    "type":"object",
-    "properties":{
-        "ContentType":{
-            "description":"A MIME content type",
-            "type":"string"
-        },
-        "Type":{
-            "description":"Dictionary type",
-            "type":"string",
-            "enum":["content"]
-        },
-        "Data":{
-            "description":"The underlying data",
-            "type":"string"
-        }
-    }
-}]]></artwork>
-        </figure>
-
-        <t>The meaning of the fields is as follows:</t>
+        in a signed/encrypted wrapper with the following fields:</t>
 
         <t><list style="hanging">
             <t></t>
 
             <t hangText="ContentType:">A MIME <xref target="RFC2045"></xref>
-            media type indicating the type of the "Data" field.</t>
+            media type that MUST be included indicating the type of
+            the "Data" field.</t>
 
             <t hangText="Type:">The constant string "content", to
             facilitate easy determination that this is the target
             content.  This is useful (for example) in certain
             operating conditions where you must continue to unwrap
-            layers of signatures until you get to the content.</t>
+            layers of signatures until you get to the content.  This
+            field MUST be included.</t>
 
-            <t hangText="Data:">The data value, base64-encoded.</t>
+            <t hangText="Data:">The data value MUST be included as a
+            text encoded as Base64 (See: <xref target="RFC4648"></xref>).</t>
+
+            <t hangText="ID">An OPTIONAL unqiue ID that idenitfies this
+            message, for use in detecting replay attacks.</t>
+
+            <t hangText="Created">An OPTIONAL field describing the UTC
+            date/time that the content was encoded into JSON, formatted
+            according to the "date-time" production of <xref target="RFC3339"></xref>.</t>
+
           </list></t>
 
         <t>Signing and encryption transform a "Content" object into "Signed"
         and "Encrypted" objects respectively. Verification and decryption
         transform "Signed" and "Encrypted" objects back into "Content"
         objects.</t>
+
+       <figure anchor="fig.content" title="Content Example">
+          <!--begin-pdu-->
+
+          <artwork><![CDATA[
+{
+    "ContentType":"text/plain; charset=UTF-8",
+    "Type":"content",
+    "Data":"SGVsbG8sIFdvcmxkCg==",
+    "ID":"746a4c9f-8e84-4313-b669-81590ee2949e",
+    "Created":"2011-03-07T16:17Z"
+}]]></artwork>
+       </figure>
       </section>
 
       <section anchor="sec.message-common" title="Common Elements">
         <t>A JSMS message is a JSON dictionary object containing a set
         of specific values.</t>
-
-        <figure>
-          <!--begin-pdu-->
-
-          <artwork><![CDATA[
-{
-    "description":"The basic schema for a JSMS message",
-    "type":"object",
-    "properties":{
-        "Type":{
-            "description":"Message type",
-            "type":"string",
-            "enum":["signed", "encrypted"]
-        },
-        "Version":{
-            "description":"Version number for the message",
-            "type":"string",
-            "enum":["1.0"]
-        }
-    }
-}]]></artwork>
-        </figure>
 
         <t>The following fields MUST be present in all messages:</t>
 
@@ -306,8 +304,8 @@
             <t></t>
 
             <t hangText="Version:">The version number. For this specification
-            this value MUST be set to the string "1.0". [TODO: Version
-            processing.]</t>
+            this value MUST be set to the string "1.0".  See <xref
+            target="sec.version"/> for details on version handling.</t>
 
             <t></t>
 
@@ -315,93 +313,82 @@
             "signed" or "encrypted", to indicate a signed message (<xref
             target="sec.signed"></xref>) or an encrypted message (<xref
             target="sec.encrypted"></xref>) respectively.</t>
-          </list></t>
+        </list></t>
 
-        <t></t>
       </section>
 
       <section anchor="sec.signed" title="Signed Data">
         <t>A "signed" message contains a signed data block plus a digital
-        signature over that data. Only one signer is allowed.</t>
-
-        <figure>
-          <!--begin-pdu-->
-
-          <artwork><![CDATA[
-{
-    "description":"A signed message",
-    "type":"object",
-    "extends":message_schema,
-    "properties":{
-        "Signature":{
-            "description":"The signature over the SignedData",
-            "type":"object",
-            "properties":{
-                "Value":{
-                    "description":"the content to be signed",
-                    "type":"string"
-                },
-                "DigestAlgorithm":{
-                    "description":"",
-                    "type":"string",
-                    "enum":["SHA256"] 
-                },
-                "SignatureAlgorithm":{
-                    "description":"",
-                    "type":"string",
-                    "enum":["RSA-PKCS1-1.5"] 
-                },
-                "Signer":{
-                    "description":"",
-                    "type":"string",
-                    "format":"email" 
-                },
-                "CertChain": {
-                    "description":"The signer's cert chain",
-                    "type":certchain_schema
-                }
-            }
-        }
-    }
-}]]></artwork>
-        </figure>
-
-        <t>[[OPEN ISSUE: How do we represent enums that correspond to
-        algorithm identifiers and hence registries. CJ: Make new registries.
-        ]]</t>
-
-        <t>The meaning of the fields is described below:</t>
+        signature over that data. To simplify implementation, only one
+        signer is allowed, and there are no optimisitc signing
+        requirements.  In addition to the required fields from <xref
+        target="sec.message-common"/>, the fields in a signature
+        message are:</t>
 
         <t><list style="hanging">
             <t></t>
 
-            <t hangText="Value:">The data over which the signature is
-            computed. This value MUST be a base64-encoded version of a
-            "Content" structure (see <xref target="sec.content"></xref>).
-            [OPEN ISSUE: is this exactly what we want?]</t>
+            <t hangText="SignedData:">This field MUST consist of a
+            Base64-encoded "Content" structure (see <xref
+            target="sec.content"></xref>), which MUST have been
+            encoded into octets as UTF-8 prior to Base64-encoding.
+            The signature is computed over the UTF-8 octet stream
+            before Base64-encoding to ensure that the sender and
+            receiver have the exact same representation.</t>
 
             <t></t>
 
             <t hangText="DigestAlgorithm:">The message digest used to compute
             the signature. This field MUST be present for RSA-based signatures
             but MAY be omitted for future signatures which do not allow
-            flexible digests.</t>
+            flexible digests.  For now, this field MUST have the value
+            "SHA-256", meaning the digest algorithm was SHA-256 [TODO:
+            insert ref].</t>
 
             <t></t>
 
             <t hangText="SignatureAlgorithm:">The signature algorithm used to
-            compute the signature. This field MUST be present.</t>
+            compute the signature. This field MUST be present.  For
+            now, this field MUST have the value "RSA-PKCS1-1.5",
+            meaning the signature algorithm was RSASSA-PKCS1-v1_5 as
+            specified in <xref target="RFC2437"/>.</t>
 
             <t></t>
 
             <t hangText="Signer:">The signer's identity, expressed as a URI
-            <xref target="RFC3986"></xref> This field MUST be present.</t>
+            <xref target="RFC3986"></xref>. This field MUST be present.</t>
 
             <t></t>
 
             <t hangText="CertChain:">The signer's certificate chain, if any
             (see <xref target="sec.certificates"></xref>).</t>
-          </list></t>
+
+            <t></t>
+
+            <t hangText="Signature:">The Base64-endoded signature, which
+            MUST be included (see <xref target="sec.signature_computation"/>).</t>
+        </list></t>
+
+        <figure anchor="fig.signed" title="Signed Message Example">
+          <!--begin-pdu-->
+
+          <artwork><![CDATA[
+{
+    "SignedData":"ewogICAgIkNvbnRlbnRUeXBlIjoidGV4dC9wbGFpbjsgY2hhcn
+                  NldD1VVEYtOCIsCiAgICAiVHlwZSI6ImNvbnRlbnQiLAogICAg
+                  IkRhdGEiOiJTR1ZzYkc4c0lGZHZjbXhrQ2c9PSIsCiAgICAiSU
+                  QiOiI3NDZhNGM5Zi04ZTg0LTQzMTMtYjY2OS04MTU5MGVlMjk0
+                  OWUiLAogICAgIkNyZWF0ZWQiOiIyMDExLTAzLTA3VDE2OjE3Wi
+                  IKfQ==",
+    "DigestAlgorithm":"SHA-256",
+    "SignatureAlgorithm":"RSA-PKCS1-1.5",
+    "Signer":"xmpp:romeo@example.net",
+    "Signature":"sNsxJltUaz4pSzAtJiPZagUMV4SwWugWexGbffK/WJRDi2uq7TxN
+                 /V9SwG/kvQ7CaTABbeUuc6cKGO5YxnH5hME3bHB5L9PKPWSjxzxo
+                 68RPxQyPli2YJDDHKVPbofEa86CLqYcwTF5qrcL7fQFvlRSOVxpS
+                 SJfIdiAJNA+nEnk="
+}]]></artwork>
+        </figure>
 
         <section anchor="sec.signature_computation"
                  title="Signature Computation">
@@ -409,20 +396,25 @@
           encoding. I.e., the processing order for encoding is:</t>
 
           <t><list style="numbers">
-              <t>Serialize the inner "Content" value into a string X.</t>
+              <t>Serialize the inner "Content" value into a
+              UTF8-encoded octet series X.</t>
 
-              <t>Compute the signature value over X. (In the case of
-              signatures which use digests, this means feed the literal bytes
-              of the signature into the digest function.). Insert the result
+              <t>Compute the signature value over X, and call the
+              result Y. (In the case of signatures which use digests,
+              this means feed the literal octets of the signature into
+              the digest function.)</t>
+
+              <t>Compute the Base64 representation of X and insert it into the
+              "SignedData" field of the message.</t>
+
+              <t>Compute the Base64 representation of Y, and insert the result
               into the "Signature" field.</t>
 
-              <t>Compute the base64 representation of X and insert it into the
-              "Value" field of the message.</t>
-            </list></t>
+           </list></t>
 
           <t>This procedure removes dependencies on the exact serialization
-          algorithm: variation in spacing, field order, etc. do not affect
-          signature validity since the base64 representation preserves them on
+          algorithm; variation in spacing, field order, etc. do not affect
+          signature validity since the Base64 representation preserves them on
           the wire and protects them from modification by intermediaries.</t>
 
           <t><list style="hanging">
@@ -451,59 +443,39 @@
               described in <xref target="sec.certificates"></xref> in order to
               determine the sender's public key.</t>
 
-              <t>Base64 decode the "Value" field in order to recover a string
+              <t>Base64 decode the "SignedData" field in order to recover a string
               X.</t>
 
               <t>Verify the "Signature" field against X using the sender's
               public key and the "SignatureAlgorithm" and "DigestAlgorithm"
               fields. If the signature fails, return an error.</t>
 
-              <t>Deserialize X to recover the inner "Content" value.</t>
-            </list></t>
+              <t>Deserialize X to recover the inner "Content"
+              value.</t>
 
+              <t>Check any "ID" or "Created" fields for replay.</t>
+
+              <t>Using the value of the "ContentType" field to give
+              MIME type context, Base64-decode the "Data" field to
+              retrieve the intended message.</t>
+            </list></t>
           <t></t>
 
           <section anchor="sec.certificates" title="Certificate Processing">
             <t>JSMS uses the "CertChain" element to carry certificate
-            chains.</t>
-
-            <figure>
-              <!--begin-pdu-->
-
-              <artwork><![CDATA[
-var certchain_schema = {
-  "description":"A certificate chain",
-  "type":"object",
-};
-
-var certchain_pkix_schema = {
-  "description":"A chain of PKIX certificates",
-  "extends":certchain_schema,
-  "properties":{
-    "Type:{
-      "description":"The type of certificate chain",
-      "type":"string",
-      "enum":["PKIX"] },
-    "Chain":{
-      "description":
-      "PKIX certificates in order from root to end-entity",
-      "type":"array",
-      "items":{
-        "description":"A base64-encoded BER certificate",
-        "type":"string",
-        }
-}}};
-               ]]></artwork>
-            </figure>
-
-            <t>The meaning of the fields is described below:</t>
+            chains.  For the moment, each certificate in the chain is
+            expected to be a PKIX certificate BER-encoded then
+            Base64-encoded.  Future versions of this document will
+            likely specify other valid certificate formats, since one
+            of the goals of this format is to avoid . The
+            meaning of the fields is described below:</t>
 
             <t><list style="hanging">
                 <t></t>
 
                 <t hangText="Type:">The type of the certificate chain. The
-                only defined value is "PKIX", referring to PKIX [REF]
-                certificates.</t>
+                only defined value is "PKIX", referring to PKIX <xref
+                target="RFC5280"/> certificates.</t>
 
                 <t></t>
 
@@ -514,10 +486,55 @@ var certchain_pkix_schema = {
                 and the final certificate representing the end-entity.</t>
               </list></t>
 
-            <t>The recipient MUST verify the certificate chain (in the case of
-            PKIX certificates according to RFC 5280 <xref
-            target="RFC5280"></xref>). If any validation failure occurs, the
-            implementation MUST abort processing and return an error.</t>
+              <figure anchor="fig.pkixchain" title="PKIX CertChain Example">
+                <!--begin-pdu-->
+
+                <artwork><![CDATA[
+{
+    "Type":"PKIX",
+    "Chain":[
+        "MIICPjCCAaegAwIBAgIBETANBgkqhkiG9w0BAQUFADBDMRMwEQ
+         YKCZImiZPyLGQBGRYDY29tMRcwFQYKCZImiZPyLGQBGRYHZXhh
+         bXBsZTETMBEGA1UEAxMKRXhhbXBsZSBDQTAeFw0wNDA0MzAxND
+         I1MzRaFw0wNTA0MzAxNDI1MzRaMEMxEzARBgoJkiaJk/IsZAEZ
+         FgNjb20xFzAVBgoJkiaJk/IsZAEZFgdleGFtcGxlMRMwEQYDVQ
+         QDEwpFeGFtcGxlIENBMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCB
+         iQKBgQDC15dtKHCqW88jLoBwOe7bb9Ut1WpPejQt+SJyR3Ad74
+         DpyjCMAMSabltFtG6l5myUDfqR6UD8JZ3Ht2gZVo8RcGrX8ckR
+         Tzp+P5mNbnaldF9epFVT5cdoNlPHHTsSpoX+vW6hyt81UKwI17
+         m0flz+4qMs0SOEqpjAm2YYmmhH6QIDAQABo0IwQDAdBgNVHQ4E
+         FgQUCGivhTPIOUp6+IKTjnBqSiCELDIwDgYDVR0PAQH/BAQDAg
+         EGMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEFBQADgYEA
+         bPgCdKZh4mQEplQMbHITrTxH+/ZlE6mFkDPqdqMm2fzRDhVfKL
+         fvk7888+I+fLlS/BZuKarh9Hpv1X/vs5XK82aIg06hNUWEy7yb
+         uMitxV5G2QsOjYDhMyvcviuSfkpDqWrvimNhs25HOL7oDaNnXf
+         P6kYE8krvFXyUl63zn2KE=",
+        "MIICcTCCAdqgAwIBAgIBEjANBgkqhkiG9w0BAQUFADBDMRMwEQ
+         YKCZImiZPyLGQBGRYDY29tMRcwFQYKCZImiZPyLGQBGRYHZXhh
+         bXBsZTETMBEGA1UEAxMKRXhhbXBsZSBDQTAeFw0wNDA5MTUxMT
+         Q4MjFaFw0wNTAzMTUxMTQ4MjFaMEMxEzARBgoJkiaJk/IsZAEZ
+         FgNjb20xFzAVBgoJkiaJk/IsZAEZFgdleGFtcGxlMRMwEQYDVQ
+         QDEwpFbmQgRW50aXR5MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCB
+         iQKBgQDhauQDMJcCPPQQ87UeTX8Ue/b10HjppIrwo3Xs7bZWln
+         +ImYWa8j5od4frntGfwLQX3KuJI6QdfhYjTE+oTfUxuHyq4xpJ
+         CfRLJtsnZzCCEgFK6Rq2wQxTi2z8L3pD7DM2fjKye9WqzwEUxh
+         LsE/ItFHqLIVgUE0xGo5ryFpX/IwIDAQABo3UwczAhBgNVHREE
+         GjAYgRZlbmQuZW50aXR5QGV4YW1wbGUuY29tMB0GA1UdDgQWBB
+         QXe5Iw/0TWZuGQECJsFk/AjkHdbTAfBgNVHSMEGDAWgBQIaK+F
+         M8g5Snr4gpOOcGpKIIQsMjAOBgNVHQ8BAf8EBAMCBsAwDQYJKo
+         ZIhvcNAQEFBQADgYEAACAoNFtoMgG7CjYOrXHFlRrhBM+urcdi
+         FKQbNjHA4gw92R7AANwQoLqFb0HLYnq3TGOBJl7SgEVeM+dwRT
+         s5OyZKnDvyJjZpCHm7+5ZDd0thi6GrkWTg8zdhPBqjpMmKsr9z
+         1E3kWORi6rwgdJKGDs6EYHbpc7vHhdORRepiXc0="
+    ]
+}]]></artwork>
+              </figure>
+
+            <t>The recipient MUST verify the certificate chain (in the
+            case of PKIX certificates according to <xref
+            target="RFC5280"/>). If any validation failure
+            occurs, the implementation MUST abort processing and
+            return an error.</t>
 
             <t>Once the certificate chain is validated, the end-entity
             certificate must contain an identity which matches the "Signer"
@@ -527,102 +544,32 @@ var certchain_pkix_schema = {
             URI in the "Signer" field. If not, an error MUST be returned.</t>
           </section>
         </section>
-
-        <section anchor="sec.signed-example" title="Example">
-          <t>TODO</t>
-        </section>
-      </section>
+     </section>
 
       <section anchor="sec.encrypted" title="Encrypted Data">
-        <t>An "encrypted" message contains an encrypted "Content" block. All
-        "encrypted" messages contain a symmetric integrity check, either via a
-        MAC or via an AEAD <xref target="RFC5116"></xref> algorithm such as
-        GCM [REF]. A message may be encrypted to an arbitrary number of
-        recipients. Each recipient is represented by a "Recipient" block,
-        which contains a copy of the keying material encrypted for that
-        recipient. Both symmetric and asymmetric key establishment is
-        supported. In order to support both integrity and encryption, what is
-        carried in the Recipient block is a Content Master Key (CMK) which is
-        then used with a KDF to generate the Content Encryption Key (CEK) used
-        to encrypt the message and the Content Integrity Key (CIK) used with
-        the MAC.</t>
+        <t>An "encrypted" message contains an encrypted "Content"
+        block. All "encrypted" messages contain a symmetric integrity
+        check, either via a MAC or via an AEAD <xref
+        target="RFC5116"></xref> algorithm such as Galois/Counter Mode
+        (GCM) [REF]. A message may be encrypted to an arbitrary number
+        of recipients. Each recipient is represented by a "Recipient"
+        block, which contains a copy of the keying material encrypted
+        for that recipient. Both symmetric and asymmetric key
+        establishment is supported. In order to support both integrity
+        and encryption, what is carried in the Recipient block is a
+        Content Master Key (CMK) which is then used with a Key
+        Derivation Function (KDF) to generate the Content Encryption
+        Key (CEK) used to encrypt the message and the Content
+        Integrity Key (CIK) used with the MAC. In addition to the
+        required fields from <xref target="sec.message-common"/> the
+        fields in an encrypted message are:</t>
 
-        <figure>
-          <!--begin-pdu-->
-
-          <artwork><![CDATA[
-var encrypted_schema = {
-  "description":"An encrypted object",
-  "type":"object",
-  "extends":message_schema,
-  "properties":{
-    "Recipients":{
-      "description":"The list of recipient blocks",
-      "type":"array",
-      "items":{
-         "description":"A single recipient block"
-         "type":"recipient_schema",
-       }
-    },
-
-    "KDF":{
-      "description":
-       "The KDF used to derive the MAC and encryption keys",
-      "type":"string",
-      "enum":["P_SHA256"]
-    },
-  
-    "Encryption":{
-      "description":
-      "The encryption control information for the entire message",
-      "type":"object",
-      "properties":{
-        "Algorithm":{
-          "description":"The algorithm used to encrypt the message",
-          "type":"string",
-          "enum":["AES-128-CBC", "AES-256-CBC",
-                  "AES-128-GCM", "AES-256-GCM"]
-        }
-        "IV":{
-          "description":
-          "The initialization vector for the message (base64)",
-          "type":"string"
-        } 
-     }
-    },
-  
-     "Integrity":{
-      "description"
-      "The integrity control information for the entire message",
-      "type":"object",
-      "properties":{
-        "Algorithm":{
-          "description":"The algorithm used to compute the MAC",
-          "type":"string",
-          "enum":["HMAC-SHA-256"],
-        },
-        "Value":{
-          "description":"The MAC value (base64-encoded)",
-          "type":"string",
-        }
-      }
-    },
-
-    "Data":{
-      "description":"The ciphertext (base64-encoded)",
-      "type":"string",
-    }
-  }
-}
-]]></artwork>
-        </figure>
-
-        <t>The meaning of the fields is as follows:</t>
+        <t></t>
 
         <t><list style="hanging">
-            <t hangText="Recipients:">The list of recipients. This is an array
-            of recipient_schema structures, each of which establishes the CMK
-            for that recipient.</t>
+            <t hangText="Recipients:">The list of recipients. This is
+            an array of Recipient objects, each of which establishes
+            the CMK for that recipient.</t>
 
             <t hangText="KDF:">Specifies the key derivation function used to
             generate the CEK and the CIK from the CMK. This field MAY be
@@ -630,83 +577,37 @@ var encrypted_schema = {
             derived by copying the CMK.</t>
 
             <t hangText="Encryption:">Specifies the properties of the
-            encryption. The Algorithm field specifies the encryption algorithm
+            encryption. The Algorithm field MUST contain the encryption algorithm
             and the IV field specifies the initialization vector (if required
-            for the algorithm.</t>
+            for the algorithm).  This field MUST be present.</t>
 
             <t hangText="Integrity:">Specifies the properties of the integrity
-            check. The Algorithm field specifies the MAC algorithm and the
-            Value field contains the MAC. This field MAY be absent if no
+            check. The Algorithm field MUST contain the MAC algorithm and the
+            Value field MUST contain the MAC. This field MAY be absent if no
             integrity check is used.</t>
 
             <t hangText="Data:">Contains the ciphertext.</t>
           </list></t>
 
-        <t>Each Recipient element provides an encrypted copy of the CMK for a
-        single recipient.</t>
-
-        <figure>
-          <!--begin-pdu-->
-
-          <artwork><![CDATA[
-var encrypted_schema = {
-  "description":"An encrypted object",
-  "type":"object",
-  "extends":message_schema,
-  "properties":{
-    "KEK":{
-      "type":"object",
-      "description:"Identifies the key used to encrypt the CMK",
-      "properties":{
-        "RecipientName":{
-         "type":"string",
-         "description":
-         "The recipients name represented as a URI",
-        },
-        "CertificateDigest":{
-         "type":"string",
-         "description":
-         "A digest of the recipient's certificate",
-  },
-        "KeyIdentifier",
-         "type":"string",
-         "description":
-         "An opaque string representing a shared symmetric key"
-        }
-      }
-    },
-    "Algorithm":{
-      "description":"The algorithm used to protect the CMK",
-      "type":"string",
-      "enum":["RSA-PKCS1-1.5", "AES-128-CBC", 
-      "AES-256-CBC", "AES-128-GCM", "AES-256-GCM"]
-    },
-    "Value":{
-      "description":
-      "The binary representation of the encrypted CMK (base64)",
-      "type":string"
-    }
-  }
-}
-]]></artwork>
-        </figure>
-
-        <t>The meaning of the fields is described below:</t>
+        <t>Each Recipient object provides an encrypted copy of the CMK for a
+        single recipient.  The meaning of the fields is described below:</t>
 
         <t><list style="hanging">
             <t></t>
 
-            <t hangText="KEK">Indicates the key used to encrypt the CMK.
-            Either a "RecipientName" or a "KeyIdentifier" MUST be provided. If
-            the "RecipientName" is provided, then a "CertificateDigest" SHOULD
-            be provided.</t>
+            <t hangText="KEKidentifier">Describes the key encyrpting
+            key (KEK) used to encrypt the CMK.  Either a
+            "RecipientName" or a "KeyIdentifier" MUST be provided. If
+            the "RecipientName" is provided, then a
+            "CertificateDigest" SHOULD be provided.</t>
 
             <t><list style="hanging">
                 <t hangText="RecipientName:">Provides the recipient's name in
                 URI form.</t>
 
-                <t hangText="CertificateDigest:">[TODO: Canonicalization?
-                TODO]</t>
+                <t hangText="CertificateDigest:">For now, the SHA-1
+                fingerprint of the PKIX certificate associated with
+                the recipient.</t>
 
                 <t hangText="KeyIdentifier">The name of a shared symmetric key
                 known to both sender and recipient. This need not be globally
@@ -714,10 +615,12 @@ var encrypted_schema = {
                 context.</t>
               </list></t>
 
-            <t hangText="Algorithm:">The algorithm used to encrypt the CMK.
-            Note the JSMS only supports key transport and not key agreement
-            (since key agreement can always be turned into key transport)
-            [TODO - prev sentence does not make sense].</t>
+            <t hangText="Algorithm:">The algorithm used to encrypt the
+            CMK.  For now, one of "RSA-PKCS1-1.5" (meaning RSASSA-PKCS1-v1_5 as
+            specified in <xref target="RFC2437"/>) or
+            "AES-256-CBC" (meaning [REF]).  Note the JSMS only supports key
+            transport and not key agreement (since key agreement can
+            always be turned into key transport).</t>
 
             <t hangText="Value:">The CMK encrypted under the specified
             algorithm and key.</t>
@@ -857,6 +760,13 @@ var encrypted_schema = {
       </section>
     </section>
 
+    <section anchor="sec.version" title="Version Processing">
+      <t>For the moment, all version numbers in the protocol MUST be
+      1.0.  Receivers MUST return an error for any other version
+      number.  More interesting version processing will be defined in
+      the future.</t>
+    </section>
+
     <section anchor="sec.iana-cons" title="IANA Considerations">
       <t>[TODO] <list style="symbols">
           <t>Register MIME types</t>
@@ -881,16 +791,17 @@ var encrypted_schema = {
       apart and form a JSMS message and visa versa?</t>
     </section>
 
-    <section title="Acknowledgments">
-      <t>[TODO]</t>
-    </section>
-  </middle>
+ </middle>
 
   <back>
     <references title="Normative References">
-     &rfc2045;
+      &rfc2045;
 
       &rfc2119;
+
+      &rfc2437;
+
+      &rfc3339;
 
       &rfc3447;
 
@@ -916,6 +827,273 @@ var encrypted_schema = {
 
       &webfinger;
     </references>
+
+    <section title="JSON Schema">
+      <t>The following schemas formally define various namespaces used
+      in this document, in conformance with <xref
+      target="I-D.zyp-json-schema"></xref>.  Because validation of
+      JSON documents is optional, these schemas are not normative and
+      are provided for descriptive purposes only.</t>
+
+      <section anchor="schema.content" title="Message Contents Schema">
+       <figure>
+          <!--begin-pdu-->
+
+          <artwork><![CDATA[
+{
+    "description":"Message Contents",
+    "type":"object",
+    "properties":{
+        "ContentType":{
+            "description":"A MIME content type",
+            "type":"string",
+            "required":true
+        },
+        "Type":{
+            "description":"Dictionary type",
+            "type":"string",
+            "enum":["content"],
+            "required":true
+        },
+        "Data":{
+            "description":"The underlying data",
+            "type":"string",
+            "required":true
+        },
+        "ID":{
+            "description":"(optional) unique ID for this message",
+            "type":"string"
+        },
+        "Created":{
+            "description":"(optional) time the message was created",
+            "type":"string",
+            "format":"date-time"
+        }
+    }
+}]]></artwork>
+        </figure>
+      </section>
+
+      <section anchor="schema.common" title="Common Elements Schema">
+       <figure>
+          <!--begin-pdu-->
+
+          <artwork><![CDATA[
+{
+    "description":"The basic schema for a JSMS message",
+    "type":"object",
+    "properties":{
+        "Type":{
+            "description":"Message type",
+            "type":"string",
+            "enum":["signed", "encrypted"]
+        },
+        "Version":{
+            "description":"Version number for the message",
+            "type":"string",
+            "enum":["1.0"]
+        }
+    }
+}]]></artwork>
+        </figure>
+      </section>
+
+      <section anchor="schema.signed" title="Signed Message Schema">
+       <figure>
+          <!--begin-pdu-->
+
+          <artwork><![CDATA[
+{
+    "description":"A signed message",
+    "type":"object",
+    "extends":message_schema,
+    "properties":{
+        "Signature":{
+            "description":"The signature over the SignedData",
+            "type":"object",
+            "properties":{
+                "SignedData":{
+                    "description":"content to be signed, Base64",
+                    "type":"string",
+                    "required":true
+                },
+                "DigestAlgorithm":{
+                    "description":"",
+                    "type":"string",
+                    "enum":["SHA-256"] 
+                },
+                "SignatureAlgorithm":{
+                    "description":"",
+                    "type":"string",
+                    "enum":["RSA-PKCS1-1.5"] 
+                },
+                "Signer":{
+                    "description":"",
+                    "type":"string",
+                    "format":"uri",
+                    "required":true 
+                },
+                "CertChain": {
+                    "description":"the signer's cert chain",
+                    "type":"PKIXcertchain"
+                },
+                "Signature":{
+                    "description":"the signature",
+                    "type":"string",
+                    "required":true
+                }
+            }
+        }
+    }
+}]]></artwork>
+        </figure>
+      </section>
+
+      <section anchor="schema.PKIXcertchain" title="PKIX Certificate Chain Schema">
+       <figure>
+          <!--begin-pdu-->
+
+          <artwork><![CDATA[
+{
+    "description":"A chain of PKIX certificates",
+    "id":"PKIXcertchain",
+    "properties":{
+        "Type":{
+            "description":"The type of certificate chain",
+            "type":"string",
+            "enum":["PKIX"] },
+        "Chain":{
+            "description":"PKIX certs ordered from root to end",
+            "type":"array",
+            "items":{
+                "description":"A base64-encoded BER certificate",
+                "type":"string"
+            }
+        }
+    }
+}]]></artwork>
+        </figure>
+      </section>
+
+      <section anchor="schema.ecncrypted" title="Encrypted Message Schema">
+       <figure>
+          <!--begin-pdu-->
+
+          <artwork><![CDATA[
+{
+    "description":"An encrypted object",
+    "type":"object",
+    "extends":message_schema,
+    "properties":{
+        "Recipients":{
+            "description":"The list of recipient blocks",
+            "type":"array",
+            "required":true,
+            "items":{
+                "description":"A single recipient block",
+                "type":"Recipient"
+            }
+        },
+        "KDF":{
+            "description":
+            "The KDF used to derive the MAC and encryption keys",
+            "type":"string",
+            "enum":["P_SHA256"]
+        },
+        "Encryption":{
+            "description":
+            "The encryption control information for the entire message",
+            "type":"object",
+            "required":true,
+            "properties":{
+                "Algorithm":{
+                    "description":"The algorithm used to encrypt",
+                    "type":"string",
+                    "enum":["AES-256-CBC"]
+                },
+                "IV":{
+                    "description":"The initialization vector (base64)",
+                    "type":"string"
+                } 
+            }
+        },
+        "Integrity":{
+            "description":"The integrity control information",
+            "type":"object",
+            "properties":{
+                "Algorithm":{
+                    "description":"The MAC algorithm",
+                    "type":"string",
+                    "enum":["HMAC-SHA-256"]
+                },
+                "Value":{
+                    "description":"The MAC value (base64-encoded)",
+                    "type":"string",
+                    "required":true
+                }
+            }
+        },
+        "Data":{
+            "description":"The ciphertext (Base64-encoded)",
+            "type":"string",
+            "required":true
+        }
+    }
+}]]></artwork>
+        </figure>
+      </section>
+
+
+      <section anchor="schema.recipient" title="Recipient Schema">
+       <figure>
+          <!--begin-pdu-->
+
+          <artwork><![CDATA[
+{
+    "description":"The recipient of an encrypted object",
+    "type":"object",
+    "id":"Recipient",
+    "properties":{
+        "KEKidentifier":{
+            "type":"object",
+            "description":"Identifies the key encrypting key",
+            "properties":{
+                "RecipientName":{
+                    "type":"string",
+                    "description":"The recipient's name",
+                    "format":"uri"
+                },
+                "CertificateDigest":{
+                    "type":"string",
+                    "description":"Recipient's certificate fingerprint"
+                },
+                "KeyIdentifier":{
+                    "type":"string",
+                    "description": "Shared symmetric key (opaque)"
+                }
+            }
+        },
+        "Algorithm":{
+            "description":"The algorithm used to protect the CMK",
+            "type":"string",
+            "enum":["RSA-PKCS1-1.5", "AES-256-CBC"]
+        },
+        "Value":{
+            "description": "Base64 representation of the encrypted CMK",
+            "type":"string"
+        }
+    }
+}]]></artwork>
+        </figure>
+      </section>
+
+    </section>
+
+
+
+    <section title="Acknowledgments">
+      <t>[TODO]</t>
+    </section>
   </back>
 </rfc>
 <!-- Keep this comment at the end of the file
