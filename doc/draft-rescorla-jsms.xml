@@ -2,7 +2,6 @@
 <!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
 <!ENTITY rfc2045 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2045.xml">
 <!ENTITY rfc2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
-<!ENTITY rfc2437 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2437.xml">
 <!ENTITY rfc3339 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3339.xml">
 <!ENTITY rfc3447 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3447.xml">
 <!ENTITY rfc3986 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.3986.xml">
@@ -72,50 +71,52 @@
       </address>
     </author>
 
-    <date day="28" month="February" year="2011" />
+    <date day="7" month="March" year="2011" />
 
     <abstract>
-      <t>Many applications require the ability to send cryptographically
-      secured messages. While the IETF has defined a number of formats for
-      such messages, such as CMS, those formats use encodings
-      which are not congenial for Web applications. This document describes a
-      new cryptographic message format which is based on JavaScript Object
-      Notation (JSON) and thus is easy for Web applications to generate and
-      parse.</t>
+      <t>Many applications require the ability to send
+      cryptographically secured messages. While the IETF has defined a
+      number of formats for such messages (e.g. CMS) those formats use
+      encodings which are not congenial for Web applications. This
+      document describes a new cryptographic message format which is
+      based on JavaScript Object Notation (JSON) and thus is easy for
+      Web applications to generate and parse.</t>
     </abstract>
   </front>
 
   <middle>
     <section title="Introduction">
-      <t>Many applications require the ability to send cryptographically
-      secured (encrypted, digitally signed, etc.) messages. While the IETF has
-      defined a number of formats for such messages,
-      those formats are widely viewed as being excessively
-      complicated for the demands of Web applications, which typically only
-      need the ability to secure simple messages. In addition, existing
-      formats use encoding mechanisms (e.g., ASN.1 BER/DER) which are not congenial
-      for Web applications. This presents an obstacle to the deployment of
+      <t>Many applications require the ability to send
+      cryptographically secured (encrypted, digitally signed, etc.)
+      messages. While the IETF has defined a number of formats for
+      such messages, those formats are widely viewed as being
+      excessively complicated for the demands of Web applications,
+      which typically only need the ability to secure simple
+      messages. In addition, existing formats use encoding mechanisms
+      (e.g., ASN.1 BER/DER) which are not congenial for Web
+      applications. This presents an obstacle to the deployment of
       strong security by such applications.</t>
 
       <t>This document describes a new cryptographic message format,
-      JavaScript Message Security (JSMS) intended to meet the need of the Web
-      environment. While JSMS is modelled on existing formats - principally
-      CMS <xref target="RFC5652"/>--it uses JavaScript Object Notation (JSON) rather than
-      ASN.1/BER/DER, making it far easier for Web applications to handle. In
-      the interest of simplicity, JSMS also omits as many as possible of the
-      CMS modes (multiple signatures, password-based encryption).</t>
+      JavaScript Message Security (JSMS) intended to meet the need of
+      the Web environment. While JSMS is modeled on existing formats
+      -- principally CMS <xref target="RFC5652"/> -- it uses
+      JavaScript Object Notation (JSON) rather than ASN.1/BER/DER,
+      making it far easier for Web applications to handle. In the
+      interest of simplicity, JSMS also omits as many as possible of
+      the CMS modes (multiple signatures, password-based
+      encryption).</t>
     </section>
 
     <section title="Conventions Used In This Document">
       <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
       "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
-      document are to be interpreted as described in <xref target="RFC2119">
-      </xref>.</t>
+      document are to be interpreted as described in <xref target="RFC2119"/>.</t>
     </section>
 
     <section title="Overview">
       <t>The JSMS message format is simply a JSON <xref
-      target="RFC4627"></xref> dictionary with an appropriate
+      target="RFC4627"/> dictionary with an appropriate
       collection of fields.  Each operating mode will have a separate
       set of fields, with a common field to distinguish between the
       modes.
@@ -145,7 +146,7 @@
         <t>Any other desired security functions are provided by composition of
         these modes. For instance, a signed and encrypted message is produced
         by first creating a Signed message and then encrypting that data. (See
-        <xref target="sec.msg-composition"></xref> for more on
+        <xref target="sec.msg-composition"/> for more on
         composition.</t>
       </section>
 
@@ -165,22 +166,22 @@
 
           <t>Any data that does not have a straightforward string
           representation (binary values, large integers, etc.) is
-          base64-encoded (see: <xref target="RFC4648"></xref>). In
+          base64-encoded (see: <xref target="RFC4648"/>). In
           some cases, hexadecimal encodings might be more convenient,
           but consistency is even more important to reduce
           implementation complexity.</t>
 
           <t hangText="No canonicalization"></t>
 
-          <t>In many cryptographic message formats,
-	  canonical encodings are used to allow
-          the same value to be computed at both sender and recipient
-          (e.g., for digital signatures). This is inconvenient in
-          JSON, which just views messages as a bundle of key/value
-          pairs. Instead, whenever canonicalization would be required,
-          the relevant data is serialized and base64-encoded for
-          transport, allowing both sides to run computations over the
-          same original set of octets.</t>
+          <t>In many cryptographic message formats, canonical
+          encodings are used to allow the same value to be computed at
+          both sender and recipient (e.g., for digital
+          signatures). This is inconvenient in JSON, which just views
+          messages as a bundle of key/value pairs. Instead, whenever
+          canonicalization would be required, the relevant data is
+          serialized and base64-encoded for transport, allowing both
+          sides to run computations over the same original set of
+          octets.</t>
 
           <t hangText="In-memory processing"></t>
 
@@ -198,25 +199,27 @@
       </section>
 
       <section title="Certificate Processing">
-        <t>Experience has shown that certificate handling (path construction)
-        is one of the trickier parts of building a cryptographic system. While
-        JSMS supports PKIX certificates, its certificate processing is far
-        simpler than that of CMS. When a JSMS agent provides its certificate,
-        it must provide an ordered chain (as in TLS <xref target="RFC5246"/>) terminating in its
-        own certificate, thus removing the need to construct certificate
-	paths. The certificates MUST be ordered with the end-entity
-	certificate first and each certificate that follows signing
-	the certificate immediately preceding it.
-	In addition, because many implementations will not want to do
-        any ASN.1/BER processing at all, we define a Web Service which
-        applications can use for chain validation. (See [TODO]).</t>
+        <t>Experience has shown that certificate handling (path
+        construction) is one of the trickier parts of building a
+        cryptographic system. While JSMS supports PKIX certificates,
+        its certificate processing is far simpler than that of
+        CMS. When a JSMS agent provides its certificate, it must
+        provide an ordered chain (as in TLS <xref target="RFC5246"/>)
+        terminating in its own certificate, thus removing the need to
+        construct certificate paths. The certificates MUST be ordered
+        with the end-entity certificate first and each certificate
+        that follows signing the certificate immediately preceding it.
+        In addition, because many implementations will not want to do
+        any ASN.1/BER processing at all, we will define a Web Service
+        which applications can use for chain validation and
+        translation to an easy-to-parse format. (See [TODO]).</t>
       </section>
 
       <section title="Certificate Discovery">
         <t>JSMS will often be used in an online messaging environment
         with users that have an address of the form user@domain, such as
         email, XMPP, or SIP.  As such, protocols such as WebFinger
-        <xref target="I-D.hammer-webfinger"></xref> or an end-to-end
+        <xref target="I-D.hammer-webfinger"/> or an end-to-end
         protocol can be used to retrieve appropriate certificates.
         Downstream uses of JSMS SHOULD define a discovery mechanism
         suitable for the intended use.</t>
@@ -225,7 +228,7 @@
 
     <section title="Message Format">
       <t>All of the field definitions in this section make use of JSON
-      Schema <xref target="I-D.zyp-json-schema"></xref>.  For each of the
+      Schema <xref target="I-D.zyp-json-schema"/>.  For each of the
       fields that is designed to hold an enumerated value, a registry
       will be created allowing other values to be used in addition to
       the values enumerated in the schema.</t>
@@ -257,7 +260,7 @@
         <t><list style="hanging">
             <t></t>
 
-            <t hangText="ContentType:">A MIME <xref target="RFC2045"></xref>
+            <t hangText="ContentType:">A MIME <xref target="RFC2045"/>
             media type that MUST be included indicating the type of
             the "Data" field.</t>
 
@@ -269,14 +272,15 @@
             field MUST be included.</t>
 
             <t hangText="Data:">The data value MUST be included as a
-            text encoded as Base64 (See: <xref target="RFC4648"></xref>).</t>
+            text encoded as Base64 (See: <xref target="RFC4648"/>).</t>
 
-            <t hangText="ID">An OPTIONAL globally unique ID that idenitfies this
-            message, for use in detecting replay attacks.</t>
+            <t hangText="ID:">An OPTIONAL universally unique ID that
+            identifies this message, for use in detecting replay
+            attacks.</t>
 
-            <t hangText="Created">An OPTIONAL field describing the UTC
+            <t hangText="Created:">An OPTIONAL field describing the UTC
             date/time that the content was encoded into JSON, formatted
-            according to the "date-time" production of <xref target="RFC3339"></xref>.</t>
+            according to the "date-time" production of <xref target="RFC3339"/>.</t>
 
           </list></t>
 
@@ -316,8 +320,8 @@
 
             <t hangText="Type:">The type of the message. MUST be either
             "signed" or "encrypted", to indicate a signed message (<xref
-            target="sec.signed"></xref>) or an encrypted message (<xref
-            target="sec.encrypted"></xref>) respectively.</t>
+            target="sec.signed"/>) or an encrypted message (<xref
+            target="sec.encrypted"/>) respectively.</t>
         </list></t>
 
       </section>
@@ -334,7 +338,7 @@
 
             <t hangText="SignedData:">This field MUST consist of a
             Base64-encoded "Content" structure (see <xref
-            target="sec.content"></xref>), which MUST have been
+            target="sec.content"/>), which MUST have been
             encoded into octets as UTF-8 prior to Base64-encoding.
             The signature is computed over the UTF-8 octet stream
             before Base64-encoding to ensure that the sender and
@@ -347,8 +351,8 @@
             but MAY be omitted for future signatures which do not allow
             flexible digests.  For now, this field MUST have the value
             "SHA-256", meaning the digest algorithm was SHA-256 
-	    <xref target="FIPS-180-3"/>.
-	    </t>
+        <xref target="FIPS-180-3"/>.
+        </t>
 
             <t></t>
 
@@ -356,21 +360,21 @@
             compute the signature. This field MUST be present.  For
             now, this field MUST have the value "RSA-PKCS1-1.5",
             meaning the signature algorithm was RSASSA-PKCS1-v1_5 as
-            specified in <xref target="RFC2437"/>.</t>
+            specified in <xref target="RFC3447"/>.</t>
 
             <t></t>
 
             <t hangText="Signer:">The signer's identity, expressed as a URI
-            <xref target="RFC3986"></xref>. This field MUST be present.</t>
+            <xref target="RFC3986"/>. This field MUST be present.</t>
 
             <t></t>
 
             <t hangText="CertChain:">The signer's certificate chain, if any
-            (see <xref target="sec.certificates"></xref>).</t>
+            (see <xref target="sec.certificates"/>).</t>
 
             <t></t>
 
-            <t hangText="Signature:">The Base64-endoded signature, which
+            <t hangText="Signature:">The Base64-encoded signature, which
             MUST be included (see <xref target="sec.signature_computation"/>).</t>
         </list></t>
 
@@ -428,14 +432,14 @@
               two disadvantages: (1) any intermediaries which change
               spacing/line breaks would break the signature. (2) it is
               inconsistent with the algorithm for encryption (<xref
-              target="sec.encrypted"></xref>), which is designed to avoid
+              target="sec.encrypted"/>), which is designed to avoid
               multiple base64 encoding.</t>
             </list></t>
 
           <t>This procedure only specifies the input to the signature
           computation. The details of the computation depend on the signature
           algorithm itself. The mapping from code points to algorithms is
-          found in <xref target="sec.iana-cons"></xref>.</t>
+          found in <xref target="sec.iana-cons"/>.</t>
         </section>
 
         <section anchor="sec.signature_verification"
@@ -445,7 +449,7 @@
 
           <t><list style="numbers">
               <t>Process the provided "Signer" and "CertChain" fields as
-              described in <xref target="sec.certificates"></xref> in order to
+              described in <xref target="sec.certificates"/> in order to
               determine the sender's public key.</t>
 
               <t>Base64 decode the "SignedData" field in order to recover a string
@@ -555,19 +559,20 @@
         <t>An "encrypted" message contains an encrypted "Content"
         block. All "encrypted" messages contain a symmetric integrity
         check, either via a MAC or via an AEAD <xref
-        target="RFC5116"></xref> algorithm such as Galois/Counter Mode
-        (GCM) [REF]. A message may be encrypted to an arbitrary number
-        of recipients. Each recipient is represented by a "Recipient"
-        block, which contains a copy of the keying material encrypted
-        for that recipient. Both symmetric and asymmetric key
-        establishment is supported. In order to support both integrity
-        and encryption, what is carried in the Recipient block is a
-        Content Master Key (CMK) which is then used with a Key
-        Derivation Function (KDF) to generate the Content Encryption
-        Key (CEK) used to encrypt the message and the Content
-        Integrity Key (CIK) used with the MAC. In addition to the
-        required fields from <xref target="sec.message-common"/> the
-        fields in an encrypted message are:</t>
+        target="RFC5116"/> algorithm such as Galois/Counter Mode
+        (GCM: <xref target="GCM"/>). A message may be encrypted to an
+        arbitrary number of recipients. Each recipient is represented
+        by a "Recipient" block, which contains a copy of the keying
+        material encrypted for that recipient. Both symmetric and
+        asymmetric key establishment is supported. In order to support
+        both integrity and encryption, what is carried in the
+        Recipient block is a Content Master Key (CMK) which is then
+        used with a Key Derivation Function (KDF) to generate the
+        Content Encryption Key (CEK) used to encrypt the message and
+        the Content Integrity Key (CIK) used with the MAC. In addition
+        to the required fields from <xref
+        target="sec.message-common"/> the fields in an encrypted
+        message are:</t>
 
         <t></t>
 
@@ -600,7 +605,7 @@
         <t><list style="hanging">
             <t></t>
 
-            <t hangText="KEKidentifier">Describes the key encyrpting
+            <t hangText="KEKidentifier">Describes the key encrypting
             key (KEK) used to encrypt the CMK.  Either a
             "RecipientName" or a "KeyIdentifier" MUST be provided. If
             the "RecipientName" is provided, then a
@@ -621,9 +626,10 @@
               </list></t>
 
             <t hangText="Algorithm:">The algorithm used to encrypt the
-            CMK.  For now, one of "RSA-PKCS1-1.5" (meaning RSASSA-PKCS1-v1_5 as
-            specified in <xref target="RFC2437"/>) or
-            "AES-256-CBC" (meaning [REF]).  Note the JSMS only supports key
+            CMK.  For now, one of "RSA-PKCS1-1.5" (meaning
+            RSASSA-PKCS1-v1_5 as specified in <xref
+            target="RFC3447"/>) or "AES-256-CBC" (meaning <xref
+            target="FIPS-180-3"/>).  Note the JSMS only supports key
             transport and not key agreement (since key agreement can
             always be turned into key transport).</t>
 
@@ -638,17 +644,17 @@
               <t>Generate a random CMK. The CMK MUST have a length at least
               equal to that of the larger of the required integrity or
               encryption keys and MUST be generated randomly. See <xref
-              target="RFC4086"></xref> for considerations on generating random
+              target="RFC4086"/> for considerations on generating random
               values. [[ TODO - we need a section on generating randomness in
               browsers - it's easy to screw up ]]</t>
 
               <t>Encrypt the CMK for each recipient (see <xref
-              target="sec.encrypt_cmk"></xref>)</t>
+              target="sec.encrypt_cmk"/>)</t>
 
               <t>Generate a random IV (if required for the algorithm).</t>
 
               <t>Run the key derivation algorithm (see <xref
-              target="sec.key_derivation"></xref>) to generate the CEK and CIK
+              target="sec.key_derivation"/>) to generate the CEK and CIK
               (if not using an AEAD algorithm).</t>
 
               <t>Serialize the content into a bitstring M.</t>
@@ -658,11 +664,13 @@
               <t>Set the Value element equal to the base64-encoded
               representation of C.</t>
 
-              <t>If not using an AEAD algorithm, compute the function I =
-              MAC(CIK, C) using the chosen integrity algorithm. Note that this
-              is EtA encryption which is considered the best cryptographic
-              choice (<xref target="krawczyk-ate"/>). Set the Integrity.Value element
-              equal to the base64-encoded representation of I.</t>
+              <t>If not using an AEAD algorithm, compute the function
+              I = MAC(CIK, C) using the chosen integrity
+              algorithm. Note that this is EtA encryption which is
+              considered the best cryptographic choice (See: <xref
+              target="krawczyk-ate"/>). Set the Integrity.Value
+              element equal to the base64-encoded representation of
+              I.</t>
             </list></t>
         </section>
 
@@ -678,7 +686,7 @@
               appears plausible, that MAY be tried.</t>
 
               <t>Run the key derivation algorithm (see <xref
-              target="sec.key_derivation"></xref>) to generate the CEK and CIK
+              target="sec.key_derivation"/>) to generate the CEK and CIK
               (if not using an AEAD algorithm).</t>
 
               <t>If not using an AEAD algorithm, compute the integrity check
@@ -708,10 +716,8 @@
           and produces an arbitrary length output. The appropriate number of
           bits (Length) is simply extracted from the beginning of the output.
           The KDF name "P_XXX" in this document refers the the TLS <xref
-          target="RFC5246"></xref> PRF using P_XXX as the underlying P_hash
-          function. [[ CJ - when I went to implimnet this, I could not figure
-          out the seed stuff so some clarification of 5246 for implementors
-          might be needed here ]]</t>
+          target="RFC5246"/> PRF using P_XXX as the underlying P_hash
+          function. </t>
 
           <t>To compute the CEK from the CMK, the label "Encryption" is
           used.</t>
@@ -719,7 +725,7 @@
           <t>To compute the CIK from the CMK, the label "Integrity" is
           used.</t>
 
-          <t>When AEAD algorithms are used the KDF element MUST not be
+          <t>When AEAD algorithms are used the KDF element MUST NOT be
           present. When they are not used, it MUST be present.</t>
         </section>
 
@@ -737,7 +743,7 @@
             <t>In the asymmetric encryption mode, the CMK is encrypted under
             the recipient's public key. The only currently defined asymmetric
             encryption mode is RSA-PKCS1-1.5, which refers to <xref
-            target="RFC3447"></xref> RSAES-PKCS1-v1_5.</t>
+            target="RFC3447"/> RSAES-PKCS1-v1_5.</t>
           </section>
 
           <section anchor="sec.symmetric_encryption"
@@ -746,7 +752,7 @@
             symmetric key shared between the sender and receiver. All such
             modes MUST provide integrity for the CMK. This document defines
             four such modes: AES-128-CBC, AES-256-CBC referring to the <xref
-            target="RFC5649"></xref> AES key wrapping modes and AES-128-GCM,
+            target="RFC5649"/> AES key wrapping modes and AES-128-GCM,
             AES-256-GCM, referring to AES encryption with GCM. For GCM the
             random 64-bit IV is prepended to the ciphertext.</t>
           </section>
@@ -790,9 +796,10 @@
     </section>
     -->
 
-    <section anchor="sec.sec-cons" title="Security Considerations"></section>
+    <section anchor="sec.sec-cons" title="Security Considerations">
+      <t>Much more to follow here.</t>
+    </section>
 
-    <section title="XML Schemas for types"></section>
 
  </middle>
 
@@ -801,8 +808,6 @@
       &rfc2045;
 
       &rfc2119;
-
-      &rfc2437;
 
       &rfc3339;
 
@@ -825,16 +830,16 @@
       &jsonschema;
 
       <reference anchor="FIPS-180-3">
- <front>
- <title>Secure Hash Standard (SHS)</title>
- <author>
- <organization>National Institute of Standards and Technology (NIST)
- </organization>
- </author>
- <date month="October" year="2008" />
- </front>
- <seriesInfo name="FIPS" value="PUB 180-3" />
- </reference>
+        <front>
+          <title>Secure Hash Standard (SHS)</title>
+          <author>
+            <organization>National Institute of Standards and Technology (NIST)
+            </organization>
+          </author>
+          <date month="October" year="2008" />
+        </front>
+        <seriesInfo name="FIPS" value="PUB 180-3" />
+      </reference>
 
     </references>
 
@@ -846,21 +851,34 @@
       &rfc5652;
 
       <reference anchor="krawczyk-ate">
-	<front>
-	<title>The Order of Encryption and Authentication for Protecting Communications (or: How Secure Is SSL?)</title>
-	
-	<author fullname="Hugo Krawczyk" initials="H." surname="Krawczyk">
-	</author>
-	</front>
-	<seriesInfo name="Advances in cryptology--CRYPTO 2001" value="August 2001"/>
+        <front>
+          <title>The Order of Encryption and Authentication for
+          Protecting Communications (or: How Secure Is SSL?)</title>
+    
+          <author fullname="Hugo Krawczyk" initials="H." surname="Krawczyk">
+          </author>
+        </front>
+        <seriesInfo name="Advances in cryptology--CRYPTO 2001" value="August 2001"/>
       </reference>
       
+      <reference anchor="GCM">
+        <front>
+          <title>Recommendation for Block Cipher Modes of Operation:
+          Galois/Counter Mode (GCM) and GMAC</title>
+          <author>
+            <organization>National Institute of Standards and Technology (NIST)
+            </organization>
+          </author>
+          <date month="November" year="2007" />
+        </front>
+        <seriesInfo name="SP" value="800-38D" />
+      </reference>
     </references>
 
     <section title="JSON Schema">
       <t>The following schemas formally define various namespaces used
       in this document, in conformance with <xref
-      target="I-D.zyp-json-schema"></xref>.  Because validation of
+      target="I-D.zyp-json-schema"/>.  Because validation of
       JSON documents is optional, these schemas are not normative and
       are provided for descriptive purposes only.</t>
 
@@ -1030,8 +1048,7 @@
             "enum":["P_SHA256"]
         },
         "Encryption":{
-            "description":
-            "The encryption control information for the entire message",
+            "description":"Encryption control information",
             "type":"object",
             "required":true,
             "properties":{
@@ -1041,7 +1058,7 @@
                     "enum":["AES-256-CBC"]
                 },
                 "IV":{
-                    "description":"The initialization vector (base64)",
+                    "description":"Initialization vector (base64)",
                     "type":"string"
                 } 
             }
@@ -1094,7 +1111,7 @@
                 },
                 "CertificateDigest":{
                     "type":"string",
-                    "description":"Recipient's certificate fingerprint"
+                    "description":"Recipient's cert fingerprint"
                 },
                 "KeyIdentifier":{
                     "type":"string",
@@ -1108,7 +1125,7 @@
             "enum":["RSA-PKCS1-1.5", "AES-256-CBC"]
         },
         "Value":{
-            "description": "Base64 representation of the encrypted CMK",
+            "description": "Base64 of the encrypted CMK",
             "type":"string"
         }
     }

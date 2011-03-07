@@ -4,8 +4,8 @@
 Network Working Group                                        E. Rescorla
 Internet-Draft                                                RTFM, Inc.
 Intended status:  Standards Track                          J. Hildebrand
-Expires:  September 1, 2011                          Cisco Systems, Inc.
-                                                       February 28, 2011
+Expires:  September 8, 2011                          Cisco Systems, Inc.
+                                                           March 7, 2011
 
 
                    JavaScript Message Security Format
@@ -15,7 +15,7 @@ Abstract
 
    Many applications require the ability to send cryptographically
    secured messages.  While the IETF has defined a number of formats for
-   such messages, such as CMS, those formats use encodings which are not
+   such messages (e.g.  CMS) those formats use encodings which are not
    congenial for Web applications.  This document describes a new
    cryptographic message format which is based on JavaScript Object
    Notation (JSON) and thus is easy for Web applications to generate and
@@ -36,7 +36,7 @@ Status of this Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on September 1, 2011.
+   This Internet-Draft will expire on September 8, 2011.
 
 Copyright Notice
 
@@ -52,9 +52,9 @@ Copyright Notice
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 1]
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 1]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
    include Simplified BSD License text as described in Section 4.e of
@@ -108,9 +108,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 2]
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 2]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 Table of Contents
@@ -138,10 +138,9 @@ Table of Contents
    5.  Version Processing . . . . . . . . . . . . . . . . . . . . . . 15
    6.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 15
    7.  Security Considerations  . . . . . . . . . . . . . . . . . . . 15
-   8.  XML Schemas for types  . . . . . . . . . . . . . . . . . . . . 15
-   9.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 16
-     9.1.  Normative References . . . . . . . . . . . . . . . . . . . 16
-     9.2.  Informative References . . . . . . . . . . . . . . . . . . 17
+   8.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+     8.1.  Normative References . . . . . . . . . . . . . . . . . . . 15
+     8.2.  Informative References . . . . . . . . . . . . . . . . . . 17
    Appendix A.  JSON Schema . . . . . . . . . . . . . . . . . . . . . 17
      A.1.  Message Contents Schema  . . . . . . . . . . . . . . . . . 18
      A.2.  Common Elements Schema . . . . . . . . . . . . . . . . . . 19
@@ -164,9 +163,10 @@ Table of Contents
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 3]
+
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 3]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 1.  Introduction
@@ -183,12 +183,12 @@ Internet-Draft                    JSMS                     February 2011
 
    This document describes a new cryptographic message format,
    JavaScript Message Security (JSMS) intended to meet the need of the
-   Web environment.  While JSMS is modelled on existing formats -
-   principally CMS [RFC5652]--it uses JavaScript Object Notation (JSON)
-   rather than ASN.1/BER/DER, making it far easier for Web applications
-   to handle.  In the interest of simplicity, JSMS also omits as many as
-   possible of the CMS modes (multiple signatures, password-based
-   encryption).
+   Web environment.  While JSMS is modeled on existing formats --
+   principally CMS [RFC5652] -- it uses JavaScript Object Notation
+   (JSON) rather than ASN.1/BER/DER, making it far easier for Web
+   applications to handle.  In the interest of simplicity, JSMS also
+   omits as many as possible of the CMS modes (multiple signatures,
+   password-based encryption).
 
 
 2.  Conventions Used In This Document
@@ -220,9 +220,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 4]
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 4]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
    Signed Data
@@ -276,9 +276,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 5]
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 5]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 3.3.  Certificate Processing
@@ -293,8 +293,9 @@ Internet-Draft                    JSMS                     February 2011
    the end-entity certificate first and each certificate that follows
    signing the certificate immediately preceding it.  In addition,
    because many implementations will not want to do any ASN.1/BER
-   processing at all, we define a Web Service which applications can use
-   for chain validation.  (See [TODO]).
+   processing at all, we will define a Web Service which applications
+   can use for chain validation and translation to an easy-to-parse
+   format.  (See [TODO]).
 
 3.4.  Certificate Discovery
 
@@ -324,18 +325,22 @@ Internet-Draft                    JSMS                     February 2011
    encoded sections of the examples are unintended side-effects of the
    production process.
 
+
+
+
+
+
+
+
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 6]
+
+Internet-Draft                    JSMS                        March 2011
+
+
    Implementation Note:  Much existing Base64-encoding code will
       generate linefeeds every 64 or 76 characters of output.  Ensure
       that these linefeeds are removed before inserting the output into
       a JSON structure.
-
-
-
-
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 6]
-
-Internet-Draft                    JSMS                     February 2011
-
 
 4.2.  Content Object
 
@@ -353,9 +358,9 @@ Internet-Draft                    JSMS                     February 2011
       content.  This field MUST be included.
    Data:  The data value MUST be included as a text encoded as Base64
       (See:  [RFC4648]).
-   ID An OPTIONAL globally unique ID that idenitfies this message, for
-      use in detecting replay attacks.
-   Created  An OPTIONAL field describing the UTC date/time that the
+   ID:  An OPTIONAL universally unique ID that identifies this message,
+      for use in detecting replay attacks.
+   Created:  An OPTIONAL field describing the UTC date/time that the
       content was encoded into JSON, formatted according to the "date-
       time" production of [RFC3339].
 
@@ -383,14 +388,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-
-
-
-
-
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 7]
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 7]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 
@@ -426,7 +426,7 @@ Internet-Draft                    JSMS                     February 2011
    SignatureAlgorithm:  The signature algorithm used to compute the
       signature.  This field MUST be present.  For now, this field MUST
       have the value "RSA-PKCS1-1.5", meaning the signature algorithm
-      was RSASSA-PKCS1-v1_5 as specified in [RFC2437].
+      was RSASSA-PKCS1-v1_5 as specified in [RFC3447].
 
    Signer:  The signer's identity, expressed as a URI [RFC3986].  This
       field MUST be present.
@@ -434,7 +434,7 @@ Internet-Draft                    JSMS                     February 2011
    CertChain:  The signer's certificate chain, if any (see
       Section 4.4.2.1).
 
-   Signature:  The Base64-endoded signature, which MUST be included (see
+   Signature:  The Base64-encoded signature, which MUST be included (see
       Section 4.4.1).
 
 
@@ -444,9 +444,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 8]
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 8]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
    {
@@ -500,9 +500,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011               [Page 9]
+Rescorla & Hildebrand   Expires September 8, 2011               [Page 9]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
    Section 6.
@@ -556,9 +556,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 10]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 10]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
    {
@@ -612,9 +612,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 11]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 11]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
    subjectAltName field of type "uniformResourceIdentifier".  This field
@@ -626,7 +626,7 @@ Internet-Draft                    JSMS                     February 2011
    An "encrypted" message contains an encrypted "Content" block.  All
    "encrypted" messages contain a symmetric integrity check, either via
    a MAC or via an AEAD [RFC5116] algorithm such as Galois/Counter Mode
-   (GCM) [REF].  A message may be encrypted to an arbitrary number of
+   (GCM:  [GCM]).  A message may be encrypted to an arbitrary number of
    recipients.  Each recipient is represented by a "Recipient" block,
    which contains a copy of the keying material encrypted for that
    recipient.  Both symmetric and asymmetric key establishment is
@@ -658,7 +658,7 @@ Internet-Draft                    JSMS                     February 2011
    single recipient.  The meaning of the fields is described below:
 
 
-   KEKidentifier  Describes the key encyrpting key (KEK) used to encrypt
+   KEKidentifier  Describes the key encrypting key (KEK) used to encrypt
       the CMK.  Either a "RecipientName" or a "KeyIdentifier" MUST be
       provided.  If the "RecipientName" is provided, then a
       "CertificateDigest" SHOULD be provided.
@@ -668,9 +668,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 12]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 12]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 
@@ -682,9 +682,9 @@ Internet-Draft                    JSMS                     February 2011
          as it is unique within the recipient's context.
    Algorithm:  The algorithm used to encrypt the CMK.  For now, one of
       "RSA-PKCS1-1.5" (meaning RSASSA-PKCS1-v1_5 as specified in
-      [RFC2437]) or "AES-256-CBC" (meaning [REF]).  Note the JSMS only
-      supports key transport and not key agreement (since key agreement
-      can always be turned into key transport).
+      [RFC3447]) or "AES-256-CBC" (meaning [FIPS-180-3]).  Note the JSMS
+      only supports key transport and not key agreement (since key
+      agreement can always be turned into key transport).
    Value:  The CMK encrypted under the specified algorithm and key.
 
 4.5.1.  Message Encryption
@@ -708,8 +708,8 @@ Internet-Draft                    JSMS                     February 2011
    8.  If not using an AEAD algorithm, compute the function I = MAC(CIK,
        C) using the chosen integrity algorithm.  Note that this is EtA
        encryption which is considered the best cryptographic choice
-       ([krawczyk-ate]).  Set the Integrity.Value element equal to the
-       base64-encoded representation of I.
+       (See:  [krawczyk-ate]).  Set the Integrity.Value element equal to
+       the base64-encoded representation of I.
 
 4.5.2.  Message Decryption
 
@@ -724,9 +724,9 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 13]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 13]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
    3.  Run the key derivation algorithm (see Section 4.5.3) to generate
@@ -752,15 +752,13 @@ Internet-Draft                    JSMS                     February 2011
    arbitrary length output.  The appropriate number of bits (Length) is
    simply extracted from the beginning of the output.  The KDF name
    "P_XXX" in this document refers the the TLS [RFC5246] PRF using P_XXX
-   as the underlying P_hash function. [[ CJ - when I went to implimnet
-   this, I could not figure out the seed stuff so some clarification of
-   5246 for implementors might be needed here ]]
+   as the underlying P_hash function.
 
    To compute the CEK from the CMK, the label "Encryption" is used.
 
    To compute the CIK from the CMK, the label "Integrity" is used.
 
-   When AEAD algorithms are used the KDF element MUST not be present.
+   When AEAD algorithms are used the KDF element MUST NOT be present.
    When they are not used, it MUST be present.
 
 4.5.4.  CMK Encryption
@@ -780,9 +778,11 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 14]
+
+
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 14]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 4.5.4.2.  Symmetric Encryption
@@ -824,34 +824,27 @@ Internet-Draft                    JSMS                     February 2011
 
 7.  Security Considerations
 
-
-8.  XML Schemas for types
-
-
-9.  References
+   Much more to follow here.
 
 
+8.  References
 
-
-
-
-
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 15]
-
-Internet-Draft                    JSMS                     February 2011
-
-
-9.1.  Normative References
+8.1.  Normative References
 
    [RFC2045]  Freed, N. and N. Borenstein, "Multipurpose Internet Mail
               Extensions (MIME) Part One: Format of Internet Message
+
+
+
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 15]
+
+Internet-Draft                    JSMS                        March 2011
+
+
               Bodies", RFC 2045, November 1996.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119, March 1997.
-
-   [RFC2437]  Kaliski, B. and J. Staddon, "PKCS #1: RSA Cryptography
-              Specifications Version 2.0", RFC 2437, October 1998.
 
    [RFC3339]  Klyne, G., Ed. and C. Newman, "Date and Time on the
               Internet: Timestamps", RFC 3339, July 2002.
@@ -890,19 +883,21 @@ Internet-Draft                    JSMS                     February 2011
               draft-zyp-json-schema-03 (work in progress),
               November 2010.
 
-
-
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 16]
-
-Internet-Draft                    JSMS                     February 2011
-
-
    [FIPS-180-3]
               National Institute of Standards and Technology (NIST),
               "Secure Hash Standard (SHS)", FIPS PUB 180-3,
               October 2008.
 
-9.2.  Informative References
+
+
+
+
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 16]
+
+Internet-Draft                    JSMS                        March 2011
+
+
+8.2.  Informative References
 
    [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
               Resource Identifier (URI): Generic Syntax", STD 66,
@@ -920,6 +915,11 @@ Internet-Draft                    JSMS                     February 2011
               Krawczyk, H., "The Order of Encryption and Authentication
               for Protecting Communications (or: How Secure Is SSL?)",
               Advances in cryptology--CRYPTO 2001 August 2001.
+
+   [GCM]      National Institute of Standards and Technology (NIST),
+              "Recommendation for Block Cipher Modes of Operation:
+              Galois/Counter Mode (GCM) and GMAC", SP 800-38D,
+              November 2007.
 
 
 Appendix A.  JSON Schema
@@ -948,9 +948,9 @@ Appendix A.  JSON Schema
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 17]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 17]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 A.1.  Message Contents Schema
@@ -1004,9 +1004,9 @@ A.1.  Message Contents Schema
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 18]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 18]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 A.2.  Common Elements Schema
@@ -1060,9 +1060,9 @@ A.2.  Common Elements Schema
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 19]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 19]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 A.3.  Signed Message Schema
@@ -1116,9 +1116,9 @@ A.3.  Signed Message Schema
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 20]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 20]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 A.4.  PKIX Certificate Chain Schema
@@ -1144,76 +1144,73 @@ A.4.  PKIX Certificate Chain Schema
 
 A.5.  Encrypted Message Schema
 
-{
-    "description":"An encrypted object",
-    "type":"object",
-    "extends":message_schema,
-    "properties":{
-        "Recipients":{
-            "description":"The list of recipient blocks",
-            "type":"array",
-            "required":true,
-            "items":{
-                "description":"A single recipient block",
-                "type":"Recipient"
-            }
-        },
-        "KDF":{
-            "description":
-            "The KDF used to derive the MAC and encryption keys",
-            "type":"string",
-            "enum":["P_SHA256"]
-        },
-        "Encryption":{
-            "description":
-            "The encryption control information for the entire message",
-            "type":"object",
-            "required":true,
+   {
+       "description":"An encrypted object",
+       "type":"object",
+       "extends":message_schema,
+       "properties":{
+           "Recipients":{
+               "description":"The list of recipient blocks",
+               "type":"array",
+               "required":true,
+               "items":{
+                   "description":"A single recipient block",
+                   "type":"Recipient"
+               }
+           },
+           "KDF":{
+               "description":
+               "The KDF used to derive the MAC and encryption keys",
+               "type":"string",
+               "enum":["P_SHA256"]
+           },
+           "Encryption":{
+               "description":"Encryption control information",
+               "type":"object",
+               "required":true,
+               "properties":{
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 21]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 21]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
-            "properties":{
-                "Algorithm":{
-                    "description":"The algorithm used to encrypt",
-                    "type":"string",
-                    "enum":["AES-256-CBC"]
-                },
-                "IV":{
-                    "description":"The initialization vector (base64)",
-                    "type":"string"
-                }
-            }
-        },
-        "Integrity":{
-            "description":"The integrity control information",
-            "type":"object",
-            "properties":{
-                "Algorithm":{
-                    "description":"The MAC algorithm",
-                    "type":"string",
-                    "enum":["HMAC-SHA-256"]
-                },
-                "Value":{
-                    "description":"The MAC value (base64-encoded)",
-                    "type":"string",
-                    "required":true
-                }
-            }
-        },
-        "Data":{
-            "description":"The ciphertext (Base64-encoded)",
-            "type":"string",
-            "required":true
-        }
-    }
-}
-
-
+                   "Algorithm":{
+                       "description":"The algorithm used to encrypt",
+                       "type":"string",
+                       "enum":["AES-256-CBC"]
+                   },
+                   "IV":{
+                       "description":"Initialization vector (base64)",
+                       "type":"string"
+                   }
+               }
+           },
+           "Integrity":{
+               "description":"The integrity control information",
+               "type":"object",
+               "properties":{
+                   "Algorithm":{
+                       "description":"The MAC algorithm",
+                       "type":"string",
+                       "enum":["HMAC-SHA-256"]
+                   },
+                   "Value":{
+                       "description":"The MAC value (base64-encoded)",
+                       "type":"string",
+                       "required":true
+                   }
+               }
+           },
+           "Data":{
+               "description":"The ciphertext (Base64-encoded)",
+               "type":"string",
+               "required":true
+           }
+       }
+   }
 
 
 
@@ -1228,48 +1225,51 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 22]
+
+
+
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 22]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 A.6.  Recipient Schema
 
-{
-    "description":"The recipient of an encrypted object",
-    "type":"object",
-    "id":"Recipient",
-    "properties":{
-        "KEKidentifier":{
-            "type":"object",
-            "description":"Identifies the key encrypting key",
-            "properties":{
-                "RecipientName":{
-                    "type":"string",
-                    "description":"The recipient's name",
-                    "format":"uri"
-                },
-                "CertificateDigest":{
-                    "type":"string",
-                    "description":"Recipient's certificate fingerprint"
-                },
-                "KeyIdentifier":{
-                    "type":"string",
-                    "description": "Shared symmetric key (opaque)"
-                }
-            }
-        },
-        "Algorithm":{
-            "description":"The algorithm used to protect the CMK",
-            "type":"string",
-            "enum":["RSA-PKCS1-1.5", "AES-256-CBC"]
-        },
-        "Value":{
-            "description": "Base64 representation of the encrypted CMK",
-            "type":"string"
-        }
-    }
-}
+   {
+       "description":"The recipient of an encrypted object",
+       "type":"object",
+       "id":"Recipient",
+       "properties":{
+           "KEKidentifier":{
+               "type":"object",
+               "description":"Identifies the key encrypting key",
+               "properties":{
+                   "RecipientName":{
+                       "type":"string",
+                       "description":"The recipient's name",
+                       "format":"uri"
+                   },
+                   "CertificateDigest":{
+                       "type":"string",
+                       "description":"Recipient's cert fingerprint"
+                   },
+                   "KeyIdentifier":{
+                       "type":"string",
+                       "description": "Shared symmetric key (opaque)"
+                   }
+               }
+           },
+           "Algorithm":{
+               "description":"The algorithm used to protect the CMK",
+               "type":"string",
+               "enum":["RSA-PKCS1-1.5", "AES-256-CBC"]
+           },
+           "Value":{
+               "description": "Base64 of the encrypted CMK",
+               "type":"string"
+           }
+       }
+   }
 
 
 Appendix B.  Acknowledgments
@@ -1284,9 +1284,9 @@ Appendix B.  Acknowledgments
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 23]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 23]
 
-Internet-Draft                    JSMS                     February 2011
+Internet-Draft                    JSMS                        March 2011
 
 
 Authors' Addresses
@@ -1340,5 +1340,5 @@ Authors' Addresses
 
 
 
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 24]
+Rescorla & Hildebrand   Expires September 8, 2011              [Page 24]
 
