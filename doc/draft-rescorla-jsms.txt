@@ -2,7 +2,7 @@
 
 
 Network Working Group                                        E. Rescorla
-Internet-Draft                                                     Skype
+Internet-Draft                                                RTFM, Inc.
 Intended status:  Standards Track                          J. Hildebrand
 Expires:  September 1, 2011                          Cisco Systems, Inc.
                                                        February 28, 2011
@@ -15,11 +15,11 @@ Abstract
 
    Many applications require the ability to send cryptographically
    secured messages.  While the IETF has defined a number of formats for
-   such messages [TODO:  REF CMS, PEM, OpenPGP], those formats use
-   encodings which are not congenial for Web applications.  This
-   document describes a new cryptographic message format which is based
-   on JavaScript Object Notation (JSON) and thus is easy for Web
-   applications to generate and parse.
+   such messages, such as CMS, those formats use encodings which are not
+   congenial for Web applications.  This document describes a new
+   cryptographic message format which is based on JavaScript Object
+   Notation (JSON) and thus is easy for Web applications to generate and
+   parse.
 
 Status of this Memo
 
@@ -137,13 +137,11 @@ Table of Contents
      4.6.  Composition  . . . . . . . . . . . . . . . . . . . . . . . 15
    5.  Version Processing . . . . . . . . . . . . . . . . . . . . . . 15
    6.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 15
-   7.  Open Issues  . . . . . . . . . . . . . . . . . . . . . . . . . 15
-   8.  Security Considerations  . . . . . . . . . . . . . . . . . . . 15
-   9.  XML Schemas for types  . . . . . . . . . . . . . . . . . . . . 15
-   10. Interoperabilty  . . . . . . . . . . . . . . . . . . . . . . . 16
-   11. References . . . . . . . . . . . . . . . . . . . . . . . . . . 16
-     11.1. Normative References . . . . . . . . . . . . . . . . . . . 16
-     11.2. Informative References . . . . . . . . . . . . . . . . . . 17
+   7.  Security Considerations  . . . . . . . . . . . . . . . . . . . 15
+   8.  XML Schemas for types  . . . . . . . . . . . . . . . . . . . . 15
+   9.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+     9.1.  Normative References . . . . . . . . . . . . . . . . . . . 16
+     9.2.  Informative References . . . . . . . . . . . . . . . . . . 17
    Appendix A.  JSON Schema . . . . . . . . . . . . . . . . . . . . . 17
      A.1.  Message Contents Schema  . . . . . . . . . . . . . . . . . 18
      A.2.  Common Elements Schema . . . . . . . . . . . . . . . . . . 19
@@ -164,6 +162,8 @@ Table of Contents
 
 
 
+
+
 Rescorla & Hildebrand   Expires September 1, 2011               [Page 3]
 
 Internet-Draft                    JSMS                     February 2011
@@ -173,22 +173,22 @@ Internet-Draft                    JSMS                     February 2011
 
    Many applications require the ability to send cryptographically
    secured (encrypted, digitally signed, etc.) messages.  While the IETF
-   has defined a number of formats for such messages [TODO:  REF CMS,
-   PEM, OpenPGP], those formats are widely viewed as being excessively
-   complicated for the demands of Web applications, which typically only
-   need the ability to secure simple messages.  In addition, existing
-   formats use encoding mechanisms (e.g., ASN.1 BER/DER) which are not
-   congenial for Web applications.  This presents an obstacle to the
-   deployment of strong security by such applications.
+   has defined a number of formats for such messages, those formats are
+   widely viewed as being excessively complicated for the demands of Web
+   applications, which typically only need the ability to secure simple
+   messages.  In addition, existing formats use encoding mechanisms
+   (e.g., ASN.1 BER/DER) which are not congenial for Web applications.
+   This presents an obstacle to the deployment of strong security by
+   such applications.
 
    This document describes a new cryptographic message format,
    JavaScript Message Security (JSMS) intended to meet the need of the
    Web environment.  While JSMS is modelled on existing formats -
-   principally CMS [TODO:  REF]--it uses JavaScript Object Notation
-   (JSON) rather than ASN.1/BER/DER, making it far easier for Web
-   applications to handle.  In the interest of simplicity, JSMS also
-   omits as many as possible of the CMS modes (multiple signatures,
-   password-based encryption).
+   principally CMS [RFC5652]--it uses JavaScript Object Notation (JSON)
+   rather than ASN.1/BER/DER, making it far easier for Web applications
+   to handle.  In the interest of simplicity, JSMS also omits as many as
+   possible of the CMS modes (multiple signatures, password-based
+   encryption).
 
 
 2.  Conventions Used In This Document
@@ -252,14 +252,13 @@ Internet-Draft                    JSMS                     February 2011
       might be more convenient, but consistency is even more important
       to reduce implementation complexity.
    No canonicalization
-      In most cryptographic message formats (CMS, PKIX, XML-DSIG [TODO:
-      REF]), canonical encodings are used to allow the same value to be
-      computed at both sender and recipient (e.g., for digital
-      signatures).  This is inconvenient in JSON, which just views
-      messages as a bundle of key/value pairs.  Instead, whenever
-      canonicalization would be required, the relevant data is
-      serialized and base64-encoded for transport, allowing both sides
-      to run computations over the same original set of octets.
+      In many cryptographic message formats, canonical encodings are
+      used to allow the same value to be computed at both sender and
+      recipient (e.g., for digital signatures).  This is inconvenient in
+      JSON, which just views messages as a bundle of key/value pairs.
+      Instead, whenever canonicalization would be required, the relevant
+      data is serialized and base64-encoded for transport, allowing both
+      sides to run computations over the same original set of octets.
    In-memory processing
       We assume that the entire message can fit in main memory and make
       no effort to design a wire representation which can be handled in
@@ -270,6 +269,7 @@ Internet-Draft                    JSMS                     February 2011
       most convenient for the JSON implementation.  The examples in this
       document are generally shown in whatever order seems most readable
       and are not normative.
+
 
 
 
@@ -287,12 +287,14 @@ Internet-Draft                    JSMS                     February 2011
    one of the trickier parts of building a cryptographic system.  While
    JSMS supports PKIX certificates, its certificate processing is far
    simpler than that of CMS.  When a JSMS agent provides its
-   certificate, it must provide an ordered chain (as in TLS [REF])
+   certificate, it must provide an ordered chain (as in TLS [RFC5246])
    terminating in its own certificate, thus removing the need to
-   construct certificate paths.  In addition, because many
-   implementations will not want to do any ASN.1/BER processing at all,
-   we define a Web Service which applications can use for chain
-   validation.  (See [TODO]).
+   construct certificate paths.  The certificates MUST be ordered with
+   the end-entity certificate first and each certificate that follows
+   signing the certificate immediately preceding it.  In addition,
+   because many implementations will not want to do any ASN.1/BER
+   processing at all, we define a Web Service which applications can use
+   for chain validation.  (See [TODO]).
 
 3.4.  Certificate Discovery
 
@@ -330,8 +332,6 @@ Internet-Draft                    JSMS                     February 2011
 
 
 
-
-
 Rescorla & Hildebrand   Expires September 1, 2011               [Page 6]
 
 Internet-Draft                    JSMS                     February 2011
@@ -353,8 +353,8 @@ Internet-Draft                    JSMS                     February 2011
       content.  This field MUST be included.
    Data:  The data value MUST be included as a text encoded as Base64
       (See:  [RFC4648]).
-   ID An OPTIONAL unqiue ID that idenitfies this message, for use in
-      detecting replay attacks.
+   ID An OPTIONAL globally unique ID that idenitfies this message, for
+      use in detecting replay attacks.
    Created  An OPTIONAL field describing the UTC date/time that the
       content was encoded into JSON, formatted according to the "date-
       time" production of [RFC3339].
@@ -362,7 +362,7 @@ Internet-Draft                    JSMS                     February 2011
    Signing and encryption transform a "Content" object into "Signed" and
    "Encrypted" objects respectively.  Verification and decryption
    transform "Signed" and "Encrypted" objects back into "Content"
-   objects.
+   objects.  For example:
 
    {
        "ContentType":"text/plain; charset=UTF-8",
@@ -406,9 +406,8 @@ Internet-Draft                    JSMS                     February 2011
 
    A "signed" message contains a signed data block plus a digital
    signature over that data.  To simplify implementation, only one
-   signer is allowed, and there are no optimisitc signing requirements.
-   In addition to the required fields from Section 4.3, the fields in a
-   signature message are:
+   signer is allowed.  In addition to the required fields from
+   Section 4.3, the fields in a signature message are:
 
 
    SignedData:  This field MUST consist of a Base64-encoded "Content"
@@ -422,7 +421,7 @@ Internet-Draft                    JSMS                     February 2011
       This field MUST be present for RSA-based signatures but MAY be
       omitted for future signatures which do not allow flexible digests.
       For now, this field MUST have the value "SHA-256", meaning the
-      digest algorithm was SHA-256 [TODO:  insert ref].
+      digest algorithm was SHA-256 [FIPS-180-3].
 
    SignatureAlgorithm:  The signature algorithm used to compute the
       signature.  This field MUST be present.  For now, this field MUST
@@ -437,6 +436,7 @@ Internet-Draft                    JSMS                     February 2011
 
    Signature:  The Base64-endoded signature, which MUST be included (see
       Section 4.4.1).
+
 
 
 
@@ -708,8 +708,8 @@ Internet-Draft                    JSMS                     February 2011
    8.  If not using an AEAD algorithm, compute the function I = MAC(CIK,
        C) using the chosen integrity algorithm.  Note that this is EtA
        encryption which is considered the best cryptographic choice
-       ([TODO:  REF Canetti]).  Set the Integrity.Value element equal to
-       the base64-encoded representation of I.
+       ([krawczyk-ate]).  Set the Integrity.Value element equal to the
+       base64-encoded representation of I.
 
 4.5.2.  Message Decryption
 
@@ -822,16 +822,16 @@ Internet-Draft                    JSMS                     February 2011
    o  Well known HTTP URLs
 
 
-7.  Open Issues
-
-   Reading the number of ways AEAD is handled differently, I don't want
-   it.
+7.  Security Considerations
 
 
-8.  Security Considerations
+8.  XML Schemas for types
 
 
-9.  XML Schemas for types
+9.  References
+
+
+
 
 
 
@@ -841,15 +841,7 @@ Rescorla & Hildebrand   Expires September 1, 2011              [Page 15]
 Internet-Draft                    JSMS                     February 2011
 
 
-10.  Interoperabilty
-
-   Can you take a CMS message you don't have the keys for and tear it
-   apart and form a JSMS message and visa versa?
-
-
-11.  References
-
-11.1.  Normative References
+9.1.  Normative References
 
    [RFC2045]  Freed, N. and N. Borenstein, "Multipurpose Internet Mail
               Extensions (MIME) Part One: Format of Internet Message
@@ -889,14 +881,6 @@ Internet-Draft                    JSMS                     February 2011
               (CRL) Profile", RFC 5280, May 2008.
 
    [RFC5649]  Housley, R. and M. Dworkin, "Advanced Encryption Standard
-
-
-
-Rescorla & Hildebrand   Expires September 1, 2011              [Page 16]
-
-Internet-Draft                    JSMS                     February 2011
-
-
               (AES) Key Wrap with Padding Algorithm", RFC 5649,
               September 2009.
 
@@ -906,7 +890,19 @@ Internet-Draft                    JSMS                     February 2011
               draft-zyp-json-schema-03 (work in progress),
               November 2010.
 
-11.2.  Informative References
+
+
+Rescorla & Hildebrand   Expires September 1, 2011              [Page 16]
+
+Internet-Draft                    JSMS                     February 2011
+
+
+   [FIPS-180-3]
+              National Institute of Standards and Technology (NIST),
+              "Secure Hash Standard (SHS)", FIPS PUB 180-3,
+              October 2008.
+
+9.2.  Informative References
 
    [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
               Resource Identifier (URI): Generic Syntax", STD 66,
@@ -917,6 +913,14 @@ Internet-Draft                    JSMS                     February 2011
               WebFinger Protocol", draft-hammer-webfinger-00 (work in
               progress), October 2009.
 
+   [RFC5652]  Housley, R., "Cryptographic Message Syntax (CMS)", STD 70,
+              RFC 5652, September 2009.
+
+   [krawczyk-ate]
+              Krawczyk, H., "The Order of Encryption and Authentication
+              for Protecting Communications (or: How Secure Is SSL?)",
+              Advances in cryptology--CRYPTO 2001 August 2001.
+
 
 Appendix A.  JSON Schema
 
@@ -924,10 +928,6 @@ Appendix A.  JSON Schema
    document, in conformance with [I-D.zyp-json-schema].  Because
    validation of JSON documents is optional, these schemas are not
    normative and are provided for descriptive purposes only.
-
-
-
-
 
 
 
@@ -1292,12 +1292,12 @@ Internet-Draft                    JSMS                     February 2011
 Authors' Addresses
 
    Eric Rescorla
-   Skype
-   8000 Marina Blvd
-   Brisbane, CA  94005
+   RTFM, Inc.
+   2064 Edgewood Drive
+   Palo Alto, CA  94303
    USA
 
-   Email:  ekr@skype.net
+   Email:  ekr@rtfm.com
 
 
    Joe Hildebrand

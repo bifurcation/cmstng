@@ -13,6 +13,8 @@
 <!ENTITY rfc5246 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5246.xml">
 <!ENTITY rfc5280 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5280.xml">
 <!ENTITY rfc5649 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5649.xml">
+<!ENTITY rfc5652 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.5652.xml">
+
 <!ENTITY webfinger SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-hammer-webfinger-00.xml">
 <!ENTITY jsonschema SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-zyp-json-schema-03.xml">
 ]>
@@ -31,22 +33,22 @@
     <title abbrev="JSMS">JavaScript Message Security Format</title>
 
     <author fullname="Eric Rescorla" initials="E." surname="Rescorla">
-      <organization>Skype</organization>
+      <organization>RTFM, Inc.</organization>
 
       <address>
         <postal>
-          <street>8000 Marina Blvd</street>
+          <street>2064 Edgewood Drive</street>
 
-          <city>Brisbane</city>
+          <city>Palo Alto</city>
 
           <region>CA</region>
 
-          <code>94005</code>
+          <code>94303</code>
 
           <country>USA</country>
         </postal>
 
-        <email>ekr@skype.net</email>
+        <email>ekr@rtfm.com</email>
       </address>
     </author>
 
@@ -75,7 +77,7 @@
     <abstract>
       <t>Many applications require the ability to send cryptographically
       secured messages. While the IETF has defined a number of formats for
-      such messages [TODO: REF CMS, PEM, OpenPGP], those formats use encodings
+      such messages, such as CMS, those formats use encodings
       which are not congenial for Web applications. This document describes a
       new cryptographic message format which is based on JavaScript Object
       Notation (JSON) and thus is easy for Web applications to generate and
@@ -87,8 +89,8 @@
     <section title="Introduction">
       <t>Many applications require the ability to send cryptographically
       secured (encrypted, digitally signed, etc.) messages. While the IETF has
-      defined a number of formats for such messages [TODO: REF CMS, PEM,
-      OpenPGP], those formats are widely viewed as being excessively
+      defined a number of formats for such messages,
+      those formats are widely viewed as being excessively
       complicated for the demands of Web applications, which typically only
       need the ability to secure simple messages. In addition, existing
       formats use encoding mechanisms (e.g., ASN.1 BER/DER) which are not congenial
@@ -98,7 +100,7 @@
       <t>This document describes a new cryptographic message format,
       JavaScript Message Security (JSMS) intended to meet the need of the Web
       environment. While JSMS is modelled on existing formats - principally
-      CMS [TODO: REF]--it uses JavaScript Object Notation (JSON) rather than
+      CMS <xref target="RFC5652"/>--it uses JavaScript Object Notation (JSON) rather than
       ASN.1/BER/DER, making it far easier for Web applications to handle. In
       the interest of simplicity, JSMS also omits as many as possible of the
       CMS modes (multiple signatures, password-based encryption).</t>
@@ -170,8 +172,8 @@
 
           <t hangText="No canonicalization"></t>
 
-          <t>In most cryptographic message formats (CMS, PKIX,
-          XML-DSIG [TODO: REF]), canonical encodings are used to allow
+          <t>In many cryptographic message formats,
+	  canonical encodings are used to allow
           the same value to be computed at both sender and recipient
           (e.g., for digital signatures). This is inconvenient in
           JSON, which just views messages as a bundle of key/value
@@ -200,9 +202,12 @@
         is one of the trickier parts of building a cryptographic system. While
         JSMS supports PKIX certificates, its certificate processing is far
         simpler than that of CMS. When a JSMS agent provides its certificate,
-        it must provide an ordered chain (as in TLS [REF]) terminating in its
+        it must provide an ordered chain (as in TLS <xref target="RFC5246"/>) terminating in its
         own certificate, thus removing the need to construct certificate
-        paths. In addition, because many implementations will not want to do
+	paths. The certificates MUST be ordered with the end-entity
+	certificate first and each certificate that follows signing
+	the certificate immediately preceding it.
+	In addition, because many implementations will not want to do
         any ASN.1/BER processing at all, we define a Web Service which
         applications can use for chain validation. (See [TODO]).</t>
       </section>
@@ -266,7 +271,7 @@
             <t hangText="Data:">The data value MUST be included as a
             text encoded as Base64 (See: <xref target="RFC4648"></xref>).</t>
 
-            <t hangText="ID">An OPTIONAL unqiue ID that idenitfies this
+            <t hangText="ID">An OPTIONAL globally unique ID that idenitfies this
             message, for use in detecting replay attacks.</t>
 
             <t hangText="Created">An OPTIONAL field describing the UTC
@@ -278,7 +283,7 @@
         <t>Signing and encryption transform a "Content" object into "Signed"
         and "Encrypted" objects respectively. Verification and decryption
         transform "Signed" and "Encrypted" objects back into "Content"
-        objects.</t>
+        objects. For example:</t>
 
        <figure anchor="fig.content" title="Content Example">
           <!--begin-pdu-->
@@ -320,8 +325,7 @@
       <section anchor="sec.signed" title="Signed Data">
         <t>A "signed" message contains a signed data block plus a digital
         signature over that data. To simplify implementation, only one
-        signer is allowed, and there are no optimisitc signing
-        requirements.  In addition to the required fields from <xref
+        signer is allowed. In addition to the required fields from <xref
         target="sec.message-common"/>, the fields in a signature
         message are:</t>
 
@@ -342,8 +346,9 @@
             the signature. This field MUST be present for RSA-based signatures
             but MAY be omitted for future signatures which do not allow
             flexible digests.  For now, this field MUST have the value
-            "SHA-256", meaning the digest algorithm was SHA-256 [TODO:
-            insert ref].</t>
+            "SHA-256", meaning the digest algorithm was SHA-256 
+	    <xref target="FIPS-180-3"/>.
+	    </t>
 
             <t></t>
 
@@ -656,7 +661,7 @@
               <t>If not using an AEAD algorithm, compute the function I =
               MAC(CIK, C) using the chosen integrity algorithm. Note that this
               is EtA encryption which is considered the best cryptographic
-              choice ([TODO: REF Canetti]). Set the Integrity.Value element
+              choice (<xref target="krawczyk-ate"/>). Set the Integrity.Value element
               equal to the base64-encoded representation of I.</t>
             </list></t>
         </section>
@@ -776,20 +781,18 @@
           <t>Well known HTTP URLs</t>
         </list></t>
     </section>
+    
 
+    <!--
     <section title="Open Issues">
       <t>Reading the number of ways AEAD is handled differently, I don't want
       it.</t>
     </section>
+    -->
 
     <section anchor="sec.sec-cons" title="Security Considerations"></section>
 
     <section title="XML Schemas for types"></section>
-
-    <section title="Interoperabilty">
-      <t>Can you take a CMS message you don't have the keys for and tear it
-      apart and form a JSMS message and visa versa?</t>
-    </section>
 
  </middle>
 
@@ -820,12 +823,38 @@
       &rfc5649;
 
       &jsonschema;
+
+      <reference anchor="FIPS-180-3">
+ <front>
+ <title>Secure Hash Standard (SHS)</title>
+ <author>
+ <organization>National Institute of Standards and Technology (NIST)
+ </organization>
+ </author>
+ <date month="October" year="2008" />
+ </front>
+ <seriesInfo name="FIPS" value="PUB 180-3" />
+ </reference>
+
     </references>
 
     <references title="Informative References">
       &rfc3986;
 
       &webfinger;
+      
+      &rfc5652;
+
+      <reference anchor="krawczyk-ate">
+	<front>
+	<title>The Order of Encryption and Authentication for Protecting Communications (or: How Secure Is SSL?)</title>
+	
+	<author fullname="Hugo Krawczyk" initials="H." surname="Krawczyk">
+	</author>
+	</front>
+	<seriesInfo name="Advances in cryptology--CRYPTO 2001" value="August 2001"/>
+      </reference>
+      
     </references>
 
     <section title="JSON Schema">
