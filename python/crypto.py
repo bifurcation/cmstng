@@ -173,9 +173,9 @@ happen on get.  The default type is plain."""
 
 @Props("Type")
 class CryptoTyped(Identity):
-    """The base class for all crypto objects.  Crypto objects contain
-    a dictionary that holds their state in a form easy to be
-    translated to JSON.  Getters and setters modify the JSON
+    """The base class for all top-level crypto objects.  Crypto
+    objects contain a dictionary that holds their state in a form easy
+    to be translated to JSON.  Getters and setters modify the JSON
     dictionary."""
     def __init__(self, json=None):
         super(CryptoTyped,self).__init__()
@@ -239,9 +239,9 @@ class CryptoTyped(Identity):
         return s
 
 @Props("Version")
-class CryptoBase(CryptoTyped):
+class CryptoVersioned(CryptoTyped):
     def __init__(self, json=None, ver=version):
-        super(CryptoBase, self).__init__(json)
+        super(CryptoVersioned, self).__init__(json)
         if json:
             if json.get("Version", None) != ver:
                 raise CryptoException("Invalid version")
@@ -249,7 +249,7 @@ class CryptoBase(CryptoTyped):
             self.json_["Version"] = ver
 
     def __cmp__(self, other):
-        r = super(CryptoBase, self).__cmp__(other)
+        r = super(CryptoVersioned, self).__cmp__(other)
         if r:
             return r
         r = cmp(self.Version, other.Version)
@@ -309,7 +309,7 @@ class CertificateExtension(CryptoTyped):
         
 @Props("Name", "PublicKey", "Hash", "Serial", "Extensions", "CriticalExtensions", NotBefore=DateCodec, NotAfter=DateCodec)
 @TypeName("certificate")
-class Certificate(CryptoBase):
+class Certificate(CryptoVersioned):
     def __init__(self, name=None, pubkey=None, serial=None, 
                  validityDays=None, notBefore=None, notAfter=None,
                  json=None):
@@ -421,7 +421,7 @@ class PublicKey(CryptoTyped):
 
 @Props("PublicKey", Algorithm=["RSA-PKCS1-1.5"], PrivateExponent=LongCodec, Prime1=LongCodec, Prime2=LongCodec, Exponent1=LongCodec, Exponent2=LongCodec, Coefficient=LongCodec)
 @TypeName("privatekey")
-class PrivateKey(CryptoBase):
+class PrivateKey(CryptoVersioned):
     def __init__(self, key=None, size=1024, json=None):
         super(PrivateKey, self).__init__(json)
         if not json:
@@ -511,7 +511,7 @@ class Signature(CryptoTyped):
 
 @Props(Signature=Signature, SignedData=Base64codec)
 @TypeName("signed")
-class Signed(CryptoBase):
+class Signed(CryptoVersioned):
     def __init__(self, data=None, contentType="text/plain", name=None, json=None):
         super(Signed, self).__init__(json)
         if data:
@@ -578,7 +578,7 @@ class Integrity(CryptoTyped):
 
 @Props("ContentType", "Data", "Name", Date=DateCodec)
 @TypeName("content")
-class Content(CryptoBase):
+class Content(CryptoVersioned):
     def __init__(self, data=None, contentType=None, date=None, name=None, json=None):
         super(Content, self).__init__(json)
         if data:
@@ -594,7 +594,7 @@ class Content(CryptoBase):
 
 @Props("Recipients", Encryption=Encryption, Integrity=Integrity, EncryptedData=Base64codec)
 @TypeName("encrypted")
-class Encrypted(CryptoBase):
+class Encrypted(CryptoVersioned):
     def __init__(self, data=None, contentType="text/plain", name=None, json=None):
         super(Encrypted, self).__init__(json)
         if data:
