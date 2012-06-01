@@ -1,0 +1,840 @@
+
+
+
+Network Working Group                                          R. Barnes
+Internet-Draft                                          BBN Technologies
+Intended status:  Standards Track                            E. Rescorla
+Expires:  January 2, 2012                                     RTFM, Inc.
+                                                           J. Hildebrand
+                                                     Cisco Systems, Inc.
+                                                            July 1, 2011
+
+
+                   JavaScript Message Security Format
+                       draft-rescorla-jsms-00.txt
+
+Abstract
+
+   Many applications require the ability to send cryptographically
+   secured messages.  While the IETF has defined a number of formats for
+   such messages (e.g.  CMS) those formats use encodings which are not
+   congenial for Web applications.  This document describes a new
+   cryptographic message format which is based on JavaScript Object
+   Notation (JSON) and thus is easy for Web applications to generate and
+   parse.
+
+Status of this Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on January 2, 2012.
+
+Copyright Notice
+
+   Copyright (c) 2011 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 1]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+
+Table of Contents
+
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
+   2.  Conventions Used In This Document  . . . . . . . . . . . . . .  3
+   3.  Overview . . . . . . . . . . . . . . . . . . . . . . . . . . .  3
+     3.1.  Operational Modes  . . . . . . . . . . . . . . . . . . . .  3
+     3.2.  Conventions  . . . . . . . . . . . . . . . . . . . . . . .  4
+     3.3.  Certificate Processing . . . . . . . . . . . . . . . . . .  5
+     3.4.  Certificate Discovery  . . . . . . . . . . . . . . . . . .  5
+   4.  Message Format . . . . . . . . . . . . . . . . . . . . . . . .  5
+     4.1.  Data types . . . . . . . . . . . . . . . . . . . . . . . .  5
+     4.2.  Common Elements  . . . . . . . . . . . . . . . . . . . . .  6
+     4.3.  SignedData . . . . . . . . . . . . . . . . . . . . . . . .  6
+     4.4.  AuthenticatedData  . . . . . . . . . . . . . . . . . . . .  7
+     4.5.  EncryptedData  . . . . . . . . . . . . . . . . . . . . . .  7
+     4.6.  Useful Objects . . . . . . . . . . . . . . . . . . . . . .  8
+       4.6.1.  AlgorithmIdentifier  . . . . . . . . . . . . . . . . .  8
+       4.6.2.  PublicKey  . . . . . . . . . . . . . . . . . . . . . .  8
+       4.6.3.  WrappedSymmetricKey  . . . . . . . . . . . . . . . . .  9
+   5.  Examples . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+     5.1.  Parameters . . . . . . . . . . . . . . . . . . . . . . . . 10
+     5.2.  SignedData . . . . . . . . . . . . . . . . . . . . . . . . 11
+     5.3.  AuthenticatedData  . . . . . . . . . . . . . . . . . . . . 11
+     5.4.  EncryptedData  . . . . . . . . . . . . . . . . . . . . . . 11
+   6.  Mapping to CMS . . . . . . . . . . . . . . . . . . . . . . . . 12
+   7.  Version Processing . . . . . . . . . . . . . . . . . . . . . . 12
+   8.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 13
+   9.  Security Considerations  . . . . . . . . . . . . . . . . . . . 13
+   10. References . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+     10.1. Normative References . . . . . . . . . . . . . . . . . . . 13
+     10.2. Informative References . . . . . . . . . . . . . . . . . . 14
+   Appendix A.  Acknowledgments . . . . . . . . . . . . . . . . . . . 14
+   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . 15
+
+
+
+
+
+
+
+
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 2]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+1.  Introduction
+
+   Many applications require the ability to send cryptographically
+   secured (encrypted, digitally signed, etc.) messages.  While the IETF
+   has defined a number of formats for such messages, those formats are
+   widely viewed as being excessively complicated for the demands of Web
+   applications, which typically only need the ability to secure simple
+   messages.  In addition, existing formats use encoding mechanisms
+   (e.g., ASN.1 BER/DER) which are not congenial for Web applications.
+   This presents an obstacle to the deployment of strong security by
+   such applications.
+
+   This document describes a new cryptographic message format,
+   JavaScript Message Security (JSMS) intended to meet the need of the
+   Web environment.  While JSMS is modeled on existing formats --
+   principally CMS [RFC5652] -- it uses JavaScript Object Notation
+   (JSON) rather than ASN.1/BER/DER, making it far easier for Web
+   applications to handle.  In the interest of simplicity, JSMS also
+   omits as many as possible of the CMS modes (multiple signatures,
+   password-based encryption).
+
+
+2.  Conventions Used In This Document
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in [RFC2119].
+
+   [Notes on Base64 encoding]
+
+
+3.  Overview
+
+   The JSMS message format is simply a JSON [RFC4627] dictionary with an
+   appropriate collection of fields.  Each operating mode will have a
+   separate set of fields, with a common field to distinguish between
+   the modes.
+
+3.1.  Operational Modes
+
+   JSMS supports two operational modes:
+
+   Encrypted Data
+      A block of data encrypted under a random message encryption key
+      (MEK).  The MEK is then separately encrypted for each recipient,
+      either via symmetric or asymmetric encryption.  The data is always
+      integrity protected, either via a separate Message Authentication
+      Code (MAC) or an Authenticated Encryption with Associated Data
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 3]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+      (AEAD) algorithm such as AES-GCM or AES-CCM.
+   Signed Data
+      A block of data signed by a single signer using his asymmetric key
+      and optionally carrying his certificate.  Multiple signatures are
+      not permitted in order to keep things simple.
+
+   Any other desired security functions are provided by composition of
+   these modes.  For instance, a signed and encrypted message is
+   produced by first creating a Signed message and then encrypting that
+   data.
+
+3.2.  Conventions
+
+   In general, JSMS follows the following structural conventions:
+
+   Minimize implementation complexity
+      Wherever possible, protocol choices have been made such that the
+      time and effort required to implement the protocol in many
+      different programming languages will be minimized.  This means
+      that optimizations for bandwidth, CPU, and memory utilization have
+      been explicitly avoided.
+   Base64 as the only encoding
+      Any data that does not have a straightforward string
+      representation (binary values, large integers, etc.) is base64-
+      encoded (see:  [RFC4648]).  In some cases, hexadecimal encodings
+      might be more convenient, but consistency is even more important
+      to reduce implementation complexity.
+   No canonicalization
+      In many cryptographic message formats, canonical encodings are
+      used to allow the same value to be computed at both sender and
+      recipient (e.g., for digital signatures).  This is inconvenient in
+      JSON, which just views messages as a bundle of key/value pairs.
+      Instead, whenever canonicalization would be required, the relevant
+      data is serialized and base64-encoded for transport, allowing both
+      sides to run computations over the same original set of octets.
+   In-memory processing
+      We assume that the entire message can fit in main memory and make
+      no effort to design a wire representation which can be handled in
+      small chunks in a single pass.  This means, for instance, that
+      there is no need to have a message digest indicator at the
+      beginning of the message and then the signature at the end, as is
+      done in CMS.  Fields are simply serialized in whatever order is
+      most convenient for the JSON implementation.  The examples in this
+      document are generally shown in whatever order seems most readable
+      and are not normative.
+
+
+
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 4]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+3.3.  Certificate Processing
+
+   Experience has shown that certificate handling (path construction) is
+   one of the trickier parts of building a cryptographic system.  While
+   JSMS supports PKIX certificates, its certificate processing is far
+   simpler than that of CMS.  When a JSMS agent provides its
+   certificate, it must provide an ordered chain (as in TLS [RFC5246])
+   terminating in its own certificate, thus removing the need to
+   construct certificate paths.  The certificates MUST be ordered with
+   the end-entity certificate first and each certificate that follows
+   signing the certificate immediately preceding it.  In addition,
+   because many implementations will not want to do any ASN.1/BER
+   processing at all, we will define a Web Service which applications
+   can use for chain validation and translation to an easy-to-parse
+   format.  (See [TODO]).
+
+3.4.  Certificate Discovery
+
+   JSMS will often be used in an online messaging environment with users
+   that have an address of the form user@domain, such as email, XMPP, or
+   SIP.  As such, protocols such as WebFinger [I-D.hammer-webfinger] or
+   an end-to-end protocol can be used to retrieve appropriate
+   certificates.  Downstream uses of JSMS SHOULD define a discovery
+   mechanism suitable for the intended use.
+
+
+4.  Message Format
+
+   A JSMS object is a JSON dictionary that encodes cryptographic
+   informaton related to a content byte string.  This document specifies
+   the set of keys that must be present in a JSMS object, and what the
+   associated values are.  In general, these keys are chosen to be short
+   but mnemonic, in order to minimize the size of JSMS objects while
+   still being easy to use.  In processing JSMS objects, unknown
+   dictionary keys MUST be ignored.
+
+   JSMS defines three top-level types of secure object, each of which
+   provides a specific cryptographic protection to a byte string.
+   SignedData:  Signature using a public-key digital signature algorithm
+   AuthenticatedData:  Authentication using a Message Authentication
+      Code (MAC)
+   EncryptedData:  Encryption and authentication using an Authenticated
+      Encryption with Associated Data (AEAD) algorithm
+
+4.1.  Data types
+
+   For each field in a JSON object, we define the type of information
+   that must be included in that field.  At base are the object, array,
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 5]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   string, number types defined by JSON.  We also use two special sub-
+   classes of strings:  Fields with type "token" contain a string drawn
+   from an IANA registry of strings (e.g., for algorithm identifiers).
+   Fields with type "bytes" contain a Base64-encoded byte string (note
+   the considerations related to Base64 encoding in Section [[REF]]
+   above).
+
+   In addition to the primitive data types, Section [[REF]] defines a
+   collection of useful object types that are used by the top-level JSMS
+   objects.  These are simply referred to by name when they appear as a
+   field value in another object.
+
+   [[ TODO:  For TOKEN values, define what registry they should be drawn
+   from ]]
+
+4.2.  Common Elements
+
+   The following elements are common to all JSMS messages:
+   "v":  REQUIRED NUMBER The version of JSMS used by this object.  This
+      field MUST be set to 1.
+   "t":  REQUIRED TOKEN The type of this JSMS object.  This field MUST
+      be set to one of the following values
+      "s":  SignedData object
+      "a":  AuthenticatedData object
+      "e":  EncryptedData object
+   "c":  OPTIONAL BYTES The content byte string, Base64-encoded.
+   If the "c" key is not present in a given JSMS object, then the JSMS
+   object is "detached".  In this case, the content must be associated
+   with the JSMS object through some out-of-band mechanism before the
+   JSMS object can be processed.
+
+   [[ Q:  Should we include an option to have a URI pointing to content?
+   ]]
+
+4.3.  SignedData
+
+   A SignedData object MUST have a "t" field set to "s".  In addition, a
+   SignedData object contains the following keys:
+   "da":  REQUIRED AlgorithmIdentifier The digest algorithm used in
+      signing the content. [[ IANA note ]]
+   "sa":  REQUIRED AlgorithmIdentifier The signature algorithm used in
+      signing the content [[ IANA note ]]
+   "s":  REQUIRED BYTES The Base64-encoded signature value
+   "k":  REQUIRED PublicKey The public key identifier for the signer,
+      represented as a PublicKey object (see below)
+
+
+
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 6]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   "c":  OPTIONAL ARRAY A certificate chain associating the signer's
+      public key with an identifier.  Each element in the array is a
+      string containing the Base64-encoded representation of a DER-
+      formatted certificate.  The certificates MUST be ordered with the
+      end-entity certificate first and each certificate that follows
+      signing the certificate immediately preceding it.
+
+   [[ Q:  Include an option to include a URI pointing to a cert/chain?
+   ]]
+
+   [[ How to generate the signature =
+   http://tools.ietf.org/html/rfc5652#section-5.4 and
+   http://tools.ietf.org/html/rfc5652#section-5.5 ]]
+
+   [[ How to verify the signature =
+   http://tools.ietf.org/html/rfc5652#section-5.6 ]]
+
+4.4.  AuthenticatedData
+
+   An AuthenticatedData object MUST have a "t" field set to "a".  In
+   addition, an AuthenticatedData object contains the following keys:
+   "a":  REQUIRED AlgorithmIdentifier The MAC algorithm used to
+      authenticate the content.
+   "m":  REQUIRED BYTES The MAC value
+   "k":  REQUIRED ARRAY Wrapped versions of the symmetric key used for
+      this MAC.  Each element in the array MUST be a WrappedSymmetricKey
+      object (see below).
+
+   [[ How to generate the MAC ==
+   http://tools.ietf.org/html/rfc5652#section-9.2 with no attributes]]
+
+   [[ How to verify the MAC ==
+   http://tools.ietf.org/html/rfc5652#section-9.3 with no attributes ]]
+
+4.5.  EncryptedData
+
+   An EncryptedData object MUST have a "t" field set to "e".  Note also
+   that in an EncryptedData object, the "c" field contains the encrypted
+   form of the content, not the content itself (as plaintext).  An
+   EncryptedData object contains the following keys in addition to any
+   common fields:
+   "a":  REQUIRED AlgorithmIdentifier The encryption algorithm used to
+      encrypt the content
+   "k":  REQUIRED ARRAY Wrapped versions of the symmetric key used to
+      encrypt the content.  Each element in the array MUST be a
+      WrappedSymmetricKey object (see below).
+
+   [[ How to encrypt == http://tools.ietf.org/html/rfc5652#section-6.3]]
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 7]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   [[ How to decrypt?  Don't think this is necessary ]]
+
+4.6.  Useful Objects
+
+   In this section we define some common object types that are used
+   across the top-level objects above.
+
+4.6.1.  AlgorithmIdentifier
+
+   An AlgorithmIdentifier object names a cryptographic algorithm and
+   specifies any associated parameters.  If the algorithm has no
+   parameters, then it the AlgorithmIdentifier object is simply a token
+   represnting the name of the algorithm. [[ Note about registries ]]
+
+   If the algorithm specifies parameters, the AlgorithmIdentifier object
+   is an array.  The first entry in the array is a token represnting the
+   name of the algorithm.  Any subsequent entries are defined by the
+   algorithm.
+
+   [[ TODO:  Define any algorithms we need, or point to external
+   document ]]
+
+   [[ Note:  Only AEAD encryption algorithms allowed.  If you want to
+   use a non-AEAD algorithm, add an HMAC and use
+   draft-mcgrew-aead-aes-cbc-hmac-sha1]]
+
+   Examples:
+      "rsa"
+      "hmac-sha1"
+      ["aes128-cbc", "gPOe6qFL5W7Mhg9ODBLoZg=="]
+      ["aead-gen", "aes128-cbc", "hmac-sha1", { "iv":
+      "gPOe6qFL5W7Mhg9ODBLoZg==", "n":  "0rlhQLrieXchGYbnxxkySg==" }],
+
+4.6.2.  PublicKey
+
+   A PublicKey object describes the public key used by a signer.  The
+   key may be specified as a JSON structure, as a URI, or as an
+   identifier.
+
+   If the key is specified directly, then the PublicKey object MUST be
+   an array.  The first entry in the array is an AlgorithmIdentifier
+   object identifying the algorithm with which the key is to be used.
+   Subsequent entries in the array specify the elements of the key, in a
+   manner determined by the algorithm.
+
+   [[ Format for RSA keys, ["rsa",n,e] ]]
+
+   [[ Format for ECC keys, TBD ]]
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 8]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   If the key is referenced by an opaque identifier or "fingerprint",
+   then the PublicKey object is a two-element JSON array.  The first
+   element is the token "id", and the second element is the SHA-1 hash
+   of the public key, represented as a DER-encoded subjectPublicKeyInfo
+   data structure.  (This fingerprint format is the same as the one
+   included in the subjectKeyIdentifier field in an X.509 certificate.)
+
+   If the key is provided as a URI, then the PublicKey object MUST be a
+   string containing a URI where the key can be retrieved, either in the
+   JSON format described above, or in a DER-encoded PKIX certificate.
+   The method that the recipient of a JSMS object uses to retrieve the
+   key will depend on the URI scheme.  For HTTP URIs, the relying party
+   MUST issue an HTTP request with the GET method and an Accept header
+   including the MIME type for JSMS PublicKey object, "[[MIMETYPE]]".
+   For MAILTO, SIP, and XMPP URIs, the recipient MAY use the WebFinger
+   protocol [[REF]] to retrieve a public key for the user.
+
+   [[ Q:  Should we also allow a fingerprint based on the JSON structure
+   above?  Would need to canonicalize it somehow. ]]
+
+   Examples:
+      ["rsa", 9873955694194590232514048984970761535584766520827432398848
+      323179877576914413107050563833143580841040071254924123181885362208
+      552200375950092400886745004251, 3]
+      ["id", "i1LbR8FCEw-aiFcAAfUvpp75wdY="]
+      "http://example.com/user23/publickey.jsms"
+      "xmpp:juliet@example.com"
+
+4.6.3.  WrappedSymmetricKey
+
+   In JSMS objects that use symmetric keys (for MAC or encryption), it
+   is necessary for the originator to convey the symmetric key used for
+   in JSMS computations to the recipient.  The WrappedSymmetricKey
+   object is a JSON object that allows these keys to be provided either
+   using key transport or key agreement.  The following fields may be
+   present in a WrappedSymmetricKey object:
+   "t":  REQUIRED TOKEN The type of wrapping being done.  This document
+      defines the following two values for this field:
+      "s":  Symmetric key transport.  The "i" field MUST be present.
+         Any other non-required fields are ignored.
+      "p":  Asymmetric key transport.  The "p" field MUST be present.
+         Any other non-required fields are ignored.
+      "a":  Key agreement.  The "o" and "r" MUST be present, and the "u"
+         field MAY be present.  Any other non-required fields are
+         ignored.
+
+
+
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 9]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   "a":  REQUIRED AlgorithmIdentifier The algorithm used to encrypt the
+      symmetric key
+   "k":  REQUIRED BYTES The symmetric key, encrypted according to the
+      algorithm indicated by the "a" value
+   "i":  OPTIONAL BYTES An opaque identifier for the symmtric key
+      encryption key
+   "i":  OPTIONAL PublicKey The public key used to wrap the symmetric
+      key
+   "o":  OPTIONAL PublicKey The public key of the originator
+   "r":  OPTIONAL PublicKey The public key of the recipient
+   "u":  OPTIONAL BYTES User key material
+
+   [[ How to perform wrapping/unwrapping ]]
+
+
+5.  Examples
+
+   This section contains complete examples of all three JSMS types.
+
+5.1.  Parameters
+
+   RSA key:
+   n = 12237824263694976709651031408224222555291991012810482177
+       92035786941828977156926971807863278433272099745881797299
+       85336687220073096675483822073402642772681280616976104546
+       17255329475427018303562916009664448746047222690146365929
+       82951349410567289583328152613883921620510403508194065665
+       63967272795487285560945461681
+   d = 75878357104421224437595505023603656489355639532714946259
+       33346690019564595079379205549922077473184883832629939313
+       60018964125252953813614463578240747832202105107893654165
+       79392505080998449581120603587386341503989723156683831337
+       82007353216712737164755944535635260836679769708872556214
+       3293140567116070641632520193
+   e = 65537
+
+   Key Tag:       01f47ad049e8b81b05f32825a988cd5212ce781e
+   Key Encryption Key:    4A5055F46000455098EFBF40EF23752B
+   AuthenticatedData Key: b55b250062b6eb0cfdfa1606beb76491
+                          39a738395c8f777a526305b65a78dae1
+   EncryptedData Key (E): 6abb9bc1e7dd54dde7845b682a2cd183
+   EncryptedData Key (A): 2612b158a27efde93309ea12dcb0b047
+                          8e0c2bbc35eff0cf3bd974e1797d6fc2
+
+   Content:
+   "Attack at dawn!"
+
+
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 10]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+5.2.  SignedData
+
+   In this object the content is signed under the specified RSA key
+   pair, using SHA1 as the digest.
+   {
+       "v": 1,
+       "t": "s",
+       "c": "QXR0YWNrIGF0IGRhd24h",
+       "da": "sha1",
+       "sa": "pkcs1"
+       "s": "FTzVmWfkW5Lajck73of7y9zbYj3k5ok34mKIteVpkalzx9ILAi
+           luMngBJJZPQdm2R_CqdH8Vfqxfuplj0w4XplfO3xcCZfS3L8bnoE
+           mHvXI9a3Wii_2dCnBg6xl8456xOUors2dCQS7kjlbPdeYe2BEOom
+           kfaNFwnHfpV-7WPhg=",
+       "p": ["rsa",
+           1223782426369497670965103140822422255529199101281048
+           2177920357869418289771569269718078632784332720997458
+           8179729985336687220073096675483822073402642772681280
+           6169761045461725532947542701830356291600966444874604
+           7222690146365929829513494105672895833281526138839216
+           2051040350819406566563967272795487285560945461681,
+           65537],
+   }
+
+5.3.  AuthenticatedData
+
+   In this object the content is authenticated with a MAC under a
+   randomly-generated key (AuthenticatedData Key above), wrapped using
+   the key encryption key above, identified by the above key tag.
+   {
+       "v": 1
+       "t": "a",
+       "c": "QXR0YWNrIGF0IGRhd24h",
+       "a": "hmac-sha1",
+       "m": "WT8ntFec5pbxj2seFTGsMGyFkXQ=",
+       "k": [{
+           "a": "aes",
+           "i": "AfR60EnouBsF8yglqYjNUhLOeB4=",
+           "k": "43QH-BFRSIsMSjQgCT1fLxZttMNJxCw776y4M3BnRCVklH
+                 g-PTozVw==",
+           "t": "s"
+       }],
+   }
+
+5.4.  EncryptedData
+
+   In this object, the content is encrypted under the general AEAD
+   algorithm using AES-128-CBC for encryption and HMAC-SHA1 for
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 11]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   authentication.  The keys are described above as "EncryptedData Key
+   (E)" and "EncryptedData Key (A)", respectively.  The temporary keys
+   are wrapped using the PKCS#1 wrapping, under the RSA key pair above.
+   {
+       "v": 1
+       "t": "e",
+       "c": "ztt4s1A9zU73L7iaibiICeDpuiP0ovfw3ICI4-qqX11hbzG3",
+       "ea": ["aead-gen", "aes128-cbc", "hmac-sha1",
+       {
+           "iv": "gPOe6qFL5W7Mhg9ODBLoZg==",
+           "n": "0rlhQLrieXchGYbnxxkySg=="
+       }],
+       "k": [{
+           "a": "pkcs1",
+           "p": ["rsa", 122378242636949767096510314082242225552
+               919910128104821779203578694182897715692697180786
+               327843327209974588179729985336687220073096675483
+               822073402642772681280616976104546172553294754270
+               183035629160096644487460472226901463659298295134
+               941056728958332815261388392162051040350819406566
+               563967272795487285560945461681,
+               65537],
+           "k": "kyUzZZJPFT8tfbUVgWScWoCkMhsMPI2IiBV7HgYy92rSLG
+               BrTqpq8hGvwn0Arf-Qon3CxN345J2M4eGt56-NIyysKhusdN
+               ogqKRMOK1wTIp3SJIj5xDuzJmQhAzMfFm-Y9_L0-4aafEfTG
+               t9JNJwcjcYdnlJpI39cgAYNKcY4oQ=",
+           "t": "p"
+       }],
+   }
+
+
+6.  Mapping to CMS
+
+   [[ SignedData == SignedData, AuthenticatedData == AuthenticatedData,
+   EncryptedData == AuthEnvelopedData ]]
+
+   [[ AlgorithmIdentifier == AlgorithmIdentifier ]]
+
+   [[ PublicKey == SubjectPublicKeyInfo.  In the latter case, equivalent
+   to SKId+self-signed ]]
+
+   [[ WrappedSymmetricKey == RecipientInfo ]]
+
+
+7.  Version Processing
+
+   For the moment, all version numbers in the protocol MUST be 1.0.
+   Receivers MUST return an error for any other version number.  More
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 12]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   interesting version processing will be defined in the future.
+
+
+8.  IANA Considerations
+
+   [TODO]
+   o  Register MIME types
+   o  Registries for algorithms
+
+
+9.  Security Considerations
+
+   Much more to follow here.
+
+
+10.  References
+
+10.1.  Normative References
+
+   [RFC2045]  Freed, N. and N. Borenstein, "Multipurpose Internet Mail
+              Extensions (MIME) Part One: Format of Internet Message
+              Bodies", RFC 2045, November 1996.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
+
+   [RFC3339]  Klyne, G., Ed. and C. Newman, "Date and Time on the
+              Internet: Timestamps", RFC 3339, July 2002.
+
+   [RFC3447]  Jonsson, J. and B. Kaliski, "Public-Key Cryptography
+              Standards (PKCS) #1: RSA Cryptography Specifications
+              Version 2.1", RFC 3447, February 2003.
+
+   [RFC4086]  Eastlake, D., Schiller, J., and S. Crocker, "Randomness
+              Requirements for Security", BCP 106, RFC 4086, June 2005.
+
+   [RFC4627]  Crockford, D., "The application/json Media Type for
+              JavaScript Object Notation (JSON)", RFC 4627, July 2006.
+
+   [RFC4648]  Josefsson, S., "The Base16, Base32, and Base64 Data
+              Encodings", RFC 4648, October 2006.
+
+   [RFC5116]  McGrew, D., "An Interface and Algorithms for Authenticated
+              Encryption", RFC 5116, January 2008.
+
+   [RFC5246]  Dierks, T. and E. Rescorla, "The Transport Layer Security
+              (TLS) Protocol Version 1.2", RFC 5246, August 2008.
+
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 13]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   [RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
+              Housley, R., and W. Polk, "Internet X.509 Public Key
+              Infrastructure Certificate and Certificate Revocation List
+              (CRL) Profile", RFC 5280, May 2008.
+
+   [RFC5649]  Housley, R. and M. Dworkin, "Advanced Encryption Standard
+              (AES) Key Wrap with Padding Algorithm", RFC 5649,
+              September 2009.
+
+   [I-D.zyp-json-schema]
+              Zyp, K. and G. Court, "A JSON Media Type for Describing
+              the Structure and Meaning of JSON Documents",
+              draft-zyp-json-schema-03 (work in progress),
+              November 2010.
+
+   [FIPS-180-3]
+              National Institute of Standards and Technology (NIST),
+              "Secure Hash Standard (SHS)", FIPS PUB 180-3,
+              October 2008.
+
+10.2.  Informative References
+
+   [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
+              Resource Identifier (URI): Generic Syntax", STD 66,
+              RFC 3986, January 2005.
+
+   [I-D.hammer-webfinger]
+              Hammer-Lahav, E., Fitzpatrick, B., and B. Cook, "The
+              WebFinger Protocol", draft-hammer-webfinger-00 (work in
+              progress), October 2009.
+
+   [RFC5652]  Housley, R., "Cryptographic Message Syntax (CMS)", STD 70,
+              RFC 5652, September 2009.
+
+   [krawczyk-ate]
+              Krawczyk, H., "The Order of Encryption and Authentication
+              for Protecting Communications (or: How Secure Is SSL?)",
+              Advances in cryptology--CRYPTO 2001 August 2001.
+
+   [GCM]      National Institute of Standards and Technology (NIST),
+              "Recommendation for Block Cipher Modes of Operation:
+              Galois/Counter Mode (GCM) and GMAC", SP 800-38D,
+              November 2007.
+
+
+Appendix A.  Acknowledgments
+
+   [TODO]
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 14]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+Authors' Addresses
+
+   Richard Barnes
+   BBN Technologies
+   1300 N. 17th St.
+   Arlington, VA  22209
+   USA
+
+   Email:  rbarnes@bbn.com
+
+
+   Eric Rescorla
+   RTFM, Inc.
+   2064 Edgewood Drive
+   Palo Alto, CA  94303
+   USA
+
+   Email:  ekr@rtfm.com
+
+
+   Joe Hildebrand
+   Cisco Systems, Inc.
+   1899 Wyknoop Street, Suite 600
+   Denver, CO  80202
+   USA
+
+   Email:  jhildebr@cisco.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 15]
+
