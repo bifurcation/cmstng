@@ -21,7 +21,7 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Cipher.AES import AESCipher
 from Crypto.Util.strxor import strxor
-from Crypto.Cipher import PKCS1_v1_5 as PKCS1_cipher
+from Crypto.Cipher import PKCS1_OAEP as PKCS1_cipher
 
 
 def jose_enc(x):
@@ -36,13 +36,13 @@ def jose_signed_sign(key, content):
     sig = signer.sign(h)
 
     jose = {
-        "v": 1,
-        "t": "s",
-        "c": jose_enc(content),
-        "da": "sha1",
-        "sa": "pkcs1",
-        "s": jose_enc(sig),
-        "p": ["rsa", key.n, key.e]
+        "version": 1,
+        "type": "signed",
+        "content": jose_enc(content),
+        "digestAlgorithm": "sha1",
+        "signatureAlgorithm": "rsa",
+        "signature": jose_enc(sig),
+        "key": {"type": "rsa", "n": key.n, "e": key.e}
     }
     return json.dumps(jose, separators=(',',':'))
 
@@ -50,22 +50,22 @@ def jose_signed_verify(josestr):
     jose = json.loads(josestr)
     if len(jose) < 3:
         raise ("Signed object too short",)
-    elif jose["t"] != "s":
+    elif jose["type"] != "signed":
         raise ("JOSE object is not a signed object",)
     
-    content = jose_dec(jose["c"])
+    content = jose_dec(jose["content"])
     # Pull the key
-    if jose["p"][0] != "rsa":
+    if jose["key"]["type"] != "rsa":
         raise ("Only RSA keys supported")
-    key = RSA.construct( (long(jose["p"][1]), long(jose["p"][2])) )
+    key = RSA.construct( (long(jose["key"]["n"]), long(jose["key"]["e"])) )
     
     # Check the signature type
-    if jose["da"] != "sha1":
+    if jose["digestAlgorithm"] != "sha1":
         raise ("Only sha1 hashing supported",)
-    if jose["sa"] != "pkcs1":
-        raise ("Only PKCS#1 signature supported",)
+    if jose["signatureAlgorithm"] != "rsa":
+        raise ("Only RSA signature supported",)
     
-    sig = jose_dec(jose["s"])
+    sig = jose_dec(jose["signature"])
     h = SHA.new(content)
     verifier = PKCS1_sig.new(key)
     return verifier.verify(h, sig)
@@ -130,16 +130,16 @@ def jose_mac_encode(key, keytag, content):
     mac = hmac.digest()
 
     jose = {
-        "v": 1,
-        "t": "a",
-        "c": jose_enc(content),
-        "a": "hmac-sha1",
-        "m": jose_enc(mac),
-        "k": [{
-            "t": "s",
-            "a": "aes",
-            "k": jose_enc(wcmk),
-            "i": jose_enc(keytag)
+        "version": 1,
+        "type": "authenticated",
+        "content": jose_enc(content),
+        "algorithm": "hmac-sha1",
+        "mac": jose_enc(mac),
+        "keys": [{
+            "type": "keyEncryption",
+            "algorithm": "aes",
+            "encryptedKey": jose_enc(wcmk),
+            "KEKIdentifier": jose_enc(keytag)
         }]
     }
     return json.dumps(jose, separators=(',',':'))
@@ -148,25 +148,25 @@ def jose_mac_verify(key, keytag, josestr):
     jose = json.loads(josestr)
     if len(jose) < 5:
         raise ("Authenticated object too short",)
-    elif jose["t"] != "a":
+    elif jose["type"] != "authenticated":
         raise ("JOSE object is not an authenticated object",)
     
-    content = jose_dec(jose["c"])
-    jmac = jose_dec(jose["m"])
+    content = jose_dec(jose["content"])
+    jmac = jose_dec(jose["mac"])
     # Pull 
-    if jose["a"] != "hmac-sha1":
+    if jose["algorithm"] != "hmac-sha1":
         raise ("Only HMAC-SHA1 supported")
     
     # Check the key encipherment type and key tag
-    if jose["k"][0]["t"] != "s":
-        raise ("Only key transport supported",)
-    if jose["k"][0]["a"] != "aes":
+    if jose["keys"][0]["type"] != "keyEncryption":
+        raise ("Only key encryption supported",)
+    if jose["keys"][0]["algorithm"] != "aes":
         raise ("Only AES key wrapping supported",)
-    jtag = jose_dec(jose["k"][0]["i"])
+    jtag = jose_dec(jose["keys"][0]["KEKIdentifier"])
     if jtag != keytag:
         raise ("Unknown key",)
     
-    wcmk = jose_dec(jose["k"][0]["k"])
+    wcmk = jose_dec(jose["keys"][0]["encryptedKey"])
     cmk = aes_key_unwrap(key, wcmk)
     
     hmac = HMAC.new(cmk, digestmod=SHA)
@@ -182,7 +182,7 @@ def rsa_key_wrap(key, p):
 def rsa_key_unwrap(key, c):
     sentinel = Random.get_random_bytes(48)
     cipher = PKCS1_cipher.new(key)
-    return cipher.decrypt(c, sentinel)
+    return cipher.decrypt(c)
 
 def jose_enc_encrypt(key, content):
     ke = Random.get_random_bytes(16)    # Encryption key
@@ -215,18 +215,25 @@ def jose_enc_encrypt(key, content):
     econtent = S + T
 
     jose = {
-        "v": 1,
-        "t": "e",
-        "c": jose_enc(econtent),
-        "ea": ["aead-gen","aes128-cbc","hmac-sha1", {
-            "n": jose_enc(n),
+        "version": 1,
+        "type": "encrypted",
+        "content": jose_enc(econtent),
+        "algorithm": {
+            "name": "aead-gen",
+            "encryption": "aes128-cbc",
+            "integrity": "hs1", 
+            "nonce": jose_enc(n),
             "iv": jose_enc(iv)
-        }],
-        "k": [{
-            "t":"p",
-            "a":"pkcs1",
-            "k": jose_enc(wcmk),
-            "p":["rsa", key.n, key.e]
+        },
+        "keys": [{
+            "type":"keyTransport",
+            "algorithm":"pkcs1",
+            "encryptedKey": jose_enc(wcmk),
+            "recipientKey": {
+                "type": "rsa", 
+                "n": key.n, 
+                "e": key.e
+            }
         }]
     }
     return json.dumps(jose, separators=(',',':'))
@@ -236,18 +243,18 @@ def jose_enc_decrypt(key, josestr):
     # TODO Check public key, algorithms
     
     # Unwrap wrapped key
-    wcmk = jose_dec(jose["k"][0]["k"])
+    wcmk = jose_dec(jose["keys"][0]["encryptedKey"])
     cmk = rsa_key_unwrap(key, wcmk)
     ke = cmk[:16]
     ka = cmk[16:]
 
     # Split the encrypted content
-    econtent = jose_dec(jose["c"]);
+    econtent = jose_dec(jose["content"]);
     S = econtent[:-SHA.digest_size]
     T = econtent[-SHA.digest_size:]
 
     # Verify the MAC (no associated data)
-    n = jose_dec(jose["ea"][3]["n"])
+    n = jose_dec(jose["algorithm"]["nonce"])
     hmac = HMAC.new(ka, digestmod=SHA)
     ln = struct.pack("!q", len(n))
     la = struct.pack("!q", 0)
@@ -259,7 +266,7 @@ def jose_enc_decrypt(key, josestr):
         raise ("Integrity check failed")
 
     # Decrypt the contents 
-    iv = jose_dec(jose["ea"][3]["iv"])
+    iv = jose_dec(jose["algorithm"]["iv"])
     cipher = AES.new(ke, AES.MODE_CBC, iv)
     econtent = cipher.decrypt(S)
 

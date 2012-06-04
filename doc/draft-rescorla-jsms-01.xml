@@ -94,11 +94,11 @@
     <abstract>
       <t>Many applications require the ability to send cryptographically
       secured messages. While the IETF has defined a number of formats for
-      such messages (e.g. CMS) those formats use encodings which are not
-      congenial for Web applications. This document describes a new
-      cryptographic message format which is based on JavaScript Object
-      Notation (JSON) and thus is easy for Web applications to generate and
-      parse.</t>
+      such messages (e.g. CMS) those formats use encodings which are not easy
+      to use in modern applications. This document describes the JavaScript
+      Message Security format (JSMS), a new cryptographic message format which
+      is based on JavaScript Object Notation (JSON) and thus is easy for many
+      applications to generate and parse.</t>
     </abstract>
   </front>
 
@@ -110,53 +110,69 @@
       viewed as being excessively complicated for the demands of Web
       applications, which typically only need the ability to secure simple
       messages. In addition, existing formats use encoding mechanisms (e.g.,
-      ASN.1 BER/DER) which are not congenial for Web applications. This
-      presents an obstacle to the deployment of strong security by such
-      applications.</t>
+      ASN.1 DER) which are not congenial for many classes of applications
+      (e.g., Web applications). This presents an obstacle to the deployment of
+      strong security by such applications.</t>
 
       <t>This document describes a new cryptographic message format,
-      JavaScript Message Security (JSMS) intended to meet the need of the Web
-      environment. While JSMS is modeled on existing formats -- principally
+      JavaScript Message Security (JSMS). This format intended to meet the
+      need of modern applications, including JavaScript-based Web
+      applications. While JSMS is modeled on existing formats -- principally
       CMS <xref target="RFC5652"/> -- it uses JavaScript Object Notation
-      (JSON) rather than ASN.1/BER/DER, making it far easier for Web
-      applications to handle. In the interest of simplicity, JSMS also omits
-      as many as possible of the CMS modes (multiple signatures,
-      password-based encryption).</t>
+      (JSON) rather than ASN.1, making it far easier for applications to
+      handle. In the interest of simplicity, JSMS also omits many of less
+      commonly used CMS modes (such as multiple signatures and password-based
+      encryption).</t>
     </section>
 
-    <section title="Conventions Used In This Document">
+    <section anchor="sec.conventions"
+             title="Conventions Used In This Document">
       <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
       "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
       document are to be interpreted as described in <xref
       target="RFC2119"/>.</t>
 
-      <t>[Notes on Base64 encoding]</t>
+      <t>In order to enable JSON to carry binary data, JSMS makes extensive
+      use of Base64 encoding <xref target="RFC4648"/>. Whenever this document refers
+      to Base64 encoding, we mean the URL-safe variant "base64url" encoding.
+      As stated in section 3.1 of <xref target="RFC4648"/>, Base64 does not allow
+      linefeeds. Since linefeeds are not valid characters in a JSON string,
+      whenever a field is specified to be Base64-encoded in this document, it
+      MUST NOT include any line breaks. Base64-encoded fields also MUST NOT
+      include JSON-encoded linefeeds such as "\n". Any linebreaks in the
+      middle of Base64-encoded sections of the examples in this document have
+      been inserted in order to make the examples fit on the page.</t>
     </section>
 
     <section title="Overview">
       <t>The JSMS message format is simply a JSON <xref target="RFC4627"/>
-      dictionary with an appropriate collection of fields. Each operating mode
+      object with an appropriate collection of fields. Each operating mode
       will have a separate set of fields, with a common field to distinguish
-      between the modes.</t>
+      between the modes. </t>
 
       <section title="Operational Modes">
-        <t>JSMS supports two operational modes:</t>
-
-        <t><list style="hanging">
-            <t hangText="Encrypted Data"/>
-
-            <t>A block of data encrypted under a random message encryption key
-            (MEK). The MEK is then separately encrypted for each recipient,
-            either via symmetric or asymmetric encryption. The data is always
-            integrity protected, either via a separate Message Authentication
-            Code (MAC) or an Authenticated Encryption with Associated Data
-            (AEAD) algorithm such as AES-GCM or AES-CCM.</t>
-
+        <t>JSMS supports three operational modes:<list style="hanging">
             <t hangText="Signed Data"/>
 
             <t>A block of data signed by a single signer using his asymmetric
             key and optionally carrying his certificate. Multiple signatures
             are not permitted in order to keep things simple.</t>
+
+            <t hangText="Authenticated Data"/>
+
+            <t>A block of data with authentication and integrity protection
+            provided using a symmetric-key Message Authentication Code (MAC).
+            The MAC key may be provided in encrypted form (as with Encryped
+            Data) or identified by name.</t>
+
+            <t hangText="Encrypted Data"/>
+
+            <t>A block of data encrypted under a random message encryption key
+            (MEK). The MEK is then separately encrypted for each recipient,
+            either via symmetric or asymmetric encryption. The data is always
+            integrity protected, through the use of an Authenticated
+            Encryption with Associated Data (AEAD) algorithm such as AES-GCM
+            or AES-CCM.</t>
           </list></t>
 
         <t>Any other desired security functions are provided by composition of
@@ -164,8 +180,8 @@
         by first creating a Signed message and then encrypting that data.</t>
       </section>
 
-      <section title="Conventions">
-        <t>In general, JSMS follows the following structural conventions:</t>
+      <section title="Design Principles">
+        <t>In general, JSMS follows the following design principles.</t>
 
         <t><list style="hanging">
             <t hangText="Minimize implementation complexity"/>
@@ -206,6 +222,14 @@
             is most convenient for the JSON implementation. The examples in
             this document are generally shown in whatever order seems most
             readable and are not normative.</t>
+
+            <t hangText="Consistency with CMS"/>
+
+            <t>To simplify the adaptation of existing cryptographic modules
+            and the validation of JSMS implementations, changes from the CMS
+            cryptographic operations are minimized. JSMS is semantically
+            equivalent to a profile of CMS, as described in Section <xref
+            target="sec.cms"/>.</t>
           </list></t>
       </section>
 
@@ -213,20 +237,18 @@
         <t>Experience has shown that certificate handling (path construction)
         is one of the trickier parts of building a cryptographic system. While
         JSMS supports PKIX certificates, its certificate processing is far
-        simpler than that of CMS. When a JSMS agent provides its certificate,
-        it must provide an ordered chain (as in TLS <xref target="RFC5246"/>)
-        terminating in its own certificate, thus removing the need to
-        construct certificate paths. The certificates MUST be ordered with the
-        end-entity certificate first and each certificate that follows signing
-        the certificate immediately preceding it. In addition, because many
-        implementations will not want to do any ASN.1/BER processing at all,
-        we will define a Web Service which applications can use for chain
-        validation and translation to an easy-to-parse format. (See
-        [TODO]).</t>
+        simpler than that of CMS. (It also supports the use of bare public
+        keys in order to avoid the use of X.509 altogether.) When a JSMS agent
+        provides its certificate, it must provide an ordered chain (as in TLS
+        <xref target="RFC5246"/>) terminating in its own certificate, thus
+        removing the need to construct certificate paths. The certificates
+        MUST be ordered with the end-entity certificate first and each
+        certificate that follows signing the certificate immediately preceding
+        it. </t>
       </section>
 
       <section title="Certificate Discovery">
-        <t>JSMS will often be used in an online messaging environment with
+        <t>JSMS will often be used in an online messaging environments with
         users that have an address of the form user@domain, such as email,
         XMPP, or SIP. As such, protocols such as WebFinger <xref
         target="I-D.hammer-webfinger"/> or an end-to-end protocol can be used
@@ -236,13 +258,12 @@
     </section>
 
     <section title="Message Format">
-      <t>A JSMS object is a JSON dictionary that encodes cryptographic
-      informaton related to a content byte string. This document specifies the
-      set of keys that must be present in a JSMS object, and what the
-      associated values are. In general, these keys are chosen to be short but
-      mnemonic, in order to minimize the size of JSMS objects while still
-      being easy to use. In processing JSMS objects, unknown dictionary keys
-      MUST be ignored.</t>
+      <t>A JSMS object is a JSON object that encodes cryptographic informaton
+      related to a content byte string. This document specifies the set of
+      keys that must be present in a JSMS object, what the associated values
+      are, and how these values are generated and processed in order to
+      realize security features. In processing JSMS objects, unknown keys MUST
+      be ignored.</t>
 
       <t>JSMS defines three top-level types of secure object, each of which
       provides a specific cryptographic protection to a byte string.<list
@@ -261,129 +282,312 @@
         <t>For each field in a JSON object, we define the type of information
         that must be included in that field. At base are the object, array,
         string, number types defined by JSON. We also use two special
-        sub-classes of strings: Fields with type "token" contain a string
-        drawn from an IANA registry of strings (e.g., for algorithm
-        identifiers). Fields with type "bytes" contain a Base64-encoded byte
-        string (note the considerations related to Base64 encoding in Section
-        [[REF]] above).</t>
+        sub-classes of strings: Fields with type "Token" contain a string
+        drawn from a defined list of strings (e.g., an IANA registry for
+        algorithm names). Fields with type "ByteString" contain a
+        Base64-encoded byte string (note the considerations related to Base64
+        encoding in Section <xref target="sec.conventions"/> above).</t>
 
-        <t>In addition to the primitive data types, Section [[REF]] defines a
-        collection of useful object types that are used by the top-level JSMS
-        objects. These are simply referred to by name when they appear as a
-        field value in another object.</t>
-
-        <t>[[ TODO: For TOKEN values, define what registry they should be
-        drawn from ]]</t>
+        <t>In addition to the primitive data types, Section <xref
+        target="sec.sec.useful"/> defines a collection of useful object types
+        that are used by the top-level JSMS objects. These are simply referred
+        to by name when they appear as a field value in another object.</t>
       </section>
 
       <section title="Common Elements">
         <t>The following elements are common to all JSMS messages:<list
             style="hanging">
-            <t hangText="&quot;v&quot;:">REQUIRED NUMBER The version of JSMS
-            used by this object. This field MUST be set to 1.</t>
+            <t hangText="&quot;version&quot;:">REQUIRED Number. The version of
+            JSMS used by this objec.t. This field MUST be set to 1.</t>
 
-            <t hangText="&quot;t&quot;:">REQUIRED TOKEN The type of this JSMS
-            object. This field MUST be set to one of the following values<list
-                style="hanging">
-                <t hangText="&quot;s&quot;:">SignedData object</t>
+            <t hangText="&quot;type&quot;:">REQUIRED Token. The type of this
+            JSMS object. This field MUST be set to one of the following
+            values<list style="hanging">
+                <t hangText="&quot;signed&quot;:">SignedData object</t>
 
-                <t hangText="&quot;a&quot;:">AuthenticatedData object</t>
+                <t hangText="&quot;authenticated&quot;:">AuthenticatedData
+                object</t>
 
-                <t hangText="&quot;e&quot;:">EncryptedData object</t>
+                <t hangText="&quot;encrypted&quot;:">EncryptedData object</t>
               </list></t>
 
-            <t hangText="&quot;c&quot;:">OPTIONAL BYTES The content byte
-            string, Base64-encoded.</t>
-          </list>If the "c" key is not present in a given JSMS object, then
-        the JSMS object is "detached". In this case, the content must be
+            <t hangText="&quot;content&quot;:">OPTIONAL ByteString. The
+            content byte string, Base64-encoded.</t>
+          </list>If the "content" key is not present in a given JSMS object,
+        then the JSMS object is "detached". In this case, the content must be
         associated with the JSMS object through some out-of-band mechanism
         before the JSMS object can be processed.</t>
-
-        <t>[[ Q: Should we include an option to have a URI pointing to
-        content? ]]</t>
       </section>
 
       <section title="SignedData">
-        <t>A SignedData object MUST have a "t" field set to "s". In addition,
-        a SignedData object contains the following keys:<list style="hanging">
-            <t hangText="&quot;da&quot;:">REQUIRED AlgorithmIdentifier The
-            digest algorithm used in signing the content. [[ IANA note ]]</t>
+        <t>A SignedData object MUST have a "type" field set to "signed". In
+        addition, a SignedData object contains the following keys:<list
+            style="hanging">
+            <t hangText="&quot;digestAlgorithm&quot;:">REQUIRED
+            AlgorithmIdentifier. The digest algorithm used in signing the
+            content. [[ IANA note ]]</t>
 
-            <t hangText="&quot;sa&quot;:">REQUIRED AlgorithmIdentifier The
-            signature algorithm used in signing the content [[ IANA note
-            ]]</t>
+            <t hangText="&quot;signatureAlgorithm&quot;:">REQUIRED
+            AlgorithmIdentifier. The signature algorithm used in signing the
+            content [[ IANA note ]]</t>
 
-            <t hangText="&quot;s&quot;:">REQUIRED BYTES The Base64-encoded
-            signature value</t>
+            <t hangText="&quot;signature&quot;:">REQUIRED ByteString. The
+            Base64-encoded signature value</t>
 
-            <t hangText="&quot;k&quot;:">REQUIRED PublicKey The public key
+            <t hangText="&quot;key&quot;:">REQUIRED PublicKey. The public key
             identifier for the signer, represented as a PublicKey object (see
             below)</t>
 
-            <t hangText="&quot;c&quot;:">OPTIONAL ARRAY A certificate chain
-            associating the signer's public key with an identifier. Each
-            element in the array is a string containing the Base64-encoded
-            representation of a DER-formatted certificate. The certificates
-            MUST be ordered with the end-entity certificate first and each
-            certificate that follows signing the certificate immediately
-            preceding it.</t>
-          </list></t>
+            <t hangText="&quot;certificates&quot;:">OPTIONAL Array of String.
+            A certificate chain associating the signer's public key with an
+            identifier. Each element in the array is a string containing the
+            Base64-encoded representation of a DER-formatted certificate. The
+            certificates MUST be ordered with the end-entity certificate first
+            and each certificate that follows signing the certificate
+            immediately preceding it.</t>
 
-        <t>[[ Q: Include an option to include a URI pointing to a cert/chain?
-        ]]</t>
+            <t hangText="&quot;certificatesURI&quot;:">OPTIONAL String. An
+            HTTP or HTTPS URI referring to a certificate chain. The referenced
+            resource MUST have type "application/json" and contain an array of
+            certificates in the same format as the "certificates" element
+            above, including the ordering constraint. </t>
+          </list>If the "key" value represents the public key as an
+        identifier, then a certificate for the signer MUST be provided by
+        setting either the "certificates" or "certificatesURL" fields.
+        Obviously, the subject key in the certificate MUST match the
+        identifier in the "key" value; the certificate SHOULD contain the
+        subjectKeyIdentifier field, with a value matching the "key" value.</t>
 
-        <t>[[ How to generate the signature =
-        http://tools.ietf.org/html/rfc5652#section-5.4 and
-        http://tools.ietf.org/html/rfc5652#section-5.5 ]]</t>
+        <t>To generate a SignedData object, the originator first computes the
+        signature value over the content:<list style="numbers">
+            <t>Compute a message digest by applying the message digest
+            algorithm to the content byte string</t>
 
-        <t>[[ How to verify the signature =
-        http://tools.ietf.org/html/rfc5652#section-5.6 ]]</t>
+            <t>Compute the signature value by using the signature algorithm to
+            sign the message digest with the private key of an asymmetric key
+            pair</t>
+          </list>The originator then encodes the SignedData object by
+        including the appropriate AlgorithmIdentifiers for the digest and
+        signature algorithms, the PublicKey structure for hte public key, and
+        the Base64 representations of the signature value and (optionally) the
+        content. </t>
+
+        <section title="Generating a SignedData Object ">
+          <t>The inputs to the process of generating a SignedData object
+          are:<list style="symbols">
+              <t>The content, as a byte string</t>
+
+              <t>A digest algorithm</t>
+
+              <t>A signature algorithm</t>
+
+              <t>An asymmetric key pair</t>
+            </list></t>
+
+          <t>To generate the signature for SignedData object, the originator
+          takes the following steps:<list style="numbers">
+              <t>Compute the message digest by applying the digest algorithm
+              to the content.</t>
+
+              <t>Compute the signature by using the signature algorithm to
+              sign the message digest with the private key from the asymmetric
+              key pair.</t>
+            </list></t>
+
+          <t>The originator then encodes the SignedData object by including
+          the appropriate AlgorithmIdentifiers for the digest and signature
+          algorithms, the PublicKey structure for hte public key, and the
+          Base64 representations of the signature value and (optionally) the
+          content. </t>
+        </section>
+
+        <section title="Verifying a SignedData Object">
+          <t>To verify a SignedData object, the recipient takes the following
+          steps:<list style="numbers">
+              <t>Verify that the digest and signature algorithms are
+              supported. Otherwise, report an error and fail.</t>
+
+              <t>Compute the content byte string by decoding the "content"
+              value of the JSMS object. If the JSMS object does not contain a
+              "content" field, retrieve the content by other means.</t>
+
+              <t>Compute the message digest by applying the digest algorithm
+              to the content.</t>
+
+              <t>Compute the signature by decoding the "signature" value of
+              the JSMS object.</t>
+
+              <t>Compute the public key: <list style="symbols">
+                  <t>If the key is represented directly, then decode it
+                  according to the rules specified by the algorithm name.</t>
+
+                  <t>If the key is represented by an ID, then retrieve the
+                  corresponding subject public key from the end-entity
+                  certificate . If no "certificates" or "certificatesURI"
+                  value is present, then report an error and fail.</t>
+
+                  <t>If the key is represented by a URI, retrieve the public
+                  key from the URI.</t>
+                </list></t>
+
+              <t>Verify the signature by using the signature algorithm to
+              verify the message digest with the public key.</t>
+            </list></t>
+        </section>
       </section>
 
       <section title="AuthenticatedData">
-        <t>An AuthenticatedData object MUST have a "t" field set to "a". In
-        addition, an AuthenticatedData object contains the following
-        keys:<list style="hanging">
-            <t hangText="&quot;a&quot;:">REQUIRED AlgorithmIdentifier The MAC
-            algorithm used to authenticate the content.</t>
+        <t>An AuthenticatedData object MUST have a "type" field set to
+        "authenticated". In addition, an AuthenticatedData object contains the
+        following keys:<list style="hanging">
+            <t hangText="&quot;algorithm&quot;:">REQUIRED AlgorithmIdentifier.
+            The MAC algorithm used to authenticate the content.</t>
 
-            <t hangText="&quot;m&quot;:">REQUIRED BYTES The MAC value</t>
+            <t hangText="&quot;mac&quot;:">REQUIRED ByteString. The MAC
+            value</t>
 
-            <t hangText="&quot;k&quot;:">REQUIRED ARRAY Wrapped versions of
-            the symmetric key used for this MAC. Each element in the array
-            MUST be a WrappedSymmetricKey object (see below).</t>
+            <t hangText="&quot;keys&quot;:">OPTIONAL Array of WrappedKey.
+            Wrapped versions of the symmetric key used for this MAC. Each
+            element in the array MUST be a WrappedSymmetricKey object (see
+            below).</t>
+
+            <t hangText="&quot;keyIdentifier&quot;:">OPTIONAL ByteString. [[
+            Opaque identifier for MAC key. ]]</t>
           </list></t>
 
-        <t>[[ How to generate the MAC ==
-        http://tools.ietf.org/html/rfc5652#section-9.2 with no
-        attributes]]</t>
+        <t>An AuthenticatedData object MUST contain either the "key" field or
+        the "keyIdentifier" field, so that the recipient knows which key to
+        use to verify the MAC.</t>
 
-        <t>[[ How to verify the MAC ==
-        http://tools.ietf.org/html/rfc5652#section-9.3 with no attributes
-        ]]</t>
+        <section title="Generating an AuthenticatedData Object ">
+          <t>The inputs to the process of generating a AuthenticatedData
+          object are:<list style="symbols">
+              <t>The content, as a byte string</t>
+
+              <t>A MAC algorithm</t>
+
+              <t>A MAC key and key identifier, or </t>
+
+              <t>One or more recipient keys and key encipherment
+              algorithms</t>
+            </list></t>
+
+          <t>If the recipient key is specified rather than the MAC key
+          directly, then a random MAC key is generated and encoded in a
+          WrappedSymmetricKey objects for each recipient (see Section <xref
+          target="sec.sec.sec.wrapped"/>). Once the MAC key has been
+          determined, the originator uses the MAC algorithm and MAC key to
+          compute the MAC over the content byte string.</t>
+
+          <t>The originator then encodes the SignedData object by including
+          the appropriate AlgorithmIdentifier for the MAC algorithm and the
+          Base64 representations of the MAC value and (optionally) the
+          content. If the MAC key was specified directly, then the Base64
+          representation of the key identifier is set as the "keyIdentifier"
+          value; otherwise, the WrappedSymmetricKey objects are collected in
+          an array and set as the "keys" value.</t>
+        </section>
+
+        <section title="Verifying a AuthenticatedData Object">
+          <t>To verify a AuthenticatedData object, the recipient takes the
+          following steps:<list style="numbers">
+              <t>Verify that the MAC algorithms are supported. If not, report
+              an error and fail.</t>
+
+              <t>Compute the content byte string by decoding the "content"
+              value of the JSMS object. If the JSMS object does not contain a
+              "content" field, retrieve the content by other means.</t>
+
+              <t>Compute the MAC key:<list style="symbols">
+                  <t>If the "keyIdentifier" value is present and represents a
+                  known key, use the identified key.</t>
+
+                  <t>If the "keys" value is present, check each
+                  WrappedPublicKey object to determine if it matches a known
+                  key for this recipient. If any of the wrapped keys matches,
+                  unwrap the key from the first one and use it (see Section
+                  <xref target="sec.sec.sec.wrapped"/>). Otherwise, report an
+                  error and fail.</t>
+                </list></t>
+
+              <t>Use the MAC algorithm and MAC key to compute the MAC over the
+              content byte string</t>
+
+              <t>Decode the MAC value from the "mac" field.</t>
+
+              <t>Verify that the computed MAC matches the MAC from the
+              object.</t>
+            </list></t>
+        </section>
       </section>
 
       <section title="EncryptedData">
-        <t>An EncryptedData object MUST have a "t" field set to "e". Note also
-        that in an EncryptedData object, the "c" field contains the encrypted
-        form of the content, not the content itself (as plaintext). An
-        EncryptedData object contains the following keys in addition to any
-        common fields:<list style="hanging">
-            <t hangText="&quot;a&quot;:">REQUIRED AlgorithmIdentifier The
-            encryption algorithm used to encrypt the content</t>
+        <t>An EncryptedData object MUST have a "type" field set to
+        "encrypted". Note also that in an EncryptedData object, the "content"
+        field contains the encrypted form of the content, not the content
+        itself (as plaintext). An EncryptedData object contains the following
+        keys in addition to any common fields:<list style="hanging">
+            <t hangText="&quot;algorithm&quot;:">REQUIRED AlgorithmIdentifier.
+            The encryption algorithm used to encrypt the content</t>
 
-            <t hangText="&quot;k&quot;:">REQUIRED ARRAY Wrapped versions of
-            the symmetric key used to encrypt the content. Each element in the
-            array MUST be a WrappedSymmetricKey object (see below).</t>
+            <t hangText="&quot;keys&quot;:">REQUIRED Array of WrappedKey.
+            Wrapped versions of the symmetric key used to encrypt the content.
+            Each element in the array MUST be a WrappedSymmetricKey object
+            (see below).</t>
           </list></t>
 
-        <t>[[ How to encrypt ==
-        http://tools.ietf.org/html/rfc5652#section-6.3]]</t>
+        <section title="Generating an EncryptedData Object ">
+          <t>The inputs to the process of generating a SignedData object
+          are:<list style="symbols">
+              <t>The content, as a byte string</t>
 
-        <t>[[ How to decrypt? Don't think this is necessary ]]</t>
+              <t>A encryption algorithm</t>
+
+              <t>One or more recipient keys and key encipherment
+              algorithms</t>
+            </list></t>
+
+          <t>The originator generates a random encryption key of a length
+          suitable for the encryption algorithm, then encodes it in a
+          WrappedSymmetricKey object for each recipient (see Section <xref
+          target="sec.sec.sec.wrapped"/>). The content is then encrypted using
+          the generated encryption key and the specified encryption
+          algorithm.</t>
+
+          <t>The originator then encodes the EncryptedData object by including
+          the appropriate AlgorithmIdentifier for the encryption algorithm, an
+          array containing the WrappedSymmetricKey objects, and (optionally)
+          the Base64 representation of the content.</t>
+        </section>
+
+        <section title="Verifying a AuthenticatedData Object">
+          <t>To decrypt an EncryptedData object, the recipient takes the
+          following steps:<list style="numbers">
+              <t>Verify that the encryption algorithm is supported. If not,
+              report an error and fail.</t>
+
+              <t>Compute the content byte string by decoding the "content"
+              value of the JSMS object. If the JSMS object does not contain a
+              "content" field, retrieve the content by other means.</t>
+
+              <t>Locate the encryption key: Check each WrappedPublicKey object
+              to determine if it matches a known key for this recipient. If
+              any of the wrapped keys matches, unwrap the key from the first
+              one and use it (see Section <xref target="sec.sec.sec.wrapped"/>).
+              Otherwise, report an error and fail.</t>
+
+              <t>Decrypt the content using the encryption key and the
+              specified encryption algorithm.</t>
+
+              <t>Verify that the integrity check in the AEAD decryption was
+              successful. If not, report an error and fail.</t>
+
+              <t>Return the decrypted content.</t>
+            </list></t>
+        </section>
       </section>
 
-      <section title="Useful Objects">
+      <section anchor="sec.sec.useful" title="Useful Objects">
         <t>In this section we define some common object types that are used
         across the top-level objects above.</t>
 
@@ -391,133 +595,252 @@
           <t>An AlgorithmIdentifier object names a cryptographic algorithm and
           specifies any associated parameters. If the algorithm has no
           parameters, then it the AlgorithmIdentifier object is simply a token
-          represnting the name of the algorithm. [[ Note about registries
+          representing the name of the algorithm. [[ Note about registries
           ]]</t>
 
           <t>If the algorithm specifies parameters, the AlgorithmIdentifier
-          object is an array. The first entry in the array is a token
-          represnting the name of the algorithm. Any subsequent entries are
-          defined by the algorithm.</t>
+          object is a JSON object. The object must contain a field "name"
+          specifying the name of the algorithm. Any other fields are specified
+          in the algorithm definition</t>
 
-          <t>[[ TODO: Define any algorithms we need, or point to external
-          document ]]</t>
+          <t>The following table summarizes the algorithms to be used with
+          JSMS. [[ More detail to be added later, in a separate document
+          ]]</t>
 
-          <t>[[ Note: Only AEAD encryption algorithms allowed. If you want to
-          use a non-AEAD algorithm, add an HMAC and use
-          draft-mcgrew-aead-aes-cbc-hmac-sha1]]</t>
+          <t/>
 
-          <t>Examples:<list style="empty">
-              <t>"rsa"</t>
+          <figure>
+            <artwork><![CDATA[Name        Parameters   Reference         Example
+=====================================================================
 
-              <t>"hmac-sha1"</t>
+SIGNING
+rsa         no           [RFC3447]         "rsa"
+dsa         yes (p,q,g)  [FIPS186]         {name:"dsa", 
+                                             p:1, q:2, g:3}
+ecdsa       yes (curve)  [RFC6090]         {name:"ecdsa", 
+                                             curve:"P-256"}
 
-              <t>["aes128-cbc", "gPOe6qFL5W7Mhg9ODBLoZg=="]</t>
+DIGEST
+sha1        no           [FIPS180-1]       "sha1" 
+sha256      no           [FIPS180-3]       "sha256"
+sha384      no           [FIPS180-3]       "sha384" 
+sha512      no           [FIPS180-3]       "sha512" 
 
-              <t>["aead-gen", "aes128-cbc", "hmac-sha1", { "iv":
-              "gPOe6qFL5W7Mhg9ODBLoZg==", "n": "0rlhQLrieXchGYbnxxkySg=="
-              }],</t>
+MAC
+hs1         no           [FIPS180-1]       "hs1"
+hs256       no           [FIPS180-3]       "hs256"
+hs384       no           [FIPS180-3]       "hs384"
+hs512       no           [FIPS180-3]       "hs512"
+
+ENCRYPTION
+aes-ccm     yes (nonce)  [RFC3610]         {name:"aes-ccm", 
+                                             nonce:"ZONce...l7IU-g"}
+aes-gcm     yes (iv)     [McGrew & Viega]  {name:"aes-gcm", 
+                                             iv:"ZONce...l7IU-g"}
+
+KEY ENCIPHERMENT
+aes         no           [RFC3394]         "aes" 
+rsaes-oaep  no           [RFC3447]         "rsaes-oaep"
+
+KEY AGREEMENT
+ecdh-es     yes (curve)  [RFC6090]         "ecdh-es"
+]]></artwork>
+          </figure>
+
+          <t>Obviously, there will be more detail needed beyond the above, and
+          some IANA considerations to create the necessary registries. For
+          some algorithms, there will be specific notes about how they are to
+          be used with JSMS, for example:<list style="symbols">
+              <t>The signature value produced by DSA is comprised of two
+              integers. The byte string to be filled in the "signature" field
+              is the two-element JSON array containing two integers,
+              "[r,s]"</t>
+
+              <t>RSAES-OAEP is always used with SHA-256 and the default MGF1
+              masking generation function</t>
+
+              <t>Elliptic curves may only be specified by name, not by
+              directly specifying curve parameters. [[ We may define our own
+              registry, or re-use the ones from TLS/IKE. ]]</t>
+
+              <t>AEAD algorithms are only used for authenticated encryption;
+              there is never associated data. Further AEAD algorithms may be
+              defined using [draft-mcgrew-aead-aes-cbc-hmac-sha1]</t>
             </list></t>
         </section>
 
         <section title="PublicKey">
           <t>A PublicKey object describes the public key used by a signer. The
-          key may be specified as a JSON structure, as a URI, or as an
-          identifier.</t>
+          key may be specified as a JSON structure directly, as a URI, or as
+          an identifier. A PublicKey object has the following fields: <list
+              style="hanging">
+              <t hangText="&quot;type&quot;">OPTIONAL String. The name of the
+              algorithm with which this key is to be used</t>
 
-          <t>If the key is specified directly, then the PublicKey object MUST
-          be an array. The first entry in the array is an AlgorithmIdentifier
-          object identifying the algorithm with which the key is to be used.
-          Subsequent entries in the array specify the elements of the key, in
-          a manner determined by the algorithm.</t>
+              <t hangText="&quot;id&quot;">OPTIONAL ByteString. An identifier
+              for the key</t>
 
-          <t>[[ Format for RSA keys, ["rsa",n,e] ]]</t>
+              <t hangText="&quot;uri&quot;">OPTIONAL String. A URI pointing to
+              a direct form of the key</t>
+            </list></t>
 
-          <t>[[ Format for ECC keys, TBD ]]</t>
+          <t>If the key is specified directly, then the "type" key MUST be
+          present; the "id" and "uri" fields MAY be present. Subsequent
+          entries in the array specify the elements of the key, in a manner
+          determined by the algorithm. Formats for RSA and ECDH/ECDSA public
+          keys are specified below. </t>
 
           <t>If the key is referenced by an opaque identifier or
-          "fingerprint", then the PublicKey object is a two-element JSON
-          array. The first element is the token "id", and the second element
-          is the SHA-1 hash of the public key, represented as a DER-encoded
-          subjectPublicKeyInfo data structure. (This fingerprint format is the
-          same as the one included in the subjectKeyIdentifier field in an
-          X.509 certificate.)</t>
+          "fingerprint", then the "id" field MUST be present, and contain the
+          Base64-encoded SHA-1 hash of the public key, represented as a
+          DER-encoded subjectPublicKeyInfo data structure. (This fingerprint
+          format is the same as the one included in the subjectKeyIdentifier
+          field in an X.509 certificate.)</t>
 
-          <t>If the key is provided as a URI, then the PublicKey object MUST
-          be a string containing a URI where the key can be retrieved, either
-          in the JSON format described above, or in a DER-encoded PKIX
-          certificate. The method that the recipient of a JSMS object uses to
-          retrieve the key will depend on the URI scheme. For HTTP URIs, the
-          relying party MUST issue an HTTP request with the GET method and an
-          Accept header including the MIME type for JSMS PublicKey object,
-          "[[MIMETYPE]]". For MAILTO, SIP, and XMPP URIs, the recipient MAY
-          use the WebFinger protocol [[REF]] to retrieve a public key for the
-          user.</t>
+          <t>If the key is provided as a URI, then the "uri" field MUST be
+          present, containing a URI where the key can be retrieved, either in
+          the JSON format described above. The method that the recipient of a
+          JSMS object uses to retrieve the key will depend on the URI scheme.
+          For HTTP URIs, the relying party MUST issue an HTTP request with the
+          GET method and an Accept header including the MIME type for JSMS
+          PublicKey object, "[[MIMETYPE]]". For MAILTO, SIP, and XMPP URIs,
+          the recipient MAY use the WebFinger protocol [[REF]] to retrieve a
+          public key for the user.</t>
 
-          <t>[[ Q: Should we also allow a fingerprint based on the JSON
-          structure above? Would need to canonicalize it somehow. ]]</t>
+          <t>Example: {"id": "i1LbR8FCEw-aiFcAAfUvpp75wdY="}</t>
 
-          <t>Examples: <list style="empty">
-              <t>["rsa",
-              9873955694194590232514048984970761535584766520827432398848323179877576914413107050563833143580841040071254924123181885362208552200375950092400886745004251,
-              3]</t>
+          <t>Example: {"uri": "xmpp:juliet@example.com"} </t>
 
-              <t>["id", "i1LbR8FCEw-aiFcAAfUvpp75wdY="]</t>
+          <section title="RSA Public Key">
+            <t>An RSA public key comprises two additional parameters in
+            addition to the algorithm identifier "rsa". <list style="hanging">
+                <t hangText="&quot;n&quot;:">REQUIRED Integer. The modulus</t>
 
-              <t>"http://example.com/user23/publickey.jsms"</t>
+                <t hangText="&quot;e&quot;:">REQUIRED Integer. The public
+                exponent</t>
+              </list></t>
 
-              <t>"xmpp:juliet@example.com"</t>
-            </list></t>
+            <t>Example: {"name":"rsa", "n":98739...04251, "e": 3}</t>
+          </section>
+
+          <section title="Elliptic-Curve Public Key">
+            <t>Public keys for several types of elliptic curve algorithms,
+            including ECDSA and ECDH, have the same format, namely an point on
+            a specified elliptic curve. In an elliptic curve PublicKey object,
+            the curve parameters are specified in the algorithm identifier,
+            and there are two additional fields that specify the point on the
+            curve:<list style="hanging">
+                <t hangText="&quot;x&quot;:">REQUIRED ByteString. The x
+                coordinate of the point</t>
+
+                <t hangText="&quot;y&quot;:">REQUIRED Integer. The y
+                coordinate of the point. MUST be equal to 0 or 1.</t>
+              </list></t>
+
+            <t>These coordinates correspond to the compressed form of an
+            elliptic curve point, as specified in [[REF:SEC01/RFC5840]]. In
+            terms of the calculation specified in section 2.3.3 of [[SEC01]],
+            the "x" coordinate is the byte string X and the "y" coordinate is
+            the reduced y coordinate (or, equivalently, Y mod 2). </t>
+
+            <t>Example: {"name":"ecdh",
+            "x":"IIIs_x1m6Na6xKN37vOwvy7AvFeG9HhBN2EN3u5EZQ4", "y": 1}</t>
+          </section>
         </section>
 
-        <section title="WrappedSymmetricKey">
+        <section anchor="sec.sec.sec.wrapped" title="WrappedSymmetricKey">
           <t>In JSMS objects that use symmetric keys (for MAC or encryption),
           it is necessary for the originator to convey the symmetric key used
           for in JSMS computations to the recipient. The WrappedSymmetricKey
           object is a JSON object that allows these keys to be provided either
           using key transport or key agreement. The following fields may be
           present in a WrappedSymmetricKey object:<list style="hanging">
-              <t hangText="&quot;t&quot;:">REQUIRED TOKEN The type of wrapping
-              being done. This document defines the following two values for
-              this field:<list style="hanging">
-                  <t hangText="&quot;s&quot;:">Symmetric key transport. The
-                  "i" field MUST be present. Any other non-required fields are
-                  ignored.</t>
+              <t hangText="&quot;type&quot;:">REQUIRED TOKEN The type of
+              wrapping being done. This document defines the following values
+              for this field:<list style="hanging">
+                  <t hangText="&quot;keyEncryption&quot;:">Symmetric key
+                  transport. The "KEKIdentifier" field MUST be present. Any
+                  other non-required fields MUST be ignored.</t>
 
-                  <t hangText="&quot;p&quot;:">Asymmetric key transport. The
-                  "p" field MUST be present. Any other non-required fields are
-                  ignored.</t>
+                  <t hangText="&quot;keyTransport&quot;:">Asymmetric key
+                  transport. The "ecipientKey" field MUST be present. Any
+                  other non-required fields MUST be ignored.</t>
 
-                  <t hangText="&quot;a&quot;:">Key agreement. The "o" and "r"
-                  MUST be present, and the "u" field MAY be present. Any other
-                  non-required fields are ignored.</t>
+                  <t hangText="&quot;keyAgreement&quot;:">Key agreement. The
+                  "originatorKey" and "recipientKey" MUST be present, and the
+                  "userKeyMaterial" field MAY be present. Any other
+                  non-required fields MUST be ignored.</t>
                 </list></t>
 
-              <t hangText="&quot;a&quot;:">REQUIRED AlgorithmIdentifier The
-              algorithm used to encrypt the symmetric key</t>
+              <t hangText="&quot;algorithm&quot;:">REQUIRED
+              AlgorithmIdentifier The algorithm used to encrypt the symmetric
+              key</t>
 
-              <t hangText="&quot;k&quot;:">REQUIRED BYTES The symmetric key,
-              encrypted according to the algorithm indicated by the "a"
-              value</t>
+              <t hangText="&quot;encryptedKey&quot;:">REQUIRED BYTES The
+              symmetric key, encrypted according to the algorithm indicated by
+              the "a" value</t>
 
-              <t hangText="&quot;i&quot;:">OPTIONAL BYTES An opaque identifier
-              for the symmtric key encryption key</t>
+              <t hangText="&quot;KEKIdentifier&quot;:">OPTIONAL BYTES An
+              opaque identifier for the symmtric key encryption key</t>
 
-              <t hangText="&quot;i&quot;:">OPTIONAL PublicKey The public key
-              used to wrap the symmetric key</t>
+              <t hangText="&quot;originatorKey&quot;:">OPTIONAL PublicKey The
+              public key of the originator</t>
 
-              <t hangText="&quot;o&quot;:">OPTIONAL PublicKey The public key
-              of the originator</t>
+              <t hangText="&quot;recipientKey&quot;:">OPTIONAL PublicKey The
+              public key of the recipient</t>
 
-              <t hangText="&quot;r&quot;:">OPTIONAL PublicKey The public key
-              of the recipient</t>
-
-              <t hangText="&quot;u&quot;:">OPTIONAL BYTES User key
-              material</t>
+              <t hangText="&quot;userKeyMaterial&quot;:">OPTIONAL BYTES User
+              key material</t>
             </list></t>
 
           <t>[[ How to perform wrapping/unwrapping ]]</t>
         </section>
       </section>
+    </section>
+
+    <section title="Compact Format">
+      <t>The compact JSON format of a JSMS object is identical to the normal
+      JSMS format, except that field names are replaced with shorter
+      equivalent field names. Translations for the field names above are given
+      in the table below. Note that in a given JSMS object, all field names
+      MUST be either in the long form or the compact form. An implementation
+      MUST reject a JSMS object with mixed long and short names as improperly
+      formatted.</t>
+
+      <t>[[ TODO: Update this table ]]</t>
+
+      <figure>
+        <artwork><![CDATA[Common                      EncryptedData
+======                      =============
+Version             v       Algorithm           a
+Type                t       Key                 k
+  SignedData        s       
+  AuthenticatedData a       
+  EncryptedData     e       WrappedKey
+Content             c       =====================
+                            Type                t
+                              KeyEncryptionKey  e
+SignedData                    KeyTransport      t
+==========                    KeyAgreement      a
+DigestAlgorithm     da      Algorithm           a
+SignatureAlgorithm  sa      EncryptedKey        k
+Signature           s       KEKIdentifier       i
+PublicKey           p       OriginatorKey       o
+Certificates        c       RecipientKey        r
+Certificates (URI)  cu      UserKeyMaterial     u
+                            
+                            
+AuthenticatedData           
+=================           
+Algorithm           a       
+MAC                 m       
+Key                 k       
+KeyIdentifier       ki    ]]></artwork>
+      </figure>
+
+      <t>In applications where a JSMS object is required to be URL-safe, it is
+      RECOMMENDED that it be rendered in the compact serialization, then
+      Base64-encoded.</t>
     </section>
 
     <section title="Examples">
@@ -544,11 +867,11 @@ e = 65537
 
 Key Tag:       01f47ad049e8b81b05f32825a988cd5212ce781e
 Key Encryption Key:    4A5055F46000455098EFBF40EF23752B
-AuthenticatedData Key: b55b250062b6eb0cfdfa1606beb76491
-                       39a738395c8f777a526305b65a78dae1
-EncryptedData Key (E): 6abb9bc1e7dd54dde7845b682a2cd183
-EncryptedData Key (A): 2612b158a27efde93309ea12dcb0b047
-                       8e0c2bbc35eff0cf3bd974e1797d6fc2 
+AuthenticatedData Key: bd5b0a3fefd399c3dca6ac1a4e4823cf
+                       c5fb037324ff3a1ffebb8ab98c402869
+EncryptedData Key (E): 8a7d6ec1c0be44173a530ebc41338343
+EncryptedData Key (A): 644a02dd5ef168731cf4e6d86f0da8f2
+                       2d8d3a55afd4275a8b6526d02502a399 
 
 Content:
 "Attack at dawn!"
@@ -562,23 +885,27 @@ Content:
 
         <figure>
           <artwork><![CDATA[{
-    "v": 1,
-    "t": "s",
-    "c": "QXR0YWNrIGF0IGRhd24h",
-    "da": "sha1",
-    "sa": "pkcs1"
-    "s": "FTzVmWfkW5Lajck73of7y9zbYj3k5ok34mKIteVpkalzx9ILAi
-        luMngBJJZPQdm2R_CqdH8Vfqxfuplj0w4XplfO3xcCZfS3L8bnoE
-        mHvXI9a3Wii_2dCnBg6xl8456xOUors2dCQS7kjlbPdeYe2BEOom
-        kfaNFwnHfpV-7WPhg=",
-    "p": ["rsa", 
-        1223782426369497670965103140822422255529199101281048
-        2177920357869418289771569269718078632784332720997458
-        8179729985336687220073096675483822073402642772681280
-        6169761045461725532947542701830356291600966444874604
-        7222690146365929829513494105672895833281526138839216
-        2051040350819406566563967272795487285560945461681, 
-        65537],
+    "version": 1,
+    "type": "signed",
+    "content": "QXR0YWNrIGF0IGRhd24h",
+    "digestAlgorithm": "sha1",
+    "signatureAlgorithm": "rsa"
+    "signature": "FTzVmWfkW5Lajck73of7y9zbYj3k5ok34mKIteVpka
+                  lzx9ILAiluMngBJJZPQdm2R_CqdH8Vfqxfuplj0w4X
+                  plfO3xcCZfS3L8bnoEmHvXI9a3Wii_2dCnBg6xl845
+                  6xOUors2dCQS7kjlbPdeYe2BEOomkfaNFwnHfpV-7W
+                  Phg=",
+    "key": {
+        "e": 65537,
+        "type": "rsa",
+        "n": 12237824263694976709651031408224222555291991012
+             81048217792035786941828977156926971807863278433
+             27209974588179729985336687220073096675483822073
+             40264277268128061697610454617255329475427018303
+             56291600966444874604722269014636592982951349410
+             56728958332815261388392162051040350819406566563
+             967272795487285560945461681
+    },
 } ]]></artwork>
         </figure>
       </section>
@@ -590,19 +917,35 @@ Content:
 
         <figure>
           <artwork><![CDATA[{
-    "v": 1
-    "t": "a",
-    "c": "QXR0YWNrIGF0IGRhd24h",
-    "a": "hmac-sha1",
-    "m": "WT8ntFec5pbxj2seFTGsMGyFkXQ=",
-    "k": [{
-        "a": "aes",
-        "i": "AfR60EnouBsF8yglqYjNUhLOeB4=",
-        "k": "43QH-BFRSIsMSjQgCT1fLxZttMNJxCw776y4M3BnRCVklH
-              g-PTozVw==",
-        "t": "s"
+    "version": 1,
+    "type": "authenticated"
+    "content": "QXR0YWNrIGF0IGRhd24h",
+    "algorithm": "hmac-sha1",
+    "mac": "Xy2Q7eLaBvhgco5HV26HePCnRf4=",
+    "keys": [{
+        "type": "keyEncryption",
+        "algorithm": "aes",
+        "encryptedKey": "eDGbPl0KSz3V5mVnUHWbIHAuZknDGLEJqVz
+                         Lh8RBJL4ELtbpJfVT_Q==",
+        "KEKIdentifier": "AfR60EnouBsF8yglqYjNUhLOeB4="
     }],
 } ]]></artwork>
+        </figure>
+
+        <t>As another example, the following object uses the defined key as
+        the MAC key directly (instead of as a key encryption key), and uses
+        the compact format. The object is shown both in raw JSON form and in
+        the Base64 encoding.</t>
+
+        <figure>
+          <artwork><![CDATA[{"v":1,"t":"a","a":"hs1","mac":"Xy2Q7eLaBvhgco5HV26HePCnRf4=",
+  "i":"AfR60EnouBsF8yglqYjNUhLOeB4="}  
+
+eyJ2IjoxLCJ0IjoiYSIsImEiOiJoczEiLCJtYWMiOiJYeTJRN2VMYUJ2aGdjbzVI
+VjI2SGVQQ25SZjQ9IiwiaSI6IkFmUjYwRW5vdUJzRjh5Z2xxWWpOVWhMT2VCND0i
+fQo
+
+]]></artwork>
         </figure>
       </section>
 
@@ -615,36 +958,44 @@ Content:
 
         <figure>
           <artwork><![CDATA[{
-    "v": 1
-    "t": "e",
-    "c": "ztt4s1A9zU73L7iaibiICeDpuiP0ovfw3ICI4-qqX11hbzG3",
-    "ea": ["aead-gen", "aes128-cbc", "hmac-sha1",
-    {
-        "iv": "gPOe6qFL5W7Mhg9ODBLoZg==",
-        "n": "0rlhQLrieXchGYbnxxkySg=="
-    }],
-    "k": [{
-        "a": "pkcs1",
-        "p": ["rsa", 122378242636949767096510314082242225552
-            919910128104821779203578694182897715692697180786
-            327843327209974588179729985336687220073096675483
-            822073402642772681280616976104546172553294754270
-            183035629160096644487460472226901463659298295134
-            941056728958332815261388392162051040350819406566
-            563967272795487285560945461681, 
-            65537],
-        "k": "kyUzZZJPFT8tfbUVgWScWoCkMhsMPI2IiBV7HgYy92rSLG
-            BrTqpq8hGvwn0Arf-Qon3CxN345J2M4eGt56-NIyysKhusdN
-            ogqKRMOK1wTIp3SJIj5xDuzJmQhAzMfFm-Y9_L0-4aafEfTG
-            t9JNJwcjcYdnlJpI39cgAYNKcY4oQ=",
-        "t": "p"
+    "version": 1,
+    "type": "encrypted",
+    "content": "eZBqDaw8FutMxIBCOGLJDNU4gc2sIy7PWI5kZY
+                l2EcA2rCYb",
+    "algorithm": {
+        "nonce": "bhNkT0cN8jSl22Z0twATqQ==",
+        "encryption": "aes128-cbc",
+        "integrity": "hs1",
+        "name": "aead-gen",
+        "iv": "AHSd4oUV4VPvvg98W98SZg=="
+    }
+    "keys": [{
+        "type": "keyTransport",
+        "algorithm": "rsaes-oaep"
+        "encryptedKey": "f5xLEzFMTMbXADWHmrLZjrFTbfMKNk3mwTF
+                         RCjeh51ibwOIStVHGXrFsSstT8rqz_9E7r5
+                         4XJD40QY5lQSc0tDq0yGRao9AjgLeHCFWDX
+                         40WeV80xyzaImnqV9yl20ruKuvC47EdeQ7f
+                         zhs6dnc-VCdHr_iXJtHTciR3YLccgHk=",
+        "recipientKey": {
+            "e": 65537,
+            "type": "rsa",
+            "n": 1223782426369497670965103140822422255529199
+                 1012810482177920357869418289771569269718078
+                 6327843327209974588179729985336687220073096
+                 6754838220734026427726812806169761045461725
+                 5329475427018303562916009664448746047222690
+                 1463659298295134941056728958332815261388392
+                 1620510403508194065665639672727954872855609
+                 45461681
+        },
     }],
 }]]></artwork>
         </figure>
       </section>
     </section>
 
-    <section title="Mapping to CMS">
+    <section anchor="sec.cms" title="Mapping to CMS">
       <t>[[ SignedData == SignedData, AuthenticatedData == AuthenticatedData,
       EncryptedData == AuthEnvelopedData ]]</t>
 
@@ -672,6 +1023,19 @@ Content:
 
     <section anchor="sec.sec-cons" title="Security Considerations">
       <t>Much more to follow here.</t>
+
+      <t>[[ Notes on identity for SignedData and AuthenticatedData: It is
+      important to note that the above verification process only checks that
+      the JSMS object was signed with a given public key. In order for this
+      information to be useful to an applications, it is usually necessary to
+      bind the public key to an application-layer identifier. If the
+      "certificates" or "certificatesURI" value is present, then the recipient
+      SHOULD verify that the chain is valid, and that the the end-entity
+      certificate chains to a trust anchor. In this case, the recipient can
+      consider the identity asserted in the end-entity certificate to be bound
+      to the public key. Applications using this specification without
+      certificates will need to specify an alternative mechanism for binding
+      public keys to identifiers. ]]</t>
     </section>
   </middle>
 
