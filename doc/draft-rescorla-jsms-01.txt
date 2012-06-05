@@ -84,26 +84,26 @@ Table of Contents
        4.4.2.  Verifying a AuthenticatedData Object . . . . . . . . .  9
      4.5.  EncryptedData  . . . . . . . . . . . . . . . . . . . . . . 10
        4.5.1.  Generating an EncryptedData Object . . . . . . . . . . 10
-       4.5.2.  Verifying a AuthenticatedData Object . . . . . . . . . 10
+       4.5.2.  Decrypting a EncryptedData Object  . . . . . . . . . . 10
      4.6.  Useful Objects . . . . . . . . . . . . . . . . . . . . . . 11
        4.6.1.  AlgorithmIdentifier  . . . . . . . . . . . . . . . . . 11
        4.6.2.  PublicKey  . . . . . . . . . . . . . . . . . . . . . . 13
        4.6.3.  WrappedSymmetricKey  . . . . . . . . . . . . . . . . . 14
    5.  Compact Format . . . . . . . . . . . . . . . . . . . . . . . . 15
    6.  Examples . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
-     6.1.  Parameters . . . . . . . . . . . . . . . . . . . . . . . . 16
+     6.1.  Parameters . . . . . . . . . . . . . . . . . . . . . . . . 17
      6.2.  SignedData . . . . . . . . . . . . . . . . . . . . . . . . 17
      6.3.  AuthenticatedData  . . . . . . . . . . . . . . . . . . . . 18
      6.4.  EncryptedData  . . . . . . . . . . . . . . . . . . . . . . 19
    7.  Mapping to CMS . . . . . . . . . . . . . . . . . . . . . . . . 20
-   8.  Version Processing . . . . . . . . . . . . . . . . . . . . . . 21
-   9.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 21
-   10. Security Considerations  . . . . . . . . . . . . . . . . . . . 21
-   11. References . . . . . . . . . . . . . . . . . . . . . . . . . . 21
-     11.1. Normative References . . . . . . . . . . . . . . . . . . . 21
-     11.2. Informative References . . . . . . . . . . . . . . . . . . 22
-   Appendix A.  Acknowledgments . . . . . . . . . . . . . . . . . . . 23
-   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . 23
+   8.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 21
+   9.  Security Considerations  . . . . . . . . . . . . . . . . . . . 21
+   10. References . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+     10.1. Normative References . . . . . . . . . . . . . . . . . . . 22
+     10.2. Informative References . . . . . . . . . . . . . . . . . . 23
+   Appendix A.  Acknowledgments . . . . . . . . . . . . . . . . . . . 24
+   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . 24
+
 
 
 
@@ -152,7 +152,7 @@ Internet-Draft                    JSMS                         July 2011
    also MUST NOT include JSON-encoded linefeeds such as "\n".  Any
    linebreaks in the middle of Base64-encoded sections of the examples
    in this document have been inserted in order to make the examples fit
-   on the page.
+   on the page.  Any trailing "=" characters SHOULD be removed.
 
 
 3.  Overview
@@ -283,6 +283,7 @@ Internet-Draft                    JSMS                         July 2011
 
    JSMS defines three top-level types of secure object, each of which
    provides a specific cryptographic protection to a byte string.
+
    SignedData:  Signature using a public-key digital signature algorithm
    AuthenticatedData:  Authentication using a Message Authentication
       Code (MAC)
@@ -308,6 +309,7 @@ Internet-Draft                    JSMS                         July 2011
 4.2.  Common Elements
 
    The following elements are common to all JSMS messages:
+
    "version":  REQUIRED Number.  The version of JSMS used by this
       objec.t.  This field MUST be set to 1.
    "type":  REQUIRED Token.  The type of this JSMS object.  This field
@@ -317,6 +319,7 @@ Internet-Draft                    JSMS                         July 2011
       "encrypted":  EncryptedData object
    "content":  OPTIONAL ByteString.  The content byte string, Base64-
       encoded.
+
    If the "content" key is not present in a given JSMS object, then the
    JSMS object is "detached".  In this case, the content must be
    associated with the JSMS object through some out-of-band mechanism
@@ -329,18 +332,15 @@ Internet-Draft                    JSMS                         July 2011
 
 
 
-
-
-
 Barnes, et al.           Expires January 2, 2012                [Page 6]
 
 Internet-Draft                    JSMS                         July 2011
 
 
    "digestAlgorithm":  REQUIRED AlgorithmIdentifier.  The digest
-      algorithm used in signing the content. [[ IANA note ]]
+      algorithm used in signing the content.
    "signatureAlgorithm":  REQUIRED AlgorithmIdentifier.  The signature
-      algorithm used in signing the content [[ IANA note ]]
+      algorithm used in signing the content.
    "signature":  REQUIRED ByteString.  The Base64-encoded signature
       value
    "key":  REQUIRED PublicKey.  The public key identifier for the
@@ -357,46 +357,26 @@ Internet-Draft                    JSMS                         July 2011
       "application/json" and contain an array of certificates in the
       same format as the "certificates" element above, including the
       ordering constraint.
+
    If the "key" value represents the public key as an identifier, then a
    certificate for the signer MUST be provided by setting either the
-   "certificates" or "certificatesURL" fields.  Obviously, the subject
-   key in the certificate MUST match the identifier in the "key" value;
+   "certificates" or "certificatesURL" fields.  The subject key in the
+   end-entity certificate MUST match the identifier in the "key" value;
    the certificate SHOULD contain the subjectKeyIdentifier field, with a
    value matching the "key" value.
-
-   To generate a SignedData object, the originator first computes the
-   signature value over the content:
-   1.  Compute a message digest by applying the message digest algorithm
-       to the content byte string
-   2.  Compute the signature value by using the signature algorithm to
-       sign the message digest with the private key of an asymmetric key
-       pair
-   The originator then encodes the SignedData object by including the
-   appropriate AlgorithmIdentifiers for the digest and signature
-   algorithms, the PublicKey structure for hte public key, and the
-   Base64 representations of the signature value and (optionally) the
-   content.
 
 4.3.1.  Generating a SignedData Object
 
    The inputs to the process of generating a SignedData object are:
+
    o  The content, as a byte string
    o  A digest algorithm
    o  A signature algorithm
-
-
-
-
-
-Barnes, et al.           Expires January 2, 2012                [Page 7]
-
-Internet-Draft                    JSMS                         July 2011
-
-
    o  An asymmetric key pair
 
    To generate the signature for SignedData object, the originator takes
    the following steps:
+
    1.  Compute the message digest by applying the digest algorithm to
        the content.
    2.  Compute the signature by using the signature algorithm to sign
@@ -405,7 +385,15 @@ Internet-Draft                    JSMS                         July 2011
 
    The originator then encodes the SignedData object by including the
    appropriate AlgorithmIdentifiers for the digest and signature
-   algorithms, the PublicKey structure for hte public key, and the
+
+
+
+Barnes, et al.           Expires January 2, 2012                [Page 7]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   algorithms, the PublicKey structure for the public key, and the
    Base64 representations of the signature value and (optionally) the
    content.
 
@@ -413,6 +401,7 @@ Internet-Draft                    JSMS                         July 2011
 
    To verify a SignedData object, the recipient takes the following
    steps:
+
    1.  Verify that the digest and signature algorithms are supported.
        Otherwise, report an error and fail.
    2.  Compute the content byte string by decoding the "content" value
@@ -440,7 +429,18 @@ Internet-Draft                    JSMS                         July 2011
    "authenticated".  In addition, an AuthenticatedData object contains
    the following keys:
 
+   "algorithm":  REQUIRED AlgorithmIdentifier.  The MAC algorithm used
+      to authenticate the content.
+   "mac":  REQUIRED ByteString.  The MAC value
+   "keys":  OPTIONAL Array of WrappedKey.  Wrapped versions of the
+      symmetric key used for this MAC.  Each element in the array MUST
+      be a WrappedSymmetricKey object (see below)
+   "keyId":  OPTIONAL ByteString.  An opaque identifier for a pre-shared
+      MAC key
 
+   An AuthenticatedData object MUST contain either the "key" field or
+   the "keyId" field, so that the recipient knows which key to use to
+   verify the MAC.
 
 
 
@@ -449,23 +449,11 @@ Barnes, et al.           Expires January 2, 2012                [Page 8]
 Internet-Draft                    JSMS                         July 2011
 
 
-   "algorithm":  REQUIRED AlgorithmIdentifier.  The MAC algorithm used
-      to authenticate the content.
-   "mac":  REQUIRED ByteString.  The MAC value
-   "keys":  OPTIONAL Array of WrappedKey.  Wrapped versions of the
-      symmetric key used for this MAC.  Each element in the array MUST
-      be a WrappedSymmetricKey object (see below).
-   "keyIdentifier":  OPTIONAL ByteString. [[ Opaque identifier for MAC
-      key. ]]
-
-   An AuthenticatedData object MUST contain either the "key" field or
-   the "keyIdentifier" field, so that the recipient knows which key to
-   use to verify the MAC.
-
 4.4.1.  Generating an AuthenticatedData Object
 
    The inputs to the process of generating a AuthenticatedData object
    are:
+
    o  The content, as a byte string
    o  A MAC algorithm
    o  A MAC key and key identifier, or
@@ -482,19 +470,31 @@ Internet-Draft                    JSMS                         July 2011
    appropriate AlgorithmIdentifier for the MAC algorithm and the Base64
    representations of the MAC value and (optionally) the content.  If
    the MAC key was specified directly, then the Base64 representation of
-   the key identifier is set as the "keyIdentifier" value; otherwise,
-   the WrappedSymmetricKey objects are collected in an array and set as
-   the "keys" value.
+   the key identifier is set as the "keyId" value; otherwise, the
+   WrappedSymmetricKey objects are collected in an array and set as the
+   "keys" value.
 
 4.4.2.  Verifying a AuthenticatedData Object
 
    To verify a AuthenticatedData object, the recipient takes the
    following steps:
-   1.  Verify that the MAC algorithms are supported.  If not, report an
+
+   1.  Verify that the MAC algorithm is supported.  If not, report an
        error and fail.
    2.  Compute the content byte string by decoding the "content" value
        of the JSMS object.  If the JSMS object does not contain a
        "content" field, retrieve the content by other means.
+   3.  Compute the MAC key:
+       *  If the "keyId" value is present and represents a known key,
+          use the identified key.
+       *  If the "keys" value is present, check each WrappedPublicKey
+          object to determine if it matches a known key for this
+          recipient.  If any of the wrapped keys matches, unwrap the key
+          from the first one and use it (see Section Section 4.6.3).
+          Otherwise, report an error and fail.
+   4.  Use the MAC algorithm and MAC key to compute the MAC over the
+       content byte string
+   5.  Decode the MAC value from the "mac" field.
 
 
 
@@ -505,17 +505,6 @@ Barnes, et al.           Expires January 2, 2012                [Page 9]
 Internet-Draft                    JSMS                         July 2011
 
 
-   3.  Compute the MAC key:
-       *  If the "keyIdentifier" value is present and represents a known
-          key, use the identified key.
-       *  If the "keys" value is present, check each WrappedPublicKey
-          object to determine if it matches a known key for this
-          recipient.  If any of the wrapped keys matches, unwrap the key
-          from the first one and use it (see Section Section 4.6.3).
-          Otherwise, report an error and fail.
-   4.  Use the MAC algorithm and MAC key to compute the MAC over the
-       content byte string
-   5.  Decode the MAC value from the "mac" field.
    6.  Verify that the computed MAC matches the MAC from the object.
 
 4.5.  EncryptedData
@@ -525,15 +514,19 @@ Internet-Draft                    JSMS                         July 2011
    contains the encrypted form of the content, not the content itself
    (as plaintext).  An EncryptedData object contains the following keys
    in addition to any common fields:
+
    "algorithm":  REQUIRED AlgorithmIdentifier.  The encryption algorithm
       used to encrypt the content
    "keys":  REQUIRED Array of WrappedKey.  Wrapped versions of the
       symmetric key used to encrypt the content.  Each element in the
       array MUST be a WrappedSymmetricKey object (see below).
+   "mac":  OPTIONAL ByteString.  The MAC value, if required by the
+      algorithm
 
 4.5.1.  Generating an EncryptedData Object
 
    The inputs to the process of generating a SignedData object are:
+
    o  The content, as a byte string
    o  A encryption algorithm
    o  One or more recipient keys and key encipherment algorithms
@@ -549,10 +542,17 @@ Internet-Draft                    JSMS                         July 2011
    array containing the WrappedSymmetricKey objects, and (optionally)
    the Base64 representation of the content.
 
-4.5.2.  Verifying a AuthenticatedData Object
+4.5.2.  Decrypting a EncryptedData Object
 
    To decrypt an EncryptedData object, the recipient takes the following
    steps:
+
+   1.  Verify that the encryption algorithm is supported.  If not,
+       report an error and fail.
+   2.  Compute the content byte string by decoding the "content" value
+       of the JSMS object.  If the JSMS object does not contain a
+       "content" field, retrieve the content by other means.
+
 
 
 
@@ -561,11 +561,6 @@ Barnes, et al.           Expires January 2, 2012               [Page 10]
 Internet-Draft                    JSMS                         July 2011
 
 
-   1.  Verify that the encryption algorithm is supported.  If not,
-       report an error and fail.
-   2.  Compute the content byte string by decoding the "content" value
-       of the JSMS object.  If the JSMS object does not contain a
-       "content" field, retrieve the content by other means.
    3.  Locate the encryption key:  Check each WrappedPublicKey object to
        determine if it matches a known key for this recipient.  If any
        of the wrapped keys matches, unwrap the key from the first one
@@ -587,15 +582,20 @@ Internet-Draft                    JSMS                         July 2011
    An AlgorithmIdentifier object names a cryptographic algorithm and
    specifies any associated parameters.  If the algorithm has no
    parameters, then it the AlgorithmIdentifier object is simply a token
-   representing the name of the algorithm. [[ Note about registries ]]
+   representing the name of the algorithm, drawn from an IANA registry
+   of algorithm names.
 
    If the algorithm specifies parameters, the AlgorithmIdentifier object
-   is a JSON object.  The object must contain a field "name" specifying
-   the name of the algorithm.  Any other fields are specified in the
-   algorithm definition
+   is a JSON object.  There is only one required field, "name".  Any
+   other fields are specified in the algorithm definition.
+   "name":  REQUIRED Token.  The name of the algorithm, chosen from one
+      of the IANA registries defined by this document.
 
    The following table summarizes the algorithms to be used with JSMS.
    [[ More detail to be added later, in a separate document ]]
+
+
+
 
 
 
@@ -618,8 +618,7 @@ Internet-Draft                    JSMS                         July 2011
 
 
    Name        Parameters   Reference         Example
-   =====================================================================
-
+   ===================================================================
    SIGNING
    rsa         no           [RFC3447]         "rsa"
    dsa         yes (p,q,g)  [FIPS186]         {name:"dsa",
@@ -627,30 +626,37 @@ Internet-Draft                    JSMS                         July 2011
    ecdsa       yes (curve)  [RFC6090]         {name:"ecdsa",
                                                 curve:"P-256"}
 
+   -------------------------------------------------------------------
    DIGEST
    sha1        no           [FIPS180-1]       "sha1"
    sha256      no           [FIPS180-3]       "sha256"
    sha384      no           [FIPS180-3]       "sha384"
    sha512      no           [FIPS180-3]       "sha512"
 
+   -------------------------------------------------------------------
    MAC
    hs1         no           [FIPS180-1]       "hs1"
    hs256       no           [FIPS180-3]       "hs256"
    hs384       no           [FIPS180-3]       "hs384"
    hs512       no           [FIPS180-3]       "hs512"
 
+   -------------------------------------------------------------------
    ENCRYPTION
    aes-ccm     yes (nonce)  [RFC3610]         {name:"aes-ccm",
-                                                nonce:"ZONce...l7IU-g"}
+                                                nonce:"ZONce...lU-g"}
    aes-gcm     yes (iv)     [McGrew & Viega]  {name:"aes-gcm",
-                                                iv:"ZONce...l7IU-g"}
+                                                iv:"ZONce...lU-g"}
 
+   -------------------------------------------------------------------
    KEY ENCIPHERMENT
    aes         no           [RFC3394]         "aes"
    rsaes-oaep  no           [RFC3447]         "rsaes-oaep"
 
+   -------------------------------------------------------------------
    KEY AGREEMENT
    ecdh-es     yes (curve)  [RFC6090]         "ecdh-es"
+   ===================================================================
+
 
    Obviously, there will be more detail needed beyond the above, and
    some IANA considerations to create the necessary registries.  For
@@ -659,12 +665,6 @@ Internet-Draft                    JSMS                         July 2011
    o  The signature value produced by DSA is comprised of two integers.
       The byte string to be filled in the "signature" field is the two-
       element JSON array containing two integers, "[r,s]"
-   o  RSAES-OAEP is always used with SHA-256 and the default MGF1
-      masking generation function
-   o  Elliptic curves may only be specified by name, not by directly
-      specifying curve parameters. [[ We may define our own registry, or
-      re-use the ones from TLS/IKE. ]]
-
 
 
 
@@ -673,6 +673,11 @@ Barnes, et al.           Expires January 2, 2012               [Page 12]
 Internet-Draft                    JSMS                         July 2011
 
 
+   o  RSAES-OAEP is always used with SHA-256 and the default MGF1
+      masking generation function
+   o  Elliptic curves may only be specified by name, not by directly
+      specifying curve parameters. [[ We may define our own registry, or
+      re-use the ones from TLS/IKE. ]]
    o  AEAD algorithms are only used for authenticated encryption; there
       is never associated data.  Further AEAD algorithms may be defined
       using [draft-mcgrew-aead-aes-cbc-hmac-sha1]
@@ -682,6 +687,7 @@ Internet-Draft                    JSMS                         July 2011
    A PublicKey object describes the public key used by a signer.  The
    key may be specified as a JSON structure directly, as a URI, or as an
    identifier.  A PublicKey object has the following fields:
+
    "type"  OPTIONAL String.  The name of the algorithm with which this
       key is to be used
    "id"  OPTIONAL ByteString.  An identifier for the key
@@ -693,6 +699,16 @@ Internet-Draft                    JSMS                         July 2011
    determined by the algorithm.  Formats for RSA and ECDH/ECDSA public
    keys are specified below.
 
+   If the key is provided as a URI, then the "uri" field MUST be
+   present, containing a URI where the key can be retrieved, either in
+   the JSON format described above.  The method that the recipient of a
+   JSMS object uses to retrieve the key will depend on the URI scheme.
+   For HTTP URIs, the relying party MUST issue an HTTP request with the
+   GET method and an Accept header including the MIME type for JSMS
+   PublicKey object, "[[MIMETYPE-TBD]]".  For MAILTO, SIP, and XMPP
+   URIs, the recipient MAY use the WebFinger protocol
+   [I-D.hammer-webfinger] to retrieve a public key for the user.
+
    If the key is referenced by an opaque identifier or "fingerprint",
    then the "id" field MUST be present, and contain the Base64-encoded
    SHA-1 hash of the public key, represented as a DER-encoded
@@ -700,15 +716,22 @@ Internet-Draft                    JSMS                         July 2011
    same as the one included in the subjectKeyIdentifier field in an
    X.509 certificate.)
 
-   If the key is provided as a URI, then the "uri" field MUST be
-   present, containing a URI where the key can be retrieved, either in
-   the JSON format described above.  The method that the recipient of a
-   JSMS object uses to retrieve the key will depend on the URI scheme.
-   For HTTP URIs, the relying party MUST issue an HTTP request with the
-   GET method and an Accept header including the MIME type for JSMS
-   PublicKey object, "[[MIMETYPE]]".  For MAILTO, SIP, and XMPP URIs,
-   the recipient MAY use the WebFinger protocol [[REF]] to retrieve a
-   public key for the user.
+   The recipient of a JSMS object can determine which of the above cases
+   a given key falls into by seeking the three fields in sequence.  If a
+   "type" field is present, then the key is represented directly; if a
+   "uri" field, then the key is represented directly, but must be
+   retreived from the URI; and if the "id" field is the only one of the
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 13]
+
+Internet-Draft                    JSMS                         July 2011
+
+
+   three present, then the key is represented by ID only, and must be
+   retrieved from somewhere else (e.g., from a certificate in the JSMS
+   object).
 
    Example:  {"id":  "i1LbR8FCEw-aiFcAAfUvpp75wdY="}
 
@@ -718,16 +741,6 @@ Internet-Draft                    JSMS                         July 2011
 
    An RSA public key comprises two additional parameters in addition to
    the algorithm identifier "rsa".
-
-
-
-
-
-
-Barnes, et al.           Expires January 2, 2012               [Page 13]
-
-Internet-Draft                    JSMS                         July 2011
-
 
    "n":  REQUIRED Integer.  The modulus
    "e":  REQUIRED Integer.  The public exponent
@@ -741,15 +754,16 @@ Internet-Draft                    JSMS                         July 2011
    elliptic curve.  In an elliptic curve PublicKey object, the curve
    parameters are specified in the algorithm identifier, and there are
    two additional fields that specify the point on the curve:
+
    "x":  REQUIRED ByteString.  The x coordinate of the point
    "y":  REQUIRED Integer.  The y coordinate of the point.  MUST be
       equal to 0 or 1.
 
    These coordinates correspond to the compressed form of an elliptic
-   curve point, as specified in [[REF:SEC01/RFC5840]].  In terms of the
-   calculation specified in section 2.3.3 of [[SEC01]], the "x"
-   coordinate is the byte string X and the "y" coordinate is the reduced
-   y coordinate (or, equivalently, Y mod 2).
+   curve point, as specified in [[SEC01]].  In terms of the calculation
+   specified in section 2.3.3 of [[SEC01]], the "x" coordinate is the
+   byte string X and the "y" coordinate is the reduced y coordinate (or,
+   equivalently, Y mod 2).
 
    Example:  {"name":"ecdh",
    "x":"IIIs_x1m6Na6xKN37vOwvy7AvFeG9HhBN2EN3u5EZQ4", "y":  1}
@@ -762,20 +776,6 @@ Internet-Draft                    JSMS                         July 2011
    object is a JSON object that allows these keys to be provided either
    using key transport or key agreement.  The following fields may be
    present in a WrappedSymmetricKey object:
-   "type":  REQUIRED TOKEN The type of wrapping being done.  This
-      document defines the following values for this field:
-      "keyEncryption":  Symmetric key transport.  The "KEKIdentifier"
-         field MUST be present.  Any other non-required fields MUST be
-         ignored.
-      "keyTransport":  Asymmetric key transport.  The "ecipientKey"
-         field MUST be present.  Any other non-required fields MUST be
-         ignored.
-      "keyAgreement":  Key agreement.  The "originatorKey" and
-         "recipientKey" MUST be present, and the "userKeyMaterial" field
-         MAY be present.  Any other non-required fields MUST be ignored.
-
-
-
 
 
 
@@ -785,17 +785,43 @@ Barnes, et al.           Expires January 2, 2012               [Page 14]
 Internet-Draft                    JSMS                         July 2011
 
 
+   "type":  REQUIRED TOKEN The type of wrapping being done.  This
+      document defines the following values for this field:
+      "encryption":  Symmetric key transport.  The "KEKIdentifier" field
+         MUST be present.  Any other non-required fields MUST be
+         ignored.
+      "transport":  Asymmetric key transport.  The "recipientKey" field
+         MUST be present.  Any other non-required fields MUST be
+         ignored.
+      "agreement":  Key agreement.  The "originatorKey" and
+         "recipientKey" MUST be present, and the "userKeyMaterial" field
+         MAY be present.  Any other non-required fields MUST be ignored.
    "algorithm":  REQUIRED AlgorithmIdentifier The algorithm used to
       encrypt the symmetric key
    "encryptedKey":  REQUIRED BYTES The symmetric key, encrypted
-      according to the algorithm indicated by the "a" value
+      according to the algorithm indicated by the "algorithm" value
    "KEKIdentifier":  OPTIONAL BYTES An opaque identifier for the
       symmtric key encryption key
    "originatorKey":  OPTIONAL PublicKey The public key of the originator
    "recipientKey":  OPTIONAL PublicKey The public key of the recipient
    "userKeyMaterial":  OPTIONAL BYTES User key material
 
-   [[ How to perform wrapping/unwrapping ]]
+   The techniques used for wrapping and unwrapping the encrypted key is
+   determined by "type" and "algorithm" fields.  In general, the options
+   are the same as for CMS [RFC5280], without the option for password-
+   based key wrapping.
+
+   "encryption":    The key is encrypted under a pre-shared symmetric
+      key encryption key identified by the "KEKIdentifier" field
+   "transport":  The key is encrypted under the recipient's public key,
+      identified in the "recipientKey" field.
+   "agreement":  The key is encrypted under a shared secret derived
+      using a key agreement algorithm combining the originator's private
+      key and the recipient's public key, corresponding to the
+      "originatorKey" and "recipientKey", respectively.  The value
+      provided in the "userKeyMaterial" field may be used to provide
+      additional entropy.
+   [[ More detail to be added. ]]
 
 
 5.  Compact Format
@@ -808,32 +834,6 @@ Internet-Draft                    JSMS                         July 2011
    implementation MUST reject a JSMS object with mixed long and short
    names as improperly formatted.
 
-   [[ TODO:  Update this table ]]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 Barnes, et al.           Expires January 2, 2012               [Page 15]
@@ -841,32 +841,44 @@ Barnes, et al.           Expires January 2, 2012               [Page 15]
 Internet-Draft                    JSMS                         July 2011
 
 
-   Common                      EncryptedData
-   ======                      =============
-   Version             v       Algorithm           a
-   Type                t       Key                 k
-     SignedData        s
-     AuthenticatedData a
-     EncryptedData     e       WrappedKey
-   Content             c       =====================
-                               Type                t
-                                 KeyEncryptionKey  e
-   SignedData                    KeyTransport      t
-   ==========                    KeyAgreement      a
-   DigestAlgorithm     da      Algorithm           a
-   SignatureAlgorithm  sa      EncryptedKey        k
-   Signature           s       KEKIdentifier       i
-   PublicKey           p       OriginatorKey       o
-   Certificates        c       RecipientKey        r
-   Certificates (URI)  cu      UserKeyMaterial     u
+   Common                             AlgorithmIdentifier
+   --------------------------         --------------------------
+     version             v              name                n
+     type                t            --------------------------
+      signed              s
+      authenticated       a
+      encrypted           e           PublicKey
+     content             c            --------------------------
+   --------------------------           type                t
+                                        id                  i
+                                        uri                 u
+   SignedData                         --------------------------
+   --------------------------
+     digestAlgorithm     da
+     signatureAlgorithm  sa           WrappedKey
+     signature           s            --------------------------
+     key                 p              type                t
+     certificates        c               encryption          e
+     certificatesURI     cu              transport           t
+   --------------------------            agreement           a
+                                        algorithm           a
+                                        encryptedKey        k
+   AuthenticatedData                    KEKIdentifier       i
+   --------------------------           originatorKey       o
+     algorithm           a              recipientKey        r
+     mac                 m              userKeyMaterial     u
+     keys                k            --------------------------
+     keyId               ki
+   --------------------------
 
 
-   AuthenticatedData
-   =================
-   Algorithm           a
-   MAC                 m
-   Key                 k
-   KeyIdentifier       ki
+   EncryptedData
+   --------------------------
+     algorithm           a
+     keys                k
+     mac                 m
+   --------------------------
+
 
    In applications where a JSMS object is required to be URL-safe, it is
    RECOMMENDED that it be rendered in the compact serialization, then
@@ -875,20 +887,8 @@ Internet-Draft                    JSMS                         July 2011
 
 6.  Examples
 
-   This section contains complete examples of all three JSMS types.
-
-6.1.  Parameters
-
-
-
-
-
-
-
-
-
-
-
+   This section contains complete examples of all three JSMS types.  All
+   white space is for readability only, and must be removed before the
 
 
 
@@ -896,6 +896,10 @@ Barnes, et al.           Expires January 2, 2012               [Page 16]
 
 Internet-Draft                    JSMS                         July 2011
 
+
+   examples can be considered valid JSMS objects.
+
+6.1.  Parameters
 
    RSA key:
    n = 12237824263694976709651031408224222555291991012810482177
@@ -927,10 +931,6 @@ Internet-Draft                    JSMS                         July 2011
 
    In this object the content is signed under the specified RSA key
    pair, using SHA1 as the digest.
-
-
-
-
 
 
 
@@ -997,10 +997,10 @@ Internet-Draft                    JSMS                         July 2011
        }],
    }
 
-   As another example, the following object uses the defined key as the
-   MAC key directly (instead of as a key encryption key), and uses the
-   compact format.  The object is shown both in raw JSON form and in the
-   Base64 encoding.
+   As another example, the following object is a detached MAC (over the
+   same content string) in the compact encoding.  Here we use the key as
+   the MAC key directly (instead of as a key encryption key).  The
+   object is shown both in raw JSON form and in the Base64 encoding.
 
 
 
@@ -1017,6 +1017,19 @@ Internet-Draft                    JSMS                         July 2011
    fQo
 
 
+   Finally, the following example is analogous to the example in Section
+   3.1 of [I-D.ietf-jose-json-web-signature].  We have mapped the "iss"
+   field to the "keyId" field, the "alg" field to the "algorithm" field,
+   and the detached signature value to the "mac" field.  The "typ" and
+   "exp" fields are omitted.  (The MAC on this object is not valid, but
+   included to illustrate the size of the object.)
+   {"v":1,"t":"a","a":"hs256", "i":"am9lCg",
+     "mac":"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"}
+
+   eyJ2IjoxLCJ0IjoiYSIsImEiOiJoczI1NiIsICJpIjoiYW05bENnIiwibWFjIjoi
+   ZEJqZnRKZVo0Q1ZQLW1COTJLMjd1aGJVSlUxcDFyX3dXMWdGV0ZPRWpYayJ9Cg
+
+
 6.4.  EncryptedData
 
    In this object, the content is encrypted under the general AEAD
@@ -1024,19 +1037,6 @@ Internet-Draft                    JSMS                         July 2011
    authentication.  The keys are described above as "EncryptedData Key
    (E)" and "EncryptedData Key (A)", respectively.  The temporary keys
    are wrapped using the PKCS#1 wrapping, under the RSA key pair above.
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1103,16 +1103,16 @@ Internet-Draft                    JSMS                         July 2011
 
 7.  Mapping to CMS
 
-   [[ SignedData == SignedData, AuthenticatedData == AuthenticatedData,
-   EncryptedData == AuthEnvelopedData ]]
+   The JSMS message format is semantically equivalent to a profile of
+   the Cryptographic Message Syntax (CMS), and mirrors a fair bit of its
+   syntactical structure as well.  The top-level message types each map
+   to top-level CMS types:  SignedData to SignedData, AuthenticatedData
+   to AuthenticatedData, and EncryptedData to AuthEnvelopedData
+   [RFC5083].  The main difference other than encoding is that many
+   optional fields have been removed, for example the protected and
+   unprotected attributes.
 
-   [[ AlgorithmIdentifier == AlgorithmIdentifier ]]
-
-   [[ PublicKey == SubjectPublicKeyInfo.  In the latter case, equivalent
-   to SKId+self-signed ]]
-
-   [[ WrappedSymmetricKey == RecipientInfo ]]
-
+   This similarity also applies to the secondary objects.  Just as in
 
 
 
@@ -1121,25 +1121,62 @@ Barnes, et al.           Expires January 2, 2012               [Page 20]
 Internet-Draft                    JSMS                         July 2011
 
 
-8.  Version Processing
+   CMS, AlgorithmIdentifier objects carry an identifier for the
+   algorithm (here a name instead of an OID) and any related parameters.
+   The PublicKey object format is an amalgam of the SubjectKeyIdentifier
+   from CMS and the SubjectPublicKeyInfo from X.509.  PublicKey objects
+   can be mapped to CMS constructs by converting them to
+   SubjectKeyIdentifier objects (using the appropriate hash) and
+   including a certificate containing the public key.  The
+   WrappedSymmetricKey object format maps directly to the CMS
+   RecipientInfo structure, with the above considerations related to
+   public keys, and without the option for password-based wrapping.
 
-   For the moment, all version numbers in the protocol MUST be 1.0.
-   Receivers MUST return an error for any other version number.  More
-   interesting version processing will be defined in the future.
+   The major way in which JSMS diverges from CMS is that it allows the
+   use of static MAC keys, referenced by an identifier.  CMS requires
+   the use of random MAC keys, encrypted in a RecipientInfo (i.e., a
+   WrappedSymmetricKey) for each recipient.  JSMS allows the use of
+   random keys, but also includes the "keyId" field to reference static
+   MAC keys directly.  The security implications of this change are
+   discussed in Section Section 9.
+
+   In fact, it should be possible to translate JSMS objects back and
+   forth to CMS without changing any values (simply reformatting), with
+   only a couple of exception cases:
+
+   o  JSMS objects that use static MAC keys cannot be translated to CMS
+      because CMS does not allow this keying mechanism.
+   o  JSMS objects using general AEAD algorithms (according to
+      [[draft-mcgrew-aead-aes-cbc-hmac-sha1]]) because the required
+      algorithm identifiers have not been defined for CMS.
+   o  CMS objects using features that are not supported in JSMS (e.g.,
+      multiple signatures) cannot be translated to JSMS.
 
 
-9.  IANA Considerations
+8.  IANA Considerations
 
-   [TODO]
+   TODO:
    o  Register MIME types
-   o  Registries for algorithms
+   o  Registries for algorithms (signing, hash, MAC, encrypion,
+      encipherment, agreement)
 
 
-10.  Security Considerations
+9.  Security Considerations
 
    Much more to follow here.
 
+   [[ Given the CMS mapping above, import CMS security considerations.
+   ]]
+
    [[ Notes on identity for SignedData and AuthenticatedData:  It is
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 21]
+
+Internet-Draft                    JSMS                         July 2011
+
+
    important to note that the above verification process only checks
    that the JSMS object was signed with a given public key.  In order
    for this information to be useful to an applications, it is usually
@@ -1152,10 +1189,13 @@ Internet-Draft                    JSMS                         July 2011
    specification without certificates will need to specify an
    alternative mechanism for binding public keys to identifiers. ]]
 
+   [[ Notes on the security of static-key MACs.  Need to periodically
+   refresh keys. ]]
 
-11.  References
 
-11.1.  Normative References
+10.  References
+
+10.1.  Normative References
 
    [RFC2045]  Freed, N. and N. Borenstein, "Multipurpose Internet Mail
               Extensions (MIME) Part One: Format of Internet Message
@@ -1169,14 +1209,6 @@ Internet-Draft                    JSMS                         July 2011
 
    [RFC3447]  Jonsson, J. and B. Kaliski, "Public-Key Cryptography
               Standards (PKCS) #1: RSA Cryptography Specifications
-
-
-
-Barnes, et al.           Expires January 2, 2012               [Page 21]
-
-Internet-Draft                    JSMS                         July 2011
-
-
               Version 2.1", RFC 3447, February 2003.
 
    [RFC4086]  Eastlake, D., Schiller, J., and S. Crocker, "Randomness
@@ -1194,6 +1226,13 @@ Internet-Draft                    JSMS                         July 2011
    [RFC5246]  Dierks, T. and E. Rescorla, "The Transport Layer Security
               (TLS) Protocol Version 1.2", RFC 5246, August 2008.
 
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 22]
+
+Internet-Draft                    JSMS                         July 2011
+
+
    [RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
               Housley, R., and W. Polk, "Internet X.509 Public Key
               Infrastructure Certificate and Certificate Revocation List
@@ -1203,18 +1242,16 @@ Internet-Draft                    JSMS                         July 2011
               (AES) Key Wrap with Padding Algorithm", RFC 5649,
               September 2009.
 
-   [I-D.zyp-json-schema]
-              Zyp, K. and G. Court, "A JSON Media Type for Describing
-              the Structure and Meaning of JSON Documents",
-              draft-zyp-json-schema-03 (work in progress),
-              November 2010.
+   [RFC5840]  Grewal, K., Montenegro, G., and M. Bhatia, "Wrapped
+              Encapsulating Security Payload (ESP) for Traffic
+              Visibility", RFC 5840, April 2010.
 
    [FIPS-180-3]
               National Institute of Standards and Technology (NIST),
               "Secure Hash Standard (SHS)", FIPS PUB 180-3,
               October 2008.
 
-11.2.  Informative References
+10.2.  Informative References
 
    [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
               Resource Identifier (URI): Generic Syntax", STD 66,
@@ -1225,16 +1262,17 @@ Internet-Draft                    JSMS                         July 2011
               WebFinger Protocol", draft-hammer-webfinger-00 (work in
               progress), October 2009.
 
-
-
-
-Barnes, et al.           Expires January 2, 2012               [Page 22]
-
-Internet-Draft                    JSMS                         July 2011
-
-
    [RFC5652]  Housley, R., "Cryptographic Message Syntax (CMS)", STD 70,
               RFC 5652, September 2009.
+
+   [RFC5083]  Housley, R., "Cryptographic Message Syntax (CMS)
+              Authenticated-Enveloped-Data Content Type", RFC 5083,
+              November 2007.
+
+   [I-D.ietf-jose-json-web-signature]
+              Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", draft-ietf-jose-json-web-signature-02
+              (work in progress), May 2012.
 
    [krawczyk-ate]
               Krawczyk, H., "The Order of Encryption and Authentication
@@ -1243,6 +1281,14 @@ Internet-Draft                    JSMS                         July 2011
 
    [GCM]      National Institute of Standards and Technology (NIST),
               "Recommendation for Block Cipher Modes of Operation:
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 23]
+
+Internet-Draft                    JSMS                         July 2011
+
+
               Galois/Counter Mode (GCM) and GMAC", SP 800-38D,
               November 2007.
 
@@ -1284,5 +1330,15 @@ Authors' Addresses
 
 
 
-Barnes, et al.           Expires January 2, 2012               [Page 23]
+
+
+
+
+
+
+
+
+
+
+Barnes, et al.           Expires January 2, 2012               [Page 24]
 

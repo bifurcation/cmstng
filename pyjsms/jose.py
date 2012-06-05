@@ -207,7 +207,6 @@ def jose_enc_encrypt(key, content):
     n = Random.get_random_bytes(16) # Nonce
     ln = struct.pack("!q", len(n))
     la = struct.pack("!q", 0)
-    print (n+econtent+ln+la).encode("hex")
     hmac.update(n + S + ln + la)
     T = hmac.digest()
 
@@ -258,11 +257,9 @@ def jose_enc_decrypt(key, josestr):
     hmac = HMAC.new(ka, digestmod=SHA)
     ln = struct.pack("!q", len(n))
     la = struct.pack("!q", 0)
-    print (n+S+ln+la).encode("hex")
     hmac.update(n + S + ln + la)
     Tp = hmac.digest()
     if Tp != T:
-        print T
         raise ("Integrity check failed")
 
     # Decrypt the contents 
